@@ -52,11 +52,14 @@ def hmc(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, l
                     i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
                     objective = - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
             gradient = tape.gradient(objective, embedding.theta)
-            speedbreak = 1.0 / (1.0 + 0.1 * tf.reduce_max(tf.math.abs(r)))
+            max_gradient_entry = tf.reduce_max(tf.math.abs(gradient))
+            max_momentum_entry = tf.reduce_max(tf.math.abs(r))
+            print(max_momentum_entry, max_gradient_entry)
+            speedbreak = 1.0 / (1.0 + max_momentum_entry + max_gradient_entry)
             #gradient = gradient
             r.assign_sub(gradient * learning_rate * speedbreak)
-            print(r)
-            print(embedding.theta)
+            #print(r)
+            #print(embedding.theta)
             embedding.theta.assign_add(r * learning_rate * speedbreak)
 
     return embedding
