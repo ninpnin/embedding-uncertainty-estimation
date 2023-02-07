@@ -2,6 +2,7 @@ import networkx as nx
 from probabilistic_word_embeddings.preprocessing import preprocess_standard
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 # Load model from models.py
 from probabilistic_word_embeddings.utils import shuffled_indices
 from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbedding
@@ -75,7 +76,7 @@ def hmc(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, l
         valid_ll = evaluate_on_holdout_set(embedding, data, model=model, ws=ws, ns=ns, batch_size=batch_size, reduce_mean=False)
         valid_ll = tf.reduce_sum(valid_ll)
         valid_posterior = valid_ll + embedding.log_prob(batch_size, N)
-        posterior_history.append(valid_posterior)
+        posterior_history.append(valid_posterior.numpy())
         kinetic = tf.reduce_sum(tf.multiply(r, r)) * batches / 2
         energy_proposal = - posterior_history[-1] + kinetic
         energy_previous = - posterior_history[-2] + initial_kinetic
@@ -85,19 +86,27 @@ def hmc(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, l
         energy_diff = energy_proposal - energy_previous
         print("Energy difference", energy_diff)
 
+    df = pd.DataFrame([[r] for r in posterior_history], columns=["log_posterior"])
+    print(df)
+    df.to_csv("posterior_history.csv")
     return embedding
 
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", type=int, default=5)
+    args = parser.parse_args()
+    
+    text = open("wiki.txt").read().lower().split()
+    text, vocabulary = preprocess_standard(text)
+    print(f"Train on a text of length {len(text)} with a vocabulary size of {len(vocabulary)}")
 
-text = open("wiki.txt").read().lower().split()
-text, vocabulary = preprocess_standard(text)
-print(f"Train on a text of length {len(text)} with a vocabulary size of {len(vocabulary)}")
+    g = nx.Graph()
+    g.add_edge("this", "that")
+    dim = 100
+    e = LaplacianEmbedding(vocabulary, dim, g, lambda0=2.5)
+    # Perform MAP estimation
 
-g = nx.Graph()
-g.add_edge("this", "that")
-dim = 100
-e = LaplacianEmbedding(vocabulary, dim, g, lambda0=2.5)
-# Perform MAP estimation
-
-e = hmc(e, text, model="cbow", ws=5, epochs=30, learning_rate=0.001)
-similarity = evaluate_word_similarity(e)
-print(similarity)
+    e = hmc(e, text, model="cbow", ws=5, epochs=args.epochs, learning_rate=0.01)
+    similarity = evaluate_word_similarity(e)
+    print(similarity)
