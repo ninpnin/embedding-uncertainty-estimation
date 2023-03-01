@@ -40,8 +40,8 @@ def conditional_hmc(wds, e, text, ws=5, ns_prime=1000):
         j_neg.append(context)
 
 
-    j = tf.constant(j)
-    j_neg = tf.constant(j_neg)
+    j = tf.constant(j) + "_c"
+    j_neg = tf.constant(j_neg)  + "_c"
     print(j.shape)
     print(j_neg.shape)
 
@@ -87,6 +87,7 @@ def save(i, e_j, e_j_neg, freq, freq_prime, args):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument("--ns_prime", type=int, default=1000)
     parser.add_argument("--data", type=str, default="data/wikismall.txt")
     parser.add_argument("--outdir", type=str, default="data/stan/")
     parser.add_argument("--wds", type=str, nargs="+", default=["dog"])
@@ -103,7 +104,7 @@ if __name__ == "__main__":
     # Perform MAP estimation
     wds = args.wds
 
-    i, e_j, e_j_neg, freq, freq_prime = conditional_hmc(wds, e, text)
+    i, e_j, e_j_neg, freq, freq_prime = conditional_hmc(wds, e, text, ns_prime=args.ns_prime)
     save(i, e_j, e_j_neg, freq, freq_prime, args)
 
 
