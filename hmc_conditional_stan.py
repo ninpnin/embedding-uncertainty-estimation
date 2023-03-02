@@ -20,8 +20,16 @@ def conditional_hmc(wds, e, text, ws=5, ns_prime=1000):
 
     for ix, wd in enumerate(text):
         if wd in wds:
-            i.append(wd)
             context = text[ix-ws:ix] + text[ix+1:ix+ws+1]
+            skip = False
+            for wd_c in context:
+                if wd_c not in e:
+                    print("Skipping", context)
+                    skip = True
+            if skip:
+                continue
+
+            i.append(wd)
             j.append(context)
 
         freq[wd] = freq.get(wd, 0.0) + 1 / datalen
@@ -37,6 +45,13 @@ def conditional_hmc(wds, e, text, ws=5, ns_prime=1000):
     for _ in range(ns_prime):
         ix = np.random.randint(ws, len(text)-ws)
         context = text[ix-ws:ix] + text[ix+1:ix+ws+1]
+        skip = False
+        for wd_c in context:
+            if wd_c not in e:
+                print("Skipping", context)
+                skip = True
+        if skip:
+            continue
         j_neg.append(context)
 
 
@@ -45,6 +60,7 @@ def conditional_hmc(wds, e, text, ws=5, ns_prime=1000):
     print(j.shape)
     print(j_neg.shape)
 
+    print(j)
     e_j = e[j]
     e_j_neg = e[j_neg]
 
