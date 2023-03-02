@@ -2,6 +2,7 @@ library(reticulate)
 library(rjson)
 library(rstan)
 
+wd <- "dog"
 NS <- 5
 setwd("~/Work/embedding-uncertainty-estimation")
 
@@ -14,17 +15,32 @@ dim(e_j_neg)
 
 freq <- fromJSON(file = "data/stan/freq.json")
 freq_prime <- fromJSON(file = "data/stan/freq_prime.json")
-freq_prime["dog"]
+freq_prime[wd]
 
 l_w <- dim(e_j)[1]
 l_ns <- dim(e_j_neg)[1]
-a_dog <- NS * get("dog", freq_prime) / get("dog", freq) * l_w / l_ns
+a_dog <- NS * get(wd, freq_prime) / get(wd, freq) * l_w / l_ns
 a_dog
 
 x <- c(rep(c(1), each=l_w), rep(c(0), each=l_ns))
-
+x
 
 c_j <- rbind(e_j, e_j_neg)
+c_j
 dim(c_j)
-train_dat <- list(x=x, D=dim(c_j)[2], J=dim(c_j)[1], c_j=c_j)
-fit1 <- stan(file = "bernoulli_embeddings.stan", data=train_dat)
+train_dat <- list(x=x, D=dim(c_j)[2], J=dim(c_j)[1], c_j=c_j, a=a_dog)
+fit1 <- stan(file = "bernoulli_embeddings.stan", data=train_dat, chains=2)
+fit1
+
+params = extract(fit1)
+dim(params)
+rho <-params$rho
+dim(rho)
+np$save("rho.npy", rho)
+
+ll <-params$lp__
+install.packages("ramify")
+library(ramify)
+argmax(data.frame(ll), rows=FALSE)
+max(ll)
+ll[1342]
