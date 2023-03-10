@@ -85,6 +85,9 @@ def bootstrap_intervals(target, words):
             sim = cossim(rho_target, rho_wd)
             ranges[wd] = ranges.get(wd, []) + [sim]
 
+    for wd, r in ranges.items():
+        print(wd, np.mean(r), np.std(r)) 
+        
     return ranges
 
 if __name__ == "__main__":
@@ -92,7 +95,6 @@ if __name__ == "__main__":
     target = "dog"
     wds = get_words(folder)
     print(wds)
-    hmc_intervals(target, wds)
+    hmc = hmc_intervals(target, wds)
     boostrap = bootstrap_intervals(target, wds)
-    print(boostrap)
-    vi_intervals(target, wds)
+    vi = vi_intervals(target, wds)
