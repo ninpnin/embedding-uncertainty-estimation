@@ -44,6 +44,52 @@ def random_eta(rho_mean, alpha_mean, rho_cov, alpha_cov):
     a = np.random.multivariate_normal(alpha_mean, alpha_cov)
     return dot(r, a)
 
+def generate_embedding(rho_mean, alpha_mean, rho_cov, alpha_cov, words, ws=5):
+    dim = rho_mean.shape[0]
+    e = Embedding(set(words), dimensionality=dim)
+
+    for wd in pb.progressbar(words):
+        ws_prime = (ws * 2)
+        r = np.random.multivariate_normal(rho_mean, rho_cov)
+
+        # Ensure that the sum of WS alphas is going to have the correct mean/cov
+        a = np.random.multivariate_normal(alpha_mean / ws_prime, alpha_cov / ws_prime)
+        e[wd] = r
+        e[wd + "_c"] = a
+
+    return e
+
+def generate_dataset(e, ws=5, size=20000):
+    vocab = [wd for wd in e.vocabulary if "_c" not in wd]
+    i = []
+    j = []
+    x = []
+
+    for _ in pb.progressbar(list(range(size))):
+        i_sample = tf.constant(np.random.choice(vocab))
+        j_sample = tf.constant(np.random.choice(vocab, size=ws*2))
+        j_sample = j_sample + "_c"
+        alpha = tf.reduce_sum(e[j_sample], axis=0)
+        rho = e[i_sample]
+
+        eta = tf.sigmoid(dot(alpha, rho))
+        print(eta)
+
+        x_sample = 0.0
+        if np.random.rand() <= eta:
+            x_sample = 1.0
+
+        i.append(str(i_sample))
+        j.append(j_sample)
+        x.append(x_sample)
+
+    i = tf.constant(i)
+    j = tf.stack(j, axis=1)
+    x = tf.constant(x)
+    print("x mean", tf.reduce_mean(x))
+    return i, j, x
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
@@ -57,13 +103,14 @@ if __name__ == "__main__":
     rho_mean, alpha_mean, rho_cov, alpha_cov = mean_and_cov(e, text)
     
     print(rho_mean)
+    print(alpha_mean)
     print(dot(rho_mean, alpha_mean))
     print(tf.sigmoid(dot(rho_mean, alpha_mean)))
 
     etas = []
     probs = []
 
-    for _ in pb.progressbar(range(1000)):
+    for _ in pb.progressbar(range(100)):
         eta = random_eta(rho_mean, alpha_mean, rho_cov, alpha_cov)
         prob = tf.sigmoid(eta)
         etas.append(eta)
@@ -71,4 +118,14 @@ if __name__ == "__main__":
 
     print(np.mean(probs))
     print(np.array(etas))
+
+    vocab_prime = list(set(text[:250]))
+    e_prime = generate_embedding(rho_mean, alpha_mean, rho_cov, alpha_cov, vocab_prime)
+    e_prime.save("e_sim.pkl")
+
+    i, j, x = generate_dataset(e_prime, ws=5, size=20000)
+
+    print(i)
+    print(j)
+    print(x)
 
