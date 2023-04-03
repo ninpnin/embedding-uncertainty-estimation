@@ -1,6 +1,7 @@
 import numpy as np
 import progressbar as pb
 from pathlib import Path
+import progressbar
 
 def get_probs(text):
     lm = {}
@@ -14,16 +15,22 @@ def get_probs(text):
     return lm
 
 def sample(x, lm, vocab, A=0.5):
-    estim_probs = lm.get(x, dict())
-    vocab = list(vocab)
-    unnormalized_probs = {wd: estim_probs.get(wd, 0.0) + A for wd in vocab}
-    valuesum = sum(unnormalized_probs.values())
-    probs = {wd: val / valuesum for wd, val in unnormalized_probs.items()}
+    probs = lm.get(x, dict())
     theta = [probs[wd] for wd in vocab]
     x_prime = np.random.choice(len(vocab), p=theta)
     x_prime = vocab[x_prime]
     return x_prime
 
+def smoothen_lm(lm, A=0.5):
+    print("Smoothen lm...")
+    for wd in lm:
+        unnormalized_probs = lm[wd]
+        unnormalized_probs = {wd: unnormalized_probs.get(wd, 0.0) + A for wd in lm}
+        valuesum = sum(unnormalized_probs.values())
+        probs = {wd: val / valuesum for wd, val in unnormalized_probs.items()}
+        lm[wd] = probs
+
+    return lm
 
 if __name__ == "__main__":
     import argparse
@@ -34,15 +41,18 @@ if __name__ == "__main__":
     parser.add_argument("--smoothing", type=float, default=0.0001)
     args = parser.parse_args()
     
-    text = open(args.data).read().lower().split()
-    vocab = set(text)
-
+    text = open(args.data).read().lower()
+    text = text.replace(",", "").replace(".", "").replace("?", "")
+    text = text.split()
+    vocab = list(set(text))
 
     lm = get_probs(text)
+    lm = smoothen_lm(lm, A=args.smoothing)
+
     data = []
 
     x = np.random.choice(list(vocab))
-    for i in range(args.N):
+    for i in progressbar.progressbar(range(args.N)):
         data.append(x)
         x = sample(x, lm, vocab, A=args.smoothing)
 
