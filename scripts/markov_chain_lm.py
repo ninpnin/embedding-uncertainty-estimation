@@ -23,9 +23,9 @@ def sample(x, lm, vocab, A=0.5):
 
 def smoothen_lm(lm, A=0.5):
     C = len(lm)
-    print(f"Smoothen lm with constant {A}")
+    #print(f"Smoothen lm with constant {A}")
     A = A / C
-    print(f"Adjusted smoothing constant {A}")
+    #print(f"Adjusted smoothing constant {A}")
     for wd in lm:
         unnormalized_probs = lm[wd]
         unnormalized_probs = {wd: unnormalized_probs.get(wd, 0.0) + A for wd in lm}
@@ -46,9 +46,8 @@ if __name__ == "__main__":
     text = open(args.data).read().lower()
     text = text.replace(",", "").replace(".", "").replace("?", "")
     text = text.split()
-    print(text[:10])
+    #print(text[:10])
     vocab = list(set(text))
-    print("'anarchism' in vocab", 'anarchism' in vocab)
 
     lm = get_probs(text)
     lm = smoothen_lm(lm, A=args.smoothing)
