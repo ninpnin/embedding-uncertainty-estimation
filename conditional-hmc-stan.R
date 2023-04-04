@@ -2,7 +2,7 @@ library(reticulate)
 library(rjson)
 library(rstan)
 
-wd <- "dog"
+wd <- "cat"
 NS <- 5
 setwd("~/Work/embedding-uncertainty-estimation")
 
@@ -36,11 +36,6 @@ params = extract(fit1)
 dim(params)
 rho <-params$rho
 dim(rho)
-np$save("rho.npy", rho)
-
-ll <-params$lp__
-install.packages("ramify")
-library(ramify)
-argmax(data.frame(ll), rows=FALSE)
-max(ll)
-ll[1342]
+embedding_path <- paste("trained/rho_", wd, ".npy", sep = "")
+embedding_path
+np$save(embedding_path, rho)
