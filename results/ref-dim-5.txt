@@ -1,0 +1,878 @@
+['done', "i'm", 'not', 'the', 'rain', 'will', 'kill', 'us', 'all', 'we']
+Train on a text of length 5000000 with a vocabulary size of 133
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931147581818421
+Epoch 1
+validate...
+Mean validation likelihood: -0.2710870491259456
+-0.2710870491259456 is better than previous best -0.6931147581818421
+Epoch 2
+validate...
+Mean validation likelihood: -0.20511724476479948
+-0.20511724476479948 is better than previous best -0.2710870491259456
+Epoch 3
+validate...
+Mean validation likelihood: -0.18534484154321976
+-0.18534484154321976 is better than previous best -0.20511724476479948
+Epoch 4
+validate...
+Mean validation likelihood: -0.17634414582716107
+-0.17634414582716107 is better than previous best -0.18534484154321976
+Epoch 5
+validate...
+Mean validation likelihood: -0.17122653647333966
+-0.17122653647333966 is better than previous best -0.17634414582716107
+Epoch 6
+validate...
+Mean validation likelihood: -0.16795206912068886
+-0.16795206912068886 is better than previous best -0.17122653647333966
+Epoch 7
+validate...
+Mean validation likelihood: -0.16605641364962898
+-0.16605641364962898 is better than previous best -0.16795206912068886
+Epoch 8
+validate...
+Mean validation likelihood: -0.16439929883438037
+-0.16439929883438037 is better than previous best -0.16605641364962898
+Epoch 9
+validate...
+Mean validation likelihood: -0.16282034582950686
+-0.16282034582950686 is better than previous best -0.16439929883438037
+Epoch 10
+validate...
+Mean validation likelihood: -0.16202822913272397
+-0.16202822913272397 is better than previous best -0.16282034582950686
+Epoch 11
+validate...
+Mean validation likelihood: -0.16103480338411807
+-0.16103480338411807 is better than previous best -0.16202822913272397
+Epoch 12
+validate...
+Mean validation likelihood: -0.16060414846634635
+-0.16060414846634635 is better than previous best -0.16103480338411807
+Epoch 13
+validate...
+Mean validation likelihood: -0.16022166895026024
+-0.16022166895026024 is better than previous best -0.16060414846634635
+Epoch 14
+validate...
+Mean validation likelihood: -0.15963063792301457
+-0.15963063792301457 is better than previous best -0.16022166895026024
+Epoch 15
+validate...
+Mean validation likelihood: -0.15954578429804786
+-0.15954578429804786 is better than previous best -0.15963063792301457
+Epoch 16
+validate...
+Mean validation likelihood: -0.15935062974726272
+-0.15935062974726272 is better than previous best -0.15954578429804786
+Epoch 17
+validate...
+Mean validation likelihood: -0.15906679499178192
+-0.15906679499178192 is better than previous best -0.15935062974726272
+Epoch 18
+validate...
+Mean validation likelihood: -0.1587999478545853
+-0.1587999478545853 is better than previous best -0.15906679499178192
+Epoch 19
+validate...
+Mean validation likelihood: -0.15862330695119875
+-0.15862330695119875 is better than previous best -0.1587999478545853
+Epoch 20
+validate...
+Mean validation likelihood: -0.15847089217568064
+-0.15847089217568064 is better than previous best -0.15862330695119875
+Epoch 21
+validate...
+Mean validation likelihood: -0.1583546448593362
+-0.1583546448593362 is better than previous best -0.15847089217568064
+Epoch 22
+validate...
+Mean validation likelihood: -0.15808637809886875
+-0.15808637809886875 is better than previous best -0.1583546448593362
+Epoch 23
+validate...
+Mean validation likelihood: -0.15790499654937482
+-0.15790499654937482 is better than previous best -0.15808637809886875
+Epoch 24
+validate...
+Mean validation likelihood: -0.15787091555071908
+-0.15787091555071908 is better than previous best -0.15790499654937482
+Epoch 25
+validate...
+Mean validation likelihood: -0.15786941529915038
+-0.15786941529915038 is better than previous best -0.15787091555071908
+Epoch 26
+validate...
+Mean validation likelihood: -0.15781195888980423
+-0.15781195888980423 is better than previous best -0.15786941529915038
+Epoch 27
+validate...
+Mean validation likelihood: -0.15771877784235572
+-0.15771877784235572 is better than previous best -0.15781195888980423
+Epoch 28
+validate...
+Mean validation likelihood: -0.15760150382772206
+-0.15760150382772206 is better than previous best -0.15771877784235572
+Epoch 29
+validate...
+Mean validation likelihood: -0.15771662225180136
+Epoch 30
+validate...
+Mean validation likelihood: -0.15743891731238052
+-0.15743891731238052 is better than previous best -0.15760150382772206
+Epoch 31
+validate...
+Mean validation likelihood: -0.15737243540055695
+-0.15737243540055695 is better than previous best -0.15743891731238052
+Epoch 32
+validate...
+Mean validation likelihood: -0.1574823406710281
+Epoch 33
+validate...
+Mean validation likelihood: -0.15738630740867185
+Epoch 34
+validate...
+Mean validation likelihood: -0.15743598536096737
+Epoch 35
+validate...
+Mean validation likelihood: -0.15742542295072706
+Epoch 36
+validate...
+Mean validation likelihood: -0.15732407328728665
+-0.15732407328728665 is better than previous best -0.15737243540055695
+Epoch 37
+validate...
+Mean validation likelihood: -0.15731407433829567
+-0.15731407433829567 is better than previous best -0.15732407328728665
+Epoch 38
+validate...
+Mean validation likelihood: -0.15753491509968864
+Epoch 39
+validate...
+Mean validation likelihood: -0.15733056657743358
+Epoch 40
+validate...
+Mean validation likelihood: -0.1571853845055258
+-0.1571853845055258 is better than previous best -0.15731407433829567
+Epoch 41
+validate...
+Mean validation likelihood: -0.15743279741709482
+Epoch 42
+validate...
+Mean validation likelihood: -0.15717049168599057
+-0.15717049168599057 is better than previous best -0.1571853845055258
+Epoch 43
+validate...
+Mean validation likelihood: -0.15706192202139288
+-0.15706192202139288 is better than previous best -0.15717049168599057
+Epoch 44
+validate...
+Mean validation likelihood: -0.15716770855687692
+Epoch 45
+validate...
+Mean validation likelihood: -0.15715978762979327
+Epoch 46
+validate...
+Mean validation likelihood: -0.15707362788897222
+Epoch 47
+validate...
+Mean validation likelihood: -0.15719620086259148
+Epoch 48
+validate...
+Mean validation likelihood: -0.1571000479506514
+Epoch 49
+validate...
+Mean validation likelihood: -0.15699460828874956
+-0.15699460828874956 is better than previous best -0.15706192202139288
+Epoch 50
+validate...
+Mean validation likelihood: -0.15706494880308228
+Epoch 51
+validate...
+Mean validation likelihood: -0.15696142309771935
+-0.15696142309771935 is better than previous best -0.15699460828874956
+Epoch 52
+validate...
+Mean validation likelihood: -0.15693603892360836
+-0.15693603892360836 is better than previous best -0.15696142309771935
+Epoch 53
+validate...
+Mean validation likelihood: -0.15695174548534419
+Epoch 54
+validate...
+Mean validation likelihood: -0.1568513888599399
+-0.1568513888599399 is better than previous best -0.15693603892360836
+Epoch 55
+validate...
+Mean validation likelihood: -0.15695267530282198
+Epoch 56
+validate...
+Mean validation likelihood: -0.15698173088218084
+Epoch 57
+validate...
+Mean validation likelihood: -0.15675268070128612
+-0.15675268070128612 is better than previous best -0.1568513888599399
+Epoch 58
+validate...
+Mean validation likelihood: -0.1568614905065054
+Epoch 59
+validate...
+Mean validation likelihood: -0.1567736685990798
+Epoch 60
+validate...
+Mean validation likelihood: -0.15677043911545493
+Epoch 61
+validate...
+Mean validation likelihood: -0.15675992546654166
+Epoch 62
+validate...
+Mean validation likelihood: -0.15670365937871794
+-0.15670365937871794 is better than previous best -0.15675268070128612
+Epoch 63
+validate...
+Mean validation likelihood: -0.15665667073678932
+-0.15665667073678932 is better than previous best -0.15670365937871794
+Epoch 64
+validate...
+Mean validation likelihood: -0.15671490282322126
+Epoch 65
+validate...
+Mean validation likelihood: -0.1566719675817338
+Epoch 66
+validate...
+Mean validation likelihood: -0.15661229701868307
+-0.15661229701868307 is better than previous best -0.15665667073678932
+Epoch 67
+validate...
+Mean validation likelihood: -0.15657450461279007
+-0.15657450461279007 is better than previous best -0.15661229701868307
+Epoch 68
+validate...
+Mean validation likelihood: -0.15662573175093766
+Epoch 69
+validate...
+Mean validation likelihood: -0.15668025667727883
+Epoch 70
+validate...
+Mean validation likelihood: -0.15658300563269592
+Epoch 71
+validate...
+Mean validation likelihood: -0.15654549357282546
+-0.15654549357282546 is better than previous best -0.15657450461279007
+Epoch 72
+validate...
+Mean validation likelihood: -0.15642020838545131
+-0.15642020838545131 is better than previous best -0.15654549357282546
+Epoch 73
+validate...
+Mean validation likelihood: -0.15643053813829189
+Epoch 74
+validate...
+Mean validation likelihood: -0.15642921085884492
+Epoch 75
+validate...
+Mean validation likelihood: -0.1566220456851002
+Epoch 76
+validate...
+Mean validation likelihood: -0.15656975330767728
+Epoch 77
+validate...
+Mean validation likelihood: -0.15654622349200756
+Epoch 78
+validate...
+Mean validation likelihood: -0.15665447543539887
+Epoch 79
+validate...
+Mean validation likelihood: -0.1564957025049476
+Epoch 80
+validate...
+Mean validation likelihood: -0.15656687208247716
+Epoch 81
+validate...
+Mean validation likelihood: -0.15644196014459014
+Epoch 82
+validate...
+Mean validation likelihood: -0.15667751256784254
+Epoch 83
+validate...
+Mean validation likelihood: -0.15641457414255988
+-0.15641457414255988 is better than previous best -0.15642020838545131
+Epoch 84
+validate...
+Mean validation likelihood: -0.15655250103084298
+Epoch 85
+validate...
+Mean validation likelihood: -0.15641534189997705
+Epoch 86
+validate...
+Mean validation likelihood: -0.15660872762489322
+Epoch 87
+validate...
+Mean validation likelihood: -0.1563053479894901
+-0.1563053479894901 is better than previous best -0.15641457414255988
+Epoch 88
+validate...
+Mean validation likelihood: -0.15637227793616812
+Epoch 89
+validate...
+Mean validation likelihood: -0.15631011520640842
+Epoch 90
+validate...
+Mean validation likelihood: -0.1564613479562382
+Epoch 91
+validate...
+Mean validation likelihood: -0.15650809061954243
+Epoch 92
+validate...
+Mean validation likelihood: -0.15640883487981078
+Epoch 93
+validate...
+Mean validation likelihood: -0.15632331460807897
+Epoch 94
+validate...
+Mean validation likelihood: -0.15633170981017006
+Epoch 95
+validate...
+Mean validation likelihood: -0.15643600236763067
+Epoch 96
+validate...
+Mean validation likelihood: -0.1562744986066419
+-0.1562744986066419 is better than previous best -0.1563053479894901
+Epoch 97
+validate...
+Mean validation likelihood: -0.15646343541890137
+Epoch 98
+validate...
+Mean validation likelihood: -0.15654265907181225
+Epoch 99
+validate...
+Mean validation likelihood: -0.156334234570804
+['fill', 'us', 'one']
+tf.Tensor(
+[[37.26646975 26.76549176 10.51470916]
+ [26.76549176 66.24448416 29.20985984]
+ [10.51470916 29.20985984 96.78559933]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.6932308448918115
+Epoch 1
+validate...
+Mean validation likelihood: -0.27383730403828255
+-0.27383730403828255 is better than previous best -0.6932308448918115
+Epoch 2
+validate...
+Mean validation likelihood: -0.2007360516704572
+-0.2007360516704572 is better than previous best -0.27383730403828255
+Epoch 3
+validate...
+Mean validation likelihood: -0.18198398010000397
+-0.18198398010000397 is better than previous best -0.2007360516704572
+Epoch 4
+validate...
+Mean validation likelihood: -0.17445618358262116
+-0.17445618358262116 is better than previous best -0.18198398010000397
+Epoch 5
+validate...
+Mean validation likelihood: -0.1708673383841752
+-0.1708673383841752 is better than previous best -0.17445618358262116
+Epoch 6
+validate...
+Mean validation likelihood: -0.16868465670633723
+-0.16868465670633723 is better than previous best -0.1708673383841752
+Epoch 7
+validate...
+Mean validation likelihood: -0.16738227629288654
+-0.16738227629288654 is better than previous best -0.16868465670633723
+Epoch 8
+validate...
+Mean validation likelihood: -0.16633087400336968
+-0.16633087400336968 is better than previous best -0.16738227629288654
+Epoch 9
+validate...
+Mean validation likelihood: -0.1653009018069474
+-0.1653009018069474 is better than previous best -0.16633087400336968
+Epoch 10
+validate...
+Mean validation likelihood: -0.16482712559048376
+-0.16482712559048376 is better than previous best -0.1653009018069474
+Epoch 11
+validate...
+Mean validation likelihood: -0.1639947796405291
+-0.1639947796405291 is better than previous best -0.16482712559048376
+Epoch 12
+validate...
+Mean validation likelihood: -0.16369275281039777
+-0.16369275281039777 is better than previous best -0.1639947796405291
+Epoch 13
+validate...
+Mean validation likelihood: -0.16325668114284503
+-0.16325668114284503 is better than previous best -0.16369275281039777
+Epoch 14
+validate...
+Mean validation likelihood: -0.16295868770433247
+-0.16295868770433247 is better than previous best -0.16325668114284503
+Epoch 15
+validate...
+Mean validation likelihood: -0.16247641763315904
+-0.16247641763315904 is better than previous best -0.16295868770433247
+Epoch 16
+validate...
+Mean validation likelihood: -0.1621964794460377
+-0.1621964794460377 is better than previous best -0.16247641763315904
+Epoch 17
+validate...
+Mean validation likelihood: -0.16189483915636346
+-0.16189483915636346 is better than previous best -0.1621964794460377
+Epoch 18
+validate...
+Mean validation likelihood: -0.16168007571192822
+-0.16168007571192822 is better than previous best -0.16189483915636346
+Epoch 19
+validate...
+Mean validation likelihood: -0.16146960647403447
+-0.16146960647403447 is better than previous best -0.16168007571192822
+Epoch 20
+validate...
+Mean validation likelihood: -0.1613497346558924
+-0.1613497346558924 is better than previous best -0.16146960647403447
+Epoch 21
+validate...
+Mean validation likelihood: -0.16118359302744117
+-0.16118359302744117 is better than previous best -0.1613497346558924
+Epoch 22
+validate...
+Mean validation likelihood: -0.16110871519513606
+-0.16110871519513606 is better than previous best -0.16118359302744117
+Epoch 23
+validate...
+Mean validation likelihood: -0.1610068089166564
+-0.1610068089166564 is better than previous best -0.16110871519513606
+Epoch 24
+validate...
+Mean validation likelihood: -0.16082196127403217
+-0.16082196127403217 is better than previous best -0.1610068089166564
+Epoch 25
+validate...
+Mean validation likelihood: -0.16064210831440018
+-0.16064210831440018 is better than previous best -0.16082196127403217
+Epoch 26
+validate...
+Mean validation likelihood: -0.16032548695793927
+-0.16032548695793927 is better than previous best -0.16064210831440018
+Epoch 27
+validate...
+Mean validation likelihood: -0.16017373430464318
+-0.16017373430464318 is better than previous best -0.16032548695793927
+Epoch 28
+validate...
+Mean validation likelihood: -0.16020522463781947
+Epoch 29
+validate...
+Mean validation likelihood: -0.16013297787814276
+-0.16013297787814276 is better than previous best -0.16017373430464318
+Epoch 30
+validate...
+Mean validation likelihood: -0.15994147009575027
+-0.15994147009575027 is better than previous best -0.16013297787814276
+Epoch 31
+validate...
+Mean validation likelihood: -0.15978171047508155
+-0.15978171047508155 is better than previous best -0.15994147009575027
+Epoch 32
+validate...
+Mean validation likelihood: -0.15964121876998202
+-0.15964121876998202 is better than previous best -0.15978171047508155
+Epoch 33
+validate...
+Mean validation likelihood: -0.15982932005599979
+Epoch 34
+validate...
+Mean validation likelihood: -0.15970606108763413
+Epoch 35
+validate...
+Mean validation likelihood: -0.15950791570095682
+-0.15950791570095682 is better than previous best -0.15964121876998202
+Epoch 36
+validate...
+Mean validation likelihood: -0.1596475324114405
+Epoch 37
+validate...
+Mean validation likelihood: -0.15945873389256937
+-0.15945873389256937 is better than previous best -0.15950791570095682
+Epoch 38
+validate...
+Mean validation likelihood: -0.15931740963077534
+-0.15931740963077534 is better than previous best -0.15945873389256937
+Epoch 39
+validate...
+Mean validation likelihood: -0.1593428594092594
+Epoch 40
+validate...
+Mean validation likelihood: -0.159182947876227
+-0.159182947876227 is better than previous best -0.15931740963077534
+Epoch 41
+validate...
+Mean validation likelihood: -0.15924232969082405
+Epoch 42
+validate...
+Mean validation likelihood: -0.15930752997743522
+Epoch 43
+validate...
+Mean validation likelihood: -0.15900004463681855
+-0.15900004463681855 is better than previous best -0.159182947876227
+Epoch 44
+validate...
+Mean validation likelihood: -0.15905464141625042
+Epoch 45
+validate...
+Mean validation likelihood: -0.15911544670834515
+Epoch 46
+validate...
+Mean validation likelihood: -0.159145415792839
+Epoch 47
+validate...
+Mean validation likelihood: -0.15896205274405914
+-0.15896205274405914 is better than previous best -0.15900004463681855
+Epoch 48
+validate...
+Mean validation likelihood: -0.159004223567408
+Epoch 49
+validate...
+Mean validation likelihood: -0.15889755821527216
+-0.15889755821527216 is better than previous best -0.15896205274405914
+Epoch 50
+validate...
+Mean validation likelihood: -0.15893999901141548
+Epoch 51
+validate...
+Mean validation likelihood: -0.15911999649114786
+Epoch 52
+validate...
+Mean validation likelihood: -0.15888646663511002
+-0.15888646663511002 is better than previous best -0.15889755821527216
+Epoch 53
+validate...
+Mean validation likelihood: -0.15894581196294486
+Epoch 54
+validate...
+Mean validation likelihood: -0.1588363348498433
+-0.1588363348498433 is better than previous best -0.15888646663511002
+Epoch 55
+validate...
+Mean validation likelihood: -0.1589571175856275
+Epoch 56
+validate...
+Mean validation likelihood: -0.1587944235107781
+-0.1587944235107781 is better than previous best -0.1588363348498433
+Epoch 57
+validate...
+Mean validation likelihood: -0.1587927439376299
+-0.1587927439376299 is better than previous best -0.1587944235107781
+Epoch 58
+validate...
+Mean validation likelihood: -0.1589600535130099
+Epoch 59
+validate...
+Mean validation likelihood: -0.158830279012047
+Epoch 60
+validate...
+Mean validation likelihood: -0.15872240589844128
+-0.15872240589844128 is better than previous best -0.1587927439376299
+Epoch 61
+validate...
+Mean validation likelihood: -0.1586945164393342
+-0.1586945164393342 is better than previous best -0.15872240589844128
+Epoch 62
+validate...
+Mean validation likelihood: -0.15877205145751713
+Epoch 63
+validate...
+Mean validation likelihood: -0.15861249830677682
+-0.15861249830677682 is better than previous best -0.1586945164393342
+Epoch 64
+validate...
+Mean validation likelihood: -0.15875137345884976
+Epoch 65
+validate...
+Mean validation likelihood: -0.15883791084202634
+Epoch 66
+validate...
+Mean validation likelihood: -0.15889132291577648
+Epoch 67
+validate...
+Mean validation likelihood: -0.1585965977276756
+-0.1585965977276756 is better than previous best -0.15861249830677682
+Epoch 68
+validate...
+Mean validation likelihood: -0.15870548851109476
+Epoch 69
+validate...
+Mean validation likelihood: -0.15858433016400011
+-0.15858433016400011 is better than previous best -0.1585965977276756
+Epoch 70
+validate...
+Mean validation likelihood: -0.15853399702702056
+-0.15853399702702056 is better than previous best -0.15858433016400011
+Epoch 71
+validate...
+Mean validation likelihood: -0.15866185649881004
+Epoch 72
+validate...
+Mean validation likelihood: -0.15854668355423504
+Epoch 73
+validate...
+Mean validation likelihood: -0.1586898691835019
+Epoch 74
+validate...
+Mean validation likelihood: -0.15859978116044335
+Epoch 75
+validate...
+Mean validation likelihood: -0.158551449483134
+Epoch 76
+validate...
+Mean validation likelihood: -0.1584582292157455
+-0.1584582292157455 is better than previous best -0.15853399702702056
+Epoch 77
+validate...
+Mean validation likelihood: -0.15860519004722545
+Epoch 78
+validate...
+Mean validation likelihood: -0.15853487353354387
+Epoch 79
+validate...
+Mean validation likelihood: -0.1585707937854234
+Epoch 80
+validate...
+Mean validation likelihood: -0.15852801803079644
+Epoch 81
+validate...
+Mean validation likelihood: -0.15848736922866508
+Epoch 82
+validate...
+Mean validation likelihood: -0.15839725446913838
+-0.15839725446913838 is better than previous best -0.1584582292157455
+Epoch 83
+validate...
+Mean validation likelihood: -0.15843964286457554
+Epoch 84
+validate...
+Mean validation likelihood: -0.15838517591091994
+-0.15838517591091994 is better than previous best -0.15839725446913838
+Epoch 85
+validate...
+Mean validation likelihood: -0.158230543514194
+-0.158230543514194 is better than previous best -0.15838517591091994
+Epoch 86
+validate...
+Mean validation likelihood: -0.15839053806115036
+Epoch 87
+validate...
+Mean validation likelihood: -0.1583631323124371
+Epoch 88
+validate...
+Mean validation likelihood: -0.1581838585734781
+-0.1581838585734781 is better than previous best -0.158230543514194
+Epoch 89
+validate...
+Mean validation likelihood: -0.15838972155021894
+Epoch 90
+validate...
+Mean validation likelihood: -0.158301758620711
+Epoch 91
+validate...
+Mean validation likelihood: -0.15840376986237956
+Epoch 92
+validate...
+Mean validation likelihood: -0.1582768770394225
+Epoch 93
+validate...
+Mean validation likelihood: -0.15828514055151743
+Epoch 94
+validate...
+Mean validation likelihood: -0.1583297938471679
+Epoch 95
+validate...
+Mean validation likelihood: -0.15832007483706656
+Epoch 96
+validate...
+Mean validation likelihood: -0.15822606508441692
+Epoch 97
+validate...
+Mean validation likelihood: -0.1582859321501944
+Epoch 98
+validate...
+Mean validation likelihood: -0.15825254992867177
+Epoch 99
+validate...
+Mean validation likelihood: -0.15813983750595584
+-0.15813983750595584 is better than previous best -0.1581838585734781
+['fill', 'us', 'one']
+tf.Tensor(
+[[ 30.73488627  18.72873204  24.15864552]
+ [ 18.72873204 115.43964344  70.21744509]
+ [ 24.15864552  70.21744509  98.44722862]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931591332211486
+Epoch 1
+validate...
+Mean validation likelihood: -0.2695055850938909
+-0.2695055850938909 is better than previous best -0.6931591332211486
+Epoch 2
+validate...
+Mean validation likelihood: -0.19724462900804032
+-0.19724462900804032 is better than previous best -0.2695055850938909
+Epoch 3
+validate...
+Mean validation likelihood: -0.1783492112489444
+-0.1783492112489444 is better than previous best -0.19724462900804032
+Epoch 4
+validate...
+Mean validation likelihood: -0.1706742204904724
+-0.1706742204904724 is better than previous best -0.1783492112489444
+Epoch 5
+validate...
+Mean validation likelihood: -0.16687026519603787
+-0.16687026519603787 is better than previous best -0.1706742204904724
+Epoch 6
+validate...
+Mean validation likelihood: -0.16490110753935833
+-0.16490110753935833 is better than previous best -0.16687026519603787
+Epoch 7
+validate...
+Mean validation likelihood: -0.16339012046101897
+-0.16339012046101897 is better than previous best -0.16490110753935833
+Epoch 8
+validate...
+Mean validation likelihood: -0.1625852638996239
+-0.1625852638996239 is better than previous best -0.16339012046101897
+Epoch 9
+validate...
+Mean validation likelihood: -0.16194602027427485
+-0.16194602027427485 is better than previous best -0.1625852638996239
+Epoch 10
+validate...
+Mean validation likelihood: -0.16164173911856963
+-0.16164173911856963 is better than previous best -0.16194602027427485
+Epoch 11
+validate...
+Mean validation likelihood: -0.1613657965128272
+-0.1613657965128272 is better than previous best -0.16164173911856963
+Epoch 12
+validate...
+Mean validation likelihood: -0.1608962318704316
+-0.1608962318704316 is better than previous best -0.1613657965128272
+Epoch 13
+validate...
+Mean validation likelihood: -0.16078448662921327
+-0.16078448662921327 is better than previous best -0.1608962318704316
+Epoch 14
+validate...
+Mean validation likelihood: -0.16055391621531545
+-0.16055391621531545 is better than previous best -0.16078448662921327
+Epoch 15
+validate...
+Mean validation likelihood: -0.16042945969417632
+-0.16042945969417632 is better than previous best -0.16055391621531545
+Epoch 16
+validate...
+Mean validation likelihood: -0.16030452753701413
+-0.16030452753701413 is better than previous best -0.16042945969417632
+Epoch 17
+validate...
+Mean validation likelihood: -0.16013446424851857
+-0.16013446424851857 is better than previous best -0.16030452753701413
+Epoch 18
+validate...
+Mean validation likelihood: -0.1599253580796719
+-0.1599253580796719 is better than previous best -0.16013446424851857
+Epoch 19
+validate...
+Mean validation likelihood: -0.1598313432787771
+-0.1598313432787771 is better than previous best -0.1599253580796719
+Epoch 20
+validate...
+Mean validation likelihood: -0.15952888757318595
+-0.15952888757318595 is better than previous best -0.1598313432787771
+Epoch 21
+validate...
+Mean validation likelihood: -0.15965581320107197
+Epoch 22
+validate...
+Mean validation likelihood: -0.15940366211635273
+-0.15940366211635273 is better than previous best -0.15952888757318595
+Epoch 23
+validate...
+Mean validation likelihood: -0.15930802306471603
+-0.15930802306471603 is better than previous best -0.15940366211635273
+Epoch 24
+validate...
+Mean validation likelihood: -0.15911725802379034
+-0.15911725802379034 is better than previous best -0.15930802306471603
+Epoch 25
+validate...
+Mean validation likelihood: -0.15919029424312134
+Epoch 26
+validate...
+Mean validation likelihood: -0.15894647768221626
+-0.15894647768221626 is better than previous best -0.15911725802379034
+Epoch 27
+validate...
+Mean validation likelihood: -0.15897989889728073
+Epoch 28
+validate...
+Mean validation likelihood: -0.15881097243731584
+-0.15881097243731584 is better than previous best -0.15894647768221626
+Epoch 29
+validate...
+Mean validation likelihood: -0.15887833083907343
+Epoch 30
+validate...
+Mean validation likelihood: -0.1586089477923003
+-0.1586089477923003 is better than previous best -0.15881097243731584
+Epoch 31
+validate...
+Mean validation likelihood: -0.15873076878500628
+Epoch 32
+validate...
+Mean validation likelihood: -0.15860687676835614
+-0.15860687676835614 is better than previous best -0.1586089477923003
+Epoch 33
+validate...
+Mean validation likelihood: -0.15851164333322368
+-0.15851164333322368 is better than previous best -0.15860687676835614
+Epoch 34
+validate...
+Mean validation likelihood: -0.15851115531859544
+-0.15851115531859544 is better than previous best -0.15851164333322368
+Epoch 35
+validate...
+Mean validation likelihood: -0.15841076589975114
+-0.15841076589975114 is better than previous best -0.15851115531859544
+Epoch 36
+validate...
+Mean validation likelihood: -0.1584874973617718
+Epoch 37
+validate...
+Mean validation likelihood: -0.15833441365259282
+-0.15833441365259282 is better than previous best -0.15841076589975114
+Epoch 38
+validate...
+Mean validation likelihood: -0.15847079009273227
+Epoch 39
+validate...
+Mean validation likelihood: -0.15840854267800905
+Epoch 40
+validate...
+Mean validation likelihood: -0.1585381724514878
+Epoch 41
+validate...
+Mean validation likelihood: -0.1581510398086045
+-0.1581510398086045 is better than previous best -0.15833441365259282
+Epoch 42
+validate...
+Mean validation likelihood: -0.15826141786903417
+Epoch 43
+validate...

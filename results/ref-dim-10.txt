@@ -1,0 +1,21 @@
+['done', "i'm", 'not', 'the', 'rain', 'will', 'kill', 'us', 'all', 'we']
+Train on a text of length 5000000 with a vocabulary size of 133
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931212793791426
+Epoch 1
+validate...
+Mean validation likelihood: -0.169595469065104
+-0.169595469065104 is better than previous best -0.6931212793791426
+Epoch 2
+validate...
+Mean validation likelihood: -0.13909843154036877
+-0.13909843154036877 is better than previous best -0.169595469065104
+Epoch 3
+validate...
+Mean validation likelihood: -0.13638884620716568
+-0.13638884620716568 is better than previous best -0.13909843154036877
+Epoch 4
+validate...
+Mean validation likelihood: -0.1359668724482702
+-0.1359668724482702 is better than previous best -0.13638884620716568

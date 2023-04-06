@@ -1,0 +1,425 @@
+['done', "i'm", 'not', 'the', 'rain', 'will', 'kill', 'us', 'all', 'we']
+Train on a text of length 5000000 with a vocabulary size of 133
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931471582452486
+Epoch 1
+validate...
+Mean validation likelihood: -0.20789452816231777
+-0.20789452816231777 is better than previous best -0.6931471582452486
+Epoch 2
+validate...
+Mean validation likelihood: -0.20655342727374285
+-0.20655342727374285 is better than previous best -0.20789452816231777
+Epoch 3
+validate...
+Mean validation likelihood: -0.20626687060258614
+-0.20626687060258614 is better than previous best -0.20655342727374285
+Epoch 4
+validate...
+Mean validation likelihood: -0.20605659063797102
+-0.20605659063797102 is better than previous best -0.20626687060258614
+Epoch 5
+validate...
+Mean validation likelihood: -0.20604212988567103
+-0.20604212988567103 is better than previous best -0.20605659063797102
+Epoch 6
+validate...
+Mean validation likelihood: -0.20600545754022123
+-0.20600545754022123 is better than previous best -0.20604212988567103
+Epoch 7
+validate...
+Mean validation likelihood: -0.20584731002426607
+-0.20584731002426607 is better than previous best -0.20600545754022123
+Epoch 8
+validate...
+Mean validation likelihood: -0.20584909337242538
+Epoch 9
+validate...
+Mean validation likelihood: -0.20578361583517993
+-0.20578361583517993 is better than previous best -0.20584731002426607
+['mouth', 'sinking', 'we']
+tf.Tensor(
+[[19.03691614  3.65807036  7.71206911]
+ [ 3.65807036 17.4696966   4.48974839]
+ [ 7.71206911  4.48974839 19.79966293]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931467621470552
+Epoch 1
+validate...
+Mean validation likelihood: -0.2079553310523906
+-0.2079553310523906 is better than previous best -0.6931467621470552
+Epoch 2
+validate...
+Mean validation likelihood: -0.20651028152569534
+-0.20651028152569534 is better than previous best -0.2079553310523906
+Epoch 3
+validate...
+Mean validation likelihood: -0.20621663740534119
+-0.20621663740534119 is better than previous best -0.20651028152569534
+Epoch 4
+validate...
+Mean validation likelihood: -0.2062829073205999
+Epoch 5
+validate...
+Mean validation likelihood: -0.20592434533513768
+-0.20592434533513768 is better than previous best -0.20621663740534119
+Epoch 6
+validate...
+Mean validation likelihood: -0.20602621926316925
+Epoch 7
+validate...
+Mean validation likelihood: -0.2057942840375939
+-0.2057942840375939 is better than previous best -0.20592434533513768
+Epoch 8
+validate...
+Mean validation likelihood: -0.2058853511727706
+Epoch 9
+validate...
+Mean validation likelihood: -0.2058060541201632
+['mouth', 'sinking', 'we']
+tf.Tensor(
+[[18.23325684  4.43519358  7.5165245 ]
+ [ 4.43519358 17.15359716  3.95086351]
+ [ 7.5165245   3.95086351 19.85231555]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931458123772993
+Epoch 1
+validate...
+Mean validation likelihood: -0.20795080772156316
+-0.20795080772156316 is better than previous best -0.6931458123772993
+Epoch 2
+validate...
+Mean validation likelihood: -0.20648039337225596
+-0.20648039337225596 is better than previous best -0.20795080772156316
+Epoch 3
+validate...
+Mean validation likelihood: -0.20619117040577464
+-0.20619117040577464 is better than previous best -0.20648039337225596
+Epoch 4
+validate...
+Mean validation likelihood: -0.2060456450591107
+-0.2060456450591107 is better than previous best -0.20619117040577464
+Epoch 5
+validate...
+Mean validation likelihood: -0.20587523062799246
+-0.20587523062799246 is better than previous best -0.2060456450591107
+Epoch 6
+validate...
+Mean validation likelihood: -0.2058109056363429
+-0.2058109056363429 is better than previous best -0.20587523062799246
+Epoch 7
+validate...
+Mean validation likelihood: -0.20596277934761872
+Epoch 8
+validate...
+Mean validation likelihood: -0.20589225104132988
+Epoch 9
+validate...
+Mean validation likelihood: -0.20582005547244292
+['mouth', 'sinking', 'we']
+tf.Tensor(
+[[18.48653332  4.14740152  7.2173777 ]
+ [ 4.14740152 16.98212424  3.93517683]
+ [ 7.2173777   3.93517683 19.03666966]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931491405252197
+Epoch 1
+validate...
+Mean validation likelihood: -0.20786295703077304
+-0.20786295703077304 is better than previous best -0.6931491405252197
+Epoch 2
+validate...
+Mean validation likelihood: -0.20655000146647884
+-0.20655000146647884 is better than previous best -0.20786295703077304
+Epoch 3
+validate...
+Mean validation likelihood: -0.20621223367594166
+-0.20621223367594166 is better than previous best -0.20655000146647884
+Epoch 4
+validate...
+Mean validation likelihood: -0.20614149056941908
+-0.20614149056941908 is better than previous best -0.20621223367594166
+Epoch 5
+validate...
+Mean validation likelihood: -0.20595746505107745
+-0.20595746505107745 is better than previous best -0.20614149056941908
+Epoch 6
+validate...
+Mean validation likelihood: -0.20591004315179998
+-0.20591004315179998 is better than previous best -0.20595746505107745
+Epoch 7
+validate...
+Mean validation likelihood: -0.20595771400318422
+Epoch 8
+validate...
+Mean validation likelihood: -0.20589419035575915
+-0.20589419035575915 is better than previous best -0.20591004315179998
+Epoch 9
+validate...
+Mean validation likelihood: -0.2058399559888525
+-0.2058399559888525 is better than previous best -0.20589419035575915
+['mouth', 'sinking', 'we']
+tf.Tensor(
+[[19.19406714  4.49351029  7.58933705]
+ [ 4.49351029 17.41403908  3.81407848]
+ [ 7.58933705  3.81407848 20.10645194]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.693148133634773
+Epoch 1
+validate...
+Mean validation likelihood: -0.2078663559199652
+-0.2078663559199652 is better than previous best -0.693148133634773
+Epoch 2
+validate...
+Mean validation likelihood: -0.20641785429695866
+-0.20641785429695866 is better than previous best -0.2078663559199652
+Epoch 3
+validate...
+Mean validation likelihood: -0.20622579627577475
+-0.20622579627577475 is better than previous best -0.20641785429695866
+Epoch 4
+validate...
+Mean validation likelihood: -0.20613713050353383
+-0.20613713050353383 is better than previous best -0.20622579627577475
+Epoch 5
+validate...
+Mean validation likelihood: -0.20595263695313867
+-0.20595263695313867 is better than previous best -0.20613713050353383
+Epoch 6
+validate...
+Mean validation likelihood: -0.20596022465154828
+Epoch 7
+validate...
+Mean validation likelihood: -0.20594896923027045
+-0.20594896923027045 is better than previous best -0.20595263695313867
+Epoch 8
+validate...
+Mean validation likelihood: -0.2059170479334267
+-0.2059170479334267 is better than previous best -0.20594896923027045
+Epoch 9
+validate...
+Mean validation likelihood: -0.2058946763563553
+-0.2058946763563553 is better than previous best -0.2059170479334267
+['mouth', 'sinking', 'we']
+tf.Tensor(
+[[18.96716442  3.38926774  7.6306685 ]
+ [ 3.38926774 17.52440887  4.10212931]
+ [ 7.6306685   4.10212931 19.75911187]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931494546012346
+Epoch 1
+validate...
+Mean validation likelihood: -0.20789346594637226
+-0.20789346594637226 is better than previous best -0.6931494546012346
+Epoch 2
+validate...
+Mean validation likelihood: -0.2064693484637251
+-0.2064693484637251 is better than previous best -0.20789346594637226
+Epoch 3
+validate...
+Mean validation likelihood: -0.2061592572537603
+-0.2061592572537603 is better than previous best -0.2064693484637251
+Epoch 4
+validate...
+Mean validation likelihood: -0.2060654722992256
+-0.2060654722992256 is better than previous best -0.2061592572537603
+Epoch 5
+validate...
+Mean validation likelihood: -0.205957766522981
+-0.205957766522981 is better than previous best -0.2060654722992256
+Epoch 6
+validate...
+Mean validation likelihood: -0.20598061044432572
+Epoch 7
+validate...
+Mean validation likelihood: -0.20592939898606033
+-0.20592939898606033 is better than previous best -0.205957766522981
+Epoch 8
+validate...
+Mean validation likelihood: -0.2059118314054677
+-0.2059118314054677 is better than previous best -0.20592939898606033
+Epoch 9
+validate...
+Mean validation likelihood: -0.20576914456775497
+-0.20576914456775497 is better than previous best -0.2059118314054677
+['mouth', 'sinking', 'we']
+tf.Tensor(
+[[18.36725497  3.2920948   7.74474809]
+ [ 3.2920948  16.51496822  3.92155998]
+ [ 7.74474809  3.92155998 19.8655438 ]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931477221240077
+Epoch 1
+validate...
+Mean validation likelihood: -0.20791419665527033
+-0.20791419665527033 is better than previous best -0.6931477221240077
+Epoch 2
+validate...
+Mean validation likelihood: -0.2065391909295521
+-0.2065391909295521 is better than previous best -0.20791419665527033
+Epoch 3
+validate...
+Mean validation likelihood: -0.20615481147116105
+-0.20615481147116105 is better than previous best -0.2065391909295521
+Epoch 4
+validate...
+Mean validation likelihood: -0.2060985014938325
+-0.2060985014938325 is better than previous best -0.20615481147116105
+Epoch 5
+validate...
+Mean validation likelihood: -0.20608843432768992
+-0.20608843432768992 is better than previous best -0.2060985014938325
+Epoch 6
+validate...
+Mean validation likelihood: -0.20601250607019508
+-0.20601250607019508 is better than previous best -0.20608843432768992
+Epoch 7
+validate...
+Mean validation likelihood: -0.20600612708095445
+-0.20600612708095445 is better than previous best -0.20601250607019508
+Epoch 8
+validate...
+Mean validation likelihood: -0.20582840656416335
+-0.20582840656416335 is better than previous best -0.20600612708095445
+Epoch 9
+validate...
+Mean validation likelihood: -0.20593302698289617
+['mouth', 'sinking', 'we']
+tf.Tensor(
+[[18.59010655  5.12239938  7.65364976]
+ [ 5.12239938 17.20660952  3.89249148]
+ [ 7.65364976  3.89249148 19.40235731]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931471648415929
+Epoch 1
+validate...
+Mean validation likelihood: -0.2078627353214348
+-0.2078627353214348 is better than previous best -0.6931471648415929
+Epoch 2
+validate...
+Mean validation likelihood: -0.2065920020552682
+-0.2065920020552682 is better than previous best -0.2078627353214348
+Epoch 3
+validate...
+Mean validation likelihood: -0.2062456366903374
+-0.2062456366903374 is better than previous best -0.2065920020552682
+Epoch 4
+validate...
+Mean validation likelihood: -0.20604505070701726
+-0.20604505070701726 is better than previous best -0.2062456366903374
+Epoch 5
+validate...
+Mean validation likelihood: -0.20600370376065105
+-0.20600370376065105 is better than previous best -0.20604505070701726
+Epoch 6
+validate...
+Mean validation likelihood: -0.20591755456468774
+-0.20591755456468774 is better than previous best -0.20600370376065105
+Epoch 7
+validate...
+Mean validation likelihood: -0.20591964387150533
+Epoch 8
+validate...
+Mean validation likelihood: -0.2058479619509667
+-0.2058479619509667 is better than previous best -0.20591755456468774
+Epoch 9
+validate...
+Mean validation likelihood: -0.20581385261471516
+-0.20581385261471516 is better than previous best -0.2058479619509667
+['mouth', 'sinking', 'we']
+tf.Tensor(
+[[18.46213693  4.69020679  7.40551251]
+ [ 4.69020679 16.65691735  4.3604905 ]
+ [ 7.40551251  4.3604905  19.28154989]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931487222783694
+Epoch 1
+validate...
+Mean validation likelihood: -0.20781315708828066
+-0.20781315708828066 is better than previous best -0.6931487222783694
+Epoch 2
+validate...
+Mean validation likelihood: -0.20661259532363419
+-0.20661259532363419 is better than previous best -0.20781315708828066
+Epoch 3
+validate...
+Mean validation likelihood: -0.20612131569909478
+-0.20612131569909478 is better than previous best -0.20661259532363419
+Epoch 4
+validate...
+Mean validation likelihood: -0.206057416248809
+-0.206057416248809 is better than previous best -0.20612131569909478
+Epoch 5
+validate...
+Mean validation likelihood: -0.20610153990113123
+Epoch 6
+validate...
+Mean validation likelihood: -0.20589534260023296
+-0.20589534260023296 is better than previous best -0.206057416248809
+Epoch 7
+validate...
+Mean validation likelihood: -0.20584250355291348
+-0.20584250355291348 is better than previous best -0.20589534260023296
+Epoch 8
+validate...
+Mean validation likelihood: -0.20607620148076816
+Epoch 9
+validate...
+Mean validation likelihood: -0.2059297294026973
+['mouth', 'sinking', 'we']
+tf.Tensor(
+[[18.50192046  4.74528919  7.68962247]
+ [ 4.74528919 17.40304408  3.96119631]
+ [ 7.68962247  3.96119631 19.56787063]], shape=(3, 3), dtype=float64)
+Epoch 0
+validate...
+Mean validation likelihood: -0.6931473852446209
+Epoch 1
+validate...
+Mean validation likelihood: -0.20790419022445442
+-0.20790419022445442 is better than previous best -0.6931473852446209
+Epoch 2
+validate...
+Mean validation likelihood: -0.20649865578086368
+-0.20649865578086368 is better than previous best -0.20790419022445442
+Epoch 3
+validate...
+Mean validation likelihood: -0.20624113772544417
+-0.20624113772544417 is better than previous best -0.20649865578086368
+Epoch 4
+validate...
+Mean validation likelihood: -0.2061044720383754
+-0.2061044720383754 is better than previous best -0.20624113772544417
+Epoch 5
+validate...
+Mean validation likelihood: -0.20601147856112145
+-0.20601147856112145 is better than previous best -0.2061044720383754
+Epoch 6
+validate...
+Mean validation likelihood: -0.2059540577783642
+-0.2059540577783642 is better than previous best -0.20601147856112145
+Epoch 7
+validate...
+Mean validation likelihood: -0.20580208518776089
+-0.20580208518776089 is better than previous best -0.2059540577783642
+Epoch 8
+validate...
+Mean validation likelihood: -0.20577449454537108
+-0.20577449454537108 is better than previous best -0.20580208518776089
+Epoch 9
+validate...
+Mean validation likelihood: -0.20586681796412593
+['mouth', 'sinking', 'we']
+tf.Tensor(
+[[19.19504377  4.39593671  7.32514402]
+ [ 4.39593671 17.40628793  3.92076605]
+ [ 7.32514402  3.92076605 19.94626505]], shape=(3, 3), dtype=float64)
