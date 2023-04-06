@@ -34,8 +34,8 @@ def main(args):
         e_testwords = e[testwords]
         print(tf.tensordot(e_testwords, e_testwords, axes=[1,1]))
         # Save embedding
-        #resample_path = trained_model_folder / f"reference_{r}.pkl"
-        #e.save(resample_path.absolute())
+        resample_path = trained_model_folder / f"reference-dim-{args.dim}-ws-{args.ws}-no-{r}.pkl"
+        e.save(resample_path.absolute())
 
 if __name__ == '__main__':
     import argparse
