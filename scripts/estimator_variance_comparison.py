@@ -80,6 +80,9 @@ def main(args):
     scatterplot = plot_bs_var_mean(true_std, tf.reduce_mean(estimated_vars, axis=0), samples=500)
     plt.savefig("bs_var_mean.png")
     plt.clf()
+    scatterplot = plot_bs_var_mean(true_mean, tf.reduce_mean(estimated_means, axis=0), samples=500)
+    plt.savefig("bs_mean.png")
+    plt.clf()
     scatterplot = plot_bs_var(true_std, estimated_vars, samples=500)
     plt.savefig("bs_var.png")
     plt.clf()
@@ -135,6 +138,7 @@ def plot_bs_var(true_std, estimated_std, samples=1000):
     print(df)
     sns.set_theme()
     return sns.scatterplot(data=df, x="true", y="estimated")
+
 
 if __name__ == "__main__":
     import argparse
