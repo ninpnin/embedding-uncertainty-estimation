@@ -107,13 +107,14 @@ if __name__ == "__main__":
     parser.add_argument("--data", type=str, default="data/wikismall.txt")
     parser.add_argument("--outdir", type=str, default="data/stan/")
     parser.add_argument("--wds", type=str, nargs="+", default=["dog"])
+    parser.add_argument("--model", type=str, default="lapl_emb.pkl")
     args = parser.parse_args()
     
     text = open(args.data).read().lower().split()
     text, vocabulary = preprocess_standard(text)
     print(f"Train on a text of length {len(text)} with a vocabulary size of {len(vocabulary)}")
 
-    e = Embedding(saved_model_path="./lapl_emb.pkl")
+    e = Embedding(saved_model_path=args.model)
     #e = Embedding(vocabulary=vocabulary, dimensionality=100)
 
     print(e)
