@@ -76,12 +76,12 @@ if __name__ == '__main__':
     print('original parameters:', (k, loc, scale))
     samples = gpd.sample(10000, seed=123)
 
-
     full_fit = fit_generalized_pareto_on_tail(samples, M = len(samples), return_all_parameters=True) #M = len(samples) just to see the fit on all of the data
     print('full fit parameters:', full_fit)
 
     tail_fit = fit_generalized_pareto_on_tail(samples, return_all_parameters=True) #M determined according to paper
     print('tail fit parameters:', tail_fit)
+    print('psis_diagnostic_results: ', psis_diagnostic_results(tail_fit[0]))
 
     if run_stability_test:
         full_fit_k_shapes = []
@@ -96,5 +96,5 @@ if __name__ == '__main__':
             tail_fit = fit_generalized_pareto_on_tail(samples, return_all_parameters=True)
             tail_fit_k_shapes.append(tail_fit[0])
         
-        print(f'Full fit k: {np.mean(full_fit_k_shapes)} ({np.std(full_fit_k_shapes)})')
-        print(f'Tail fit k: {np.mean(tail_fit_k_shapes)} ({np.std(tail_fit_k_shapes)})')
+        print(f'Repeated full fit k: {np.mean(full_fit_k_shapes)} ({np.std(full_fit_k_shapes)})')
+        print(f'Repeated tail fit k: {np.mean(tail_fit_k_shapes)} ({np.std(tail_fit_k_shapes)})')
