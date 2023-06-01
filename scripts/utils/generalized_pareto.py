@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
     tail_fit = fit_generalized_pareto_on_tail(samples, return_all_parameters=True) #M determined according to paper
     print('tail fit parameters:', tail_fit)
-    print('psis_diagnostic_results: ', psis_diagnostic_results(tail_fit[0]))
+    psis_diagnostic_results(tail_fit[0])
 
     if run_stability_test:
         full_fit_k_shapes = []
