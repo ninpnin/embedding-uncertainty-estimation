@@ -71,10 +71,10 @@ if __name__ == '__main__':
 
     # generate some mock data
     k, loc, scale = 0.6, 3, 2
-    gpd = tfd.GeneralizedPareto(loc=1, scale=3, concentration=k)
+    gpd = tfd.GeneralizedPareto(loc=loc, scale=scale, concentration=k)
     print('parameters: (k(shape), loc, scale)')
     print('original parameters:', (k, loc, scale))
-    samples = gpd.sample(1000, seed=123)
+    samples = gpd.sample(10000, seed=123)
 
 
     full_fit = fit_generalized_pareto_on_tail(samples, M = len(samples), return_all_parameters=True) #M = len(samples) just to see the fit on all of the data
