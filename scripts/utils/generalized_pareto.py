@@ -13,7 +13,7 @@ def fit_generalized_pareto_on_tail(rs_importance_ratios, M=None, return_all_para
     Fit generalized pareto on upper tail of weights (rs)
     Source: https://arxiv.org/pdf/1802.02538.pdf
 
-    method : "MM" or "MLE"
+    method : "MM" or "MLE" or "NEW"
     """
     if method is None:
         method = "MLE"
@@ -21,9 +21,13 @@ def fit_generalized_pareto_on_tail(rs_importance_ratios, M=None, return_all_para
     if M is None:
         M = suggest_M(len(rs_importance_ratios))
 
-    rs_M_largest = rs_importance_ratios[:
-                                        :-1][0:M]
-    (k_shape, loc, scale) = genpareto.fit(rs_M_largest, method=method) #  , 3, 2
+    rs_M_largest = rs_importance_ratios[::-1][0:M]
+    
+    if method.lower()=='new':
+        k_shape = zhang_stephens_k(rs_M_largest)
+        loc, scale = None, None
+    else:
+        (k_shape, loc, scale) = genpareto.fit(rs_M_largest, method=method)
     
     if return_all_parameters:
         return (k_shape, loc, scale)
@@ -66,6 +70,57 @@ def plot_generalized_pareto(shape, loc, scale):
     plt.title('genpareto pdf')
 
 
+def zhang_stephens_k(X):
+
+    """
+    https://sci-hub.se/https://www.tandfonline.com/doi/abs/10.1198/tech.2009.08017?role=button&needAccess=true&journalCode=utch20
+    See primarily (5), (6) and (7).
+
+    Zhang and Stephens estimate of the shape parameter (k^{hat}_{NEW}) of the Pareto distribution. 
+    
+    """
+
+    n = len(X)
+
+    m = 20 + int(np.sqrt(n)) # m = 20 + [√n], where [x] denotes the largest integer smaller than or equal to x
+    X_star = sorted(X)[int(n/4+0.5)] # Let X^* = X([n/4+0.5]) be the first quartile of the sample data.
+    X_order_statistics_n = np.max(X) # X_{(n)} is the n:th order_statistics of X - which is the max of X.
+
+    #print(m , X_star, X_order_statistics_n)
+
+    thetas = np.array([])
+    for j in range(m):
+        theta_j = 1/X_order_statistics_n + (1 - np.sqrt(m/(j+0.5)) ) / (3*X_star) # +0.5 instead of -0.5 due to index start at 0.
+        thetas = np.append(thetas, theta_j)
+    assert len(thetas) == m , 'there should be m thetas'
+    assert (thetas < 1/(X_order_statistics_n)).all() , 'thetas should be less than 1/X(n)'
+
+    def calculate_l(theta, X, n):
+        # l(θ)
+        #k = -1/n * np.sum(np.log(1-theta*X)) # Note: not the same as shape parameter of Pareto.
+        k = -np.mean(np.log(1-theta*X))
+        l = n*(np.log(theta/k) + k - 1)
+        return l
+
+    ll = np.array([])
+    for theta_j in thetas:
+        ll = np.append(ll, calculate_l(theta_j, X, n))
+    assert len(ll) == m , 'there should be m l(theta)'
+    print(max(ll))
+
+    ww = np.array([])
+    for j in range(m):
+        denominator = np.sum(np.exp(ll[j]-ll))
+        ww = np.append(ww, 1/denominator)
+    assert len(ww) == m , 'there should be m ww'
+
+    theta_new = np.sum(thetas*ww)
+    #k_new = 1/n*np.sum(np.log(1-theta_new*X))
+    k_new = -np.mean(np.log(1-theta_new*X))
+    return k_new
+
+
+
 if __name__ == '__main__':
     # Example usage
     from tensorflow_probability import distributions as tfd
@@ -76,8 +131,8 @@ if __name__ == '__main__':
 
 
     # generate some mock data
-    method = 'MLE'
-    k, loc, scale = 0.9, 3, 2
+    method = 'NEW'
+    k, loc, scale = 0.9, 0, 1
     gpd = tfd.GeneralizedPareto(loc=loc, scale=scale, concentration=k)
     print('parameters: (k(shape), loc, scale)')
     print('original parameters:', (k, loc, scale))
@@ -92,8 +147,9 @@ if __name__ == '__main__':
     print('tail fit parameters:', tail_fit)
     psis_diagnostic_results(tail_fit[0])
 
-    print('\nAverage over new samples')
+    
     if run_stability_test:
+        print('\nAverage over new samples')
         full_fit_k_shapes = []
         tail_fit_k_shapes = []
       
@@ -109,9 +165,9 @@ if __name__ == '__main__':
         print(f'Repeated full fit k: {np.mean(full_fit_k_shapes)} ({np.std(full_fit_k_shapes)})')
         print(f'Repeated tail fit k: {np.mean(tail_fit_k_shapes)} ({np.std(tail_fit_k_shapes)})')
 
-    print('\nJackknife')
+   
     if run_jackknife:
-
+        print('\nJackknife')
         full_fit_jackknife = []
         tail_fit_jackknife = []
       
