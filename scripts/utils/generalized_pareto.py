@@ -8,17 +8,22 @@ def suggest_M(S:int) -> int:
     return min(int(S/5), int(3*S**(0.5)))
 
 
-def fit_generalized_pareto_on_tail(rs_importance_ratios, M=None, return_all_parameters=False):
+def fit_generalized_pareto_on_tail(rs_importance_ratios, M=None, return_all_parameters=False,  method="MLE"):
     """
     Fit generalized pareto on upper tail of weights (rs)
     Source: https://arxiv.org/pdf/1802.02538.pdf
+
+    method : "MM" or "MLE"
     """
+    if method is None:
+        method = "MLE"
 
     if M is None:
         M = suggest_M(len(rs_importance_ratios))
 
-    rs_M_largest = rs_importance_ratios[::-1][0:M]
-    (k_shape, loc, scale) = genpareto.fit(rs_M_largest)
+    rs_M_largest = rs_importance_ratios[:
+                                        :-1][0:M]
+    (k_shape, loc, scale) = genpareto.fit(rs_M_largest, method=method) #  , 3, 2
     
     if return_all_parameters:
         return (k_shape, loc, scale)
@@ -67,34 +72,57 @@ if __name__ == '__main__':
     from tensorflow.random import set_seed
     set_seed(123)
     run_stability_test = True #repeat to see stability of k_hat
+    run_jackknife = True
 
 
     # generate some mock data
-    k, loc, scale = 0.6, 3, 2
+    method = 'MLE'
+    k, loc, scale = 0.9, 3, 2
     gpd = tfd.GeneralizedPareto(loc=loc, scale=scale, concentration=k)
     print('parameters: (k(shape), loc, scale)')
     print('original parameters:', (k, loc, scale))
-    samples = gpd.sample(10000, seed=123)
+    samples = gpd.sample(1000, seed=1231) # seed 1231 gives poor full fit estimate
 
-    full_fit = fit_generalized_pareto_on_tail(samples, M = len(samples), return_all_parameters=True) #M = len(samples) just to see the fit on all of the data
+    print('alt k: ', (np.mean(samples)**2/(np.std(samples)**2-1)/2)) #X_bar^2 /( S^2 - 1) / 2
+
+    full_fit = fit_generalized_pareto_on_tail(samples, M = len(samples), return_all_parameters=True, method=method) #M = len(samples) just to see the fit on all of the data
     print('full fit parameters:', full_fit)
 
-    tail_fit = fit_generalized_pareto_on_tail(samples, return_all_parameters=True) #M determined according to paper
+    tail_fit = fit_generalized_pareto_on_tail(samples, return_all_parameters=True,  method=method) #M determined according to paper
     print('tail fit parameters:', tail_fit)
     psis_diagnostic_results(tail_fit[0])
 
+    print('\nAverage over new samples')
     if run_stability_test:
         full_fit_k_shapes = []
         tail_fit_k_shapes = []
-
+      
         for i in range(100):
-            samples = gpd.sample(1000)
+            new_samples = gpd.sample(1000)
 
-            full_fit = fit_generalized_pareto_on_tail(samples, M=len(samples), return_all_parameters=True)
+            full_fit = fit_generalized_pareto_on_tail(new_samples, M=len(new_samples), return_all_parameters=True,  method=method)
             full_fit_k_shapes.append(full_fit[0])
 
-            tail_fit = fit_generalized_pareto_on_tail(samples, return_all_parameters=True)
+            tail_fit = fit_generalized_pareto_on_tail(new_samples, return_all_parameters=True,  method=method)
             tail_fit_k_shapes.append(tail_fit[0])
-        
+            
         print(f'Repeated full fit k: {np.mean(full_fit_k_shapes)} ({np.std(full_fit_k_shapes)})')
         print(f'Repeated tail fit k: {np.mean(tail_fit_k_shapes)} ({np.std(tail_fit_k_shapes)})')
+
+    print('\nJackknife')
+    if run_jackknife:
+
+        full_fit_jackknife = []
+        tail_fit_jackknife = []
+      
+        for i in range(len(samples)):
+            jackknife_samples = [x for j,x in enumerate(samples) if j!=i] 
+
+            full_fit = fit_generalized_pareto_on_tail(jackknife_samples, M=len(samples), return_all_parameters=True,  method=method)
+            full_fit_jackknife.append(full_fit[0])
+
+            tail_fit = fit_generalized_pareto_on_tail(jackknife_samples, return_all_parameters=True,  method=method)
+            tail_fit_jackknife.append(tail_fit[0])
+            
+        print(f'Jackknife full fit k: {np.mean(full_fit_jackknife)} ({np.std(full_fit_jackknife)})')
+        print(f'Jackknife tail fit k: {np.mean(tail_fit_jackknife)} ({np.std(tail_fit_jackknife)})')
