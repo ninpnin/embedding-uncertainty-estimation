@@ -1,6 +1,7 @@
 from scipy.stats import genpareto
 import matplotlib.pyplot as plt
 import numpy as np
+from arviz.stats.stats import _gpdfit
 
 # >> PLACEHOLDER TEMPLATES
 
@@ -59,16 +60,18 @@ def fit_generalized_pareto_on_tail(rs_importance_ratios, M=None, return_all_para
 
     method : "MM" or "MLE" or "NEW"
     """
+    rs_importance_ratios = np.sort(rs_importance_ratios)#[::-1]
+
     if method is None:
         method = "MLE"
 
     if M is None:
         M = suggest_M(len(rs_importance_ratios))
 
-    rs_M_largest = rs_importance_ratios[::-1][0:M]
+    rs_M_largest = rs_importance_ratios[-M:]#[::-1]
     
     if method.lower()=='new':
-        k_shape = zhang_stephens_k(rs_M_largest)
+        k_shape,_ = _gpdfit(rs_M_largest)#zhang_stephens_k(rs_M_largest)
         loc, scale = None, None
     else:
         (k_shape, loc, scale) = genpareto.fit(rs_M_largest, method=method)
@@ -94,10 +97,10 @@ def psis_diagnostic_category(k_shape:float, verbose=True) -> int:
      3 : If k > 0.7 - Indicates VI has failed.
     """
 
-    if k_shape<0:
+    if False:#k_shape<0:
         diagnostic_status_code = -1
         print('Negative GPD shape k_hat = %.4f. Upper tail of weights follow a uniform distribution. What does this mean?'%k_shape)
-    elif k_shape >= 0 and k_shape<=0.5:
+    elif k_shape<=0.5: # k_shape >= 0 and
         diagnostic_status_code = 1
         print('k < 0.5 (k = %.4f) We conclude the variational approximation q is close enough to the true density'%k_shape)
     elif k_shape > 0.7:
@@ -177,17 +180,20 @@ if __name__ == '__main__':
     from tensorflow.random import set_seed
     set_seed(123)
     run_stability_test = True #repeat to see stability of k_hat
-    run_jackknife = True
+    run_jackknife = False
 
 
     # generate some mock data
     method = 'NEW'
-    k, loc, scale = 0.9, 0, 1
+    k, loc, scale = 0.9, 0, 3 #changing loc gives instable results
+
     gpd = tfd.GeneralizedPareto(loc=loc, scale=scale, concentration=k)
     print('parameters: (k(shape), loc, scale)')
     print('original parameters:', (k, loc, scale))
     samples = gpd.sample(1000, seed=1231) # seed 1231 gives poor full fit estimate
-
+    samples = np.ones(1000)/10000 + np.random.normal(loc=0, scale=0.0001, size=1000)
+    #samples = np.sort(samples)[::-1]
+    #print((samples)[0:5], samples[-5:])
     print('alt k: ', (np.mean(samples)**2/(np.std(samples)**2-1)/2)) #X_bar^2 /( S^2 - 1) / 2
 
     full_fit = fit_generalized_pareto_on_tail(samples, M = len(samples), return_all_parameters=True, method=method) #M = len(samples) just to see the fit on all of the data
