@@ -6,15 +6,22 @@ import numpy as np
 
 def psis_diagnostic(embedding, data, approx='vi', n_samples=1000, samples=None, method='MLE', verbose=True):
     """
-    samples overrides n_samples and approx argument.
- 
-    approx = 'vi' or 'laplace'
+    Calculate the PSIS diagnostic for an approximate posterior.
 
-    method = 'MLE', 'MM' or 'NEW'. The method used to estimate pareto parameters.
+    Args:
+        embedding: For VI, tuple of the mean and stdev of the embeddings as pwe.Embedding objects.
+                For Laplace approximation, tuple of the mean and covariance matrix.
+        data: Data as a list of python strings.
+        approx: Type of posterior approximation: 'vi' for mean-field variational inference, and 'laplace' for Laplace approximation.
+        method: 'MLE', 'MM' or 'NEW'. The method used to estimate pareto parameters.
+        samples: A list of samples directly from the approximate posterior. Overrides the 'n_samples' and 'approx' arguments.
 
-    returns psis diagnostic category (-1, 1, 2 or 3)
-    
+    Returns:
+        PSIS diagnostic category (-1, 1, 2 or 3)
     """
+    assert approx in ["vi", "laplace"]
+    assert method in ["MLE", "MM", "NEW"]
+
     if not samples is None:
         if approx == 'vi':
             samples = get_vi_samples(embedding, data, n_samples)
