@@ -33,20 +33,29 @@ def generate_dataset(e, batches, batch_size, seed=None):
         i_j_x = (i,j,x)
         yield i_j_x
 
+def populate_emb(e, words, dim, stdev=1):
+    e_prime[words] = np.random.randn(len(words), args.dim) * stdev / np.sqrt(dim)
+    e_prime[[f"{w}_c" for w in words]] = np.random.randn(len(words), dim) * stdev / np.sqrt(dim)
+    return e_prime
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--N", type=int, default=10)
-    parser.add_argument("--words", type=str, nargs="+", default=["this", "will", "about", "food", "democrats", "republicans"])
-    parser.add_argument("--modelpath", type=str, default="trained/lapl_emb.pkl")
+    parser.add_argument("--words", type=str, nargs="+", default=["soccer", "cookies", "about", "food", "democrats", "republicans"])
+    parser.add_argument("--modelpath", type=str, default=None)
     parser.add_argument("--dim", type=int, default=100)
     args = parser.parse_args()
-    
-    e = Embedding(saved_model_path=args.modelpath)
-    words = args.words
+
+    words = args.words    
     e_prime = Embedding(set(words), dimensionality=args.dim)
-    e_prime = transfer_embeddings(e, e_prime)
+    if args.modelpath is not None:
+        e = Embedding(saved_model_path=args.modelpath)
+        e_prime = transfer_embeddings(e, e_prime)
+    else:
+        embpath = f'data/sgns_simulated-dim-{args.dim}-embs.pkl'
+        e_prime = populate_emb(e_prime, words, args.dim)
+        e_prime.save(embpath)
 
     batch_size = 10
     batches = args.N // batch_size
@@ -63,6 +72,6 @@ if __name__ == "__main__":
     print(d)
 
     with open(f'data/sgns_simulated-dim-{args.dim}.json', 'w', encoding='utf-8') as f:
-        json.dump(d, f, ensure_ascii=False, indent=4)
+        json.dump(d, f, ensure_ascii=False, indent=2)
 
 
