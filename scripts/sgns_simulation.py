@@ -57,7 +57,7 @@ if __name__ == "__main__":
         e_prime = populate_emb(e_prime, words, args.dim)
         e_prime.save(embpath)
 
-    batch_size = 10
+    batch_size = 500
     batches = args.N // batch_size
     d = {"i": [], "j": [], "x": []}
     for ix, data in enumerate(generate_dataset(e_prime, batches, batch_size)):
