@@ -26,7 +26,7 @@ def populate_emb(e, words, dim, stdev=1):
     return e_prime
 
 def map_estimate(e, i, j, x, batch_size=100, epochs=5):
-    opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+    opt = tf.keras.optimizers.legacy.Adam(learning_rate=0.001)
     N = len(i)
     for epoch in range(epochs):
         epoch_training_loss = []
