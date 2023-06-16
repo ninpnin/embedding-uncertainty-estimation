@@ -16,19 +16,14 @@ import random
 def generate_dataset(e, batches, batch_size, seed=None):
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
 
-    for batch in range(batches):
+    for _ in pb.progressbar(range(batches)):
         i = random.choices(words, k=batch_size)
         j = random.choices(words, k=batch_size)
         j = [wd + "_c" for wd in j]
-        print(i)
-        print(j)
 
         e_i, e_j = e[i], e[j]
-
         etas = tf.math.sigmoid(tf.reduce_sum(tf.multiply(e_i, e_j), axis=1))
-        print(etas)
         x = tfp.distributions.Bernoulli(probs=etas).sample()
-        print(x)
 
         i_j_x = (i,j,x)
         yield i_j_x
@@ -42,36 +37,37 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--N", type=int, default=10)
+    parser.add_argument("--std", type=float, default=1.0, help="Normalized standard deviation of the embeddings")
     parser.add_argument("--words", type=str, nargs="+", default=["soccer", "cookies", "about", "food", "democrats", "republicans"])
     parser.add_argument("--modelpath", type=str, default=None)
     parser.add_argument("--dim", type=int, default=100)
     args = parser.parse_args()
+    print(args)
 
     words = args.words    
     e_prime = Embedding(set(words), dimensionality=args.dim)
+    datapath = f'data/sgns_simulated-dim-{args.dim}-N-{args.N}.json'
     if args.modelpath is not None:
+        print(f"Load model from {args.modelpath}...")
         e = Embedding(saved_model_path=args.modelpath)
+        assert args.dim == e.theta.shape[1]
         e_prime = transfer_embeddings(e, e_prime)
     else:
-        embpath = f'data/sgns_simulated-dim-{args.dim}-embs.pkl'
-        e_prime = populate_emb(e_prime, words, args.dim)
+        embpath = datapath.replace("data/", "trained/").replace(".json", ".pkl")
+        e_prime = populate_emb(e_prime, words, args.dim, stdev=args.std)
         e_prime.save(embpath)
 
     batch_size = 500
     batches = args.N // batch_size
     d = {"i": [], "j": [], "x": []}
     for ix, data in enumerate(generate_dataset(e_prime, batches, batch_size)):
-        print(ix)
         i, j, x = data
-        print(i, j, x)
 
         d["i"] = d["i"] + i
         d["j"] = d["j"] + j
         d["x"] = d["x"] + [int(x_i) for x_i in x.numpy()]
 
-    print(d)
-
-    with open(f'data/sgns_simulated-dim-{args.dim}.json', 'w', encoding='utf-8') as f:
+    with open(datapath, 'w', encoding='utf-8') as f:
         json.dump(d, f, ensure_ascii=False, indent=2)
 
 
