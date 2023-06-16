@@ -30,6 +30,8 @@ def main(args):
     sns.set_style("white")
     plt.show()
 
+    df = df[( (df["w1"] == "dog") & (df["w2"] == "saw_c")) ]#| ( (df["w1"] == "the") & (df["w2"] == "cat_c")) ]
+
     means = df[["w1", "w2", "n", "dot-estimate", "dot-true"]].groupby(["w1", "w2", "n"]).mean()
     means = means.reset_index()
     print(means)
