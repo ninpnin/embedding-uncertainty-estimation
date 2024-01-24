@@ -4,13 +4,16 @@ import json
 import argparse
 import numpy as np
 
+def sigmoid(x:float): # might be a good idea to have this in a common library.
+  return 1 / (1 + np.exp(-x))
+
 def simulate_data(vocab_size:int=10, dimensionality:int=3, n_datapoints:int=100, sd:float=0.2, seed:int=None, save_path:str=None):
     """
     Main function for simulating artificial data.
     """
     vocabulary = create_vocabulary(vocab_size=vocab_size)
-    theta = sample_theta(vocabulary=vocabulary, seed=seed)
-    data = simulate_from_theta(vocabulary, theta, n_datapoints=n_datapoints, seed=seed)
+    theta = sample_theta(vocabulary=vocabulary, dimensionality=dimensionality, sd=sd, seed=seed)
+    data = simulate_from_theta(vocabulary, theta, n_datapoints=n_datapoints,  seed=seed)
 
     if save_path:
         json_ = {"data": data, "theta": theta.tolist(), "vocabulary": vocabulary, "seed": (seed if seed is not None else "None")}
@@ -25,20 +28,16 @@ def load(file_path:str):
         data = json.load(file)
     return data
 
-
-def sigmoid(x:float): # might be a good idea to have this in a common library.
-  return 1 / (1 + np.exp(-x))
-
 def create_vocabulary(vocab_size:int=10):
     words = {}
     for i in range(vocab_size):
         words['word_%i'%i] = i
     return words
 
-def sample_theta(vocabulary, dimensionality:int=3, sd:float=0.2, seed:int=None):
+def sample_theta(vocabulary, dimensionality, sd, seed:int=None):
     return np.random.default_rng(seed=seed).normal(loc=0.0, scale=sd, size=(2*len(vocabulary), dimensionality)) # scale - standard deviation.
 
-def simulate_from_theta(vocabulary, theta, n_datapoints:int=5, seed:int=None):
+def simulate_from_theta(vocabulary, theta, n_datapoints, seed:int=None):
     
     data = [] # format : [{"v":"some_word", "w":"another_word", "x":1}, ...]
     words = list(vocabulary.keys())
@@ -57,8 +56,8 @@ def simulate_from_theta(vocabulary, theta, n_datapoints:int=5, seed:int=None):
         data_i["x"] = int(x)
         
         data.append(data_i)
-    return data
 
+    return data
 
 def file_exists_check(file_path:str):
     if os.path.isfile(file_path):
@@ -69,7 +68,6 @@ def file_exists_check(file_path:str):
             print("Interrupted.")
             return False
     return True
-
 
 if __name__ == '__main__':
     # Observe that using the same seed (and vocab, dim etc) but changing n_datapoints
@@ -85,6 +83,7 @@ if __name__ == '__main__':
     parser.add_argument('--vocab_size', type=int, default=10, help='Vocabulary size')
     parser.add_argument('--dimensionality', type=int, default=3, help='Dimension of embedding')
     parser.add_argument('--n_datapoints', type=int, default=10, help='n_datapoints in the artifical dataset')
+    parser.add_argument('--sd', type=float, default=0.02, help='standard deviation of embedding elements.')
     parser.add_argument('--seed', type=int, default=None, help='seed')
 
     # Parse the arguments
