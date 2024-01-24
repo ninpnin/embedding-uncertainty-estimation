@@ -86,7 +86,6 @@ if __name__ == '__main__':
     parser.add_argument('--sd', type=float, default=0.02, help='standard deviation of embedding elements.')
     parser.add_argument('--seed', type=int, default=None, help='seed')
 
-    # Parse the arguments
     args = parser.parse_args()
     save_path = args.save_path
     if save_path and not file_exists_check(save_path):
