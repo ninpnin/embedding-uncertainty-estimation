@@ -2,3 +2,4 @@ data/
 .RData
 .Rhistory
 trained
+**/__pycache__/
