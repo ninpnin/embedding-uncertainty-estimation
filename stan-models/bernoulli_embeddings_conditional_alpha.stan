@@ -1,3 +1,6 @@
+// Bernoulli embeddings SGNS / CBOW model, so that the estimation is conditional
+// on trained context vectors. These trained context vectors are provided as 
+// numerical values in the c_j variable
 data {
   int<lower=0> D;
   int<lower=0> J;
@@ -14,6 +17,8 @@ transformed parameters {
   vector[J] eta = c_j * rho;
 }
 
+// Since the context vectors are set in stone, there is no difference between 
+// CBOW and SGNS here
 model {
   for (j in 1:J) {
     if (x[j] == 0){
