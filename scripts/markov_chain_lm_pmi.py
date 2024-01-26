@@ -14,13 +14,6 @@ def get_probs(text):
 
     return lm
 
-def sample(x, lm, vocab, A=0.5):
-    probs = lm.get(x, dict())
-    theta = [probs[wd] for wd in vocab]
-    x_prime = np.random.choice(len(vocab), p=theta)
-    x_prime = vocab[x_prime]
-    return x_prime
-
 def smoothen_lm(lm, A=0.5):
     C = len(lm)
     #print(f"Smoothen lm with constant {A}")
@@ -34,6 +27,42 @@ def smoothen_lm(lm, A=0.5):
         lm[wd] = probs
 
     return lm
+
+def get_pmi_matrix(lm, ws=1):
+    #print(lm)
+    vocab = [wd for wd in lm]
+    A = np.zeros((len(vocab), len(vocab)))
+    for i, w1 in enumerate(vocab):
+        for j, w2 in enumerate(vocab):
+            p = lm[w1][w2]
+            A[j,i] = p
+    
+    A = A.T
+    print(A)
+    A_lim = A
+    for _ in range(10000):
+        A_lim = A_lim @ A
+    
+    print("LIM:")
+    print(A_lim[0])
+    
+    v_max = A_lim[0]
+    v_max = v_max / np.sum(v_max)
+    print(v_max)
+    print("Most freq:", vocab[list(v_max).index(max(v_max))])
+    B = np.zeros((len(vocab), len(vocab)))
+    A_prime = np.identity(len(vocab))
+    for w in range(ws):
+        A_prime = A_prime @ A
+        
+        B += 0.5/ws * A_prime
+        B += 0.5/ws * A_prime.T
+    
+    #print(B)
+    PMI = B / np.outer(v_max, v_max)
+    PMI = np.real(PMI)
+    log_PMI = np.log(PMI)
+    return log_PMI, vocab
 
 if __name__ == "__main__":
     import argparse
@@ -52,12 +81,6 @@ if __name__ == "__main__":
     lm = get_probs(text)
     lm = smoothen_lm(lm, A=args.smoothing)
 
-    data = []
-
-    x = np.random.choice(list(vocab))
-    for i in progressbar.progressbar(range(args.N)):
-        data.append(x)
-        x = sample(x, lm, vocab, A=args.smoothing)
-
-    print(" ".join(data))
-
+    log_PMI, vocab = get_pmi_matrix(lm)
+    print(vocab)
+    print(log_PMI)
