@@ -3,6 +3,7 @@ import sys
 import json
 import argparse
 import numpy as np
+import tensorflow as tf
 
 def sigmoid(x:float): # might be a good idea to have this in a common library.
   return 1 / (1 + np.exp(-x))
@@ -23,10 +24,31 @@ def simulate_data(vocab_size:int=10, dimensionality:int=3, n_datapoints:int=100,
 
     return data, theta, vocabulary
 
+
+def load_simulated_data_generator(file_path):
+    data = load(file_path) #can use ijson for more effiecient, incremental data loading.
+    for item in simulated_data_generator(data):
+        yield item
+
 def load(file_path:str):
     with open(file_path, 'r') as file:
         data = json.load(file)
     return data
+
+def simulated_data_generator(data:dict):
+    """
+    input is data or saved json from simulate_data()
+    """
+    if 'data' in data:
+        data = data['data']
+
+    for item in data: # TODO: while true.
+        l = list(item.values())
+        l[0] = tf.constant([l[0]])
+        l[1] = tf.constant([l[1]])
+        l[2] = tf.constant([l[2]])
+        yield tuple(l)
+
 
 def create_vocabulary(vocab_size:int=10):
     words = {}
