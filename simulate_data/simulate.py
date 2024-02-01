@@ -35,19 +35,38 @@ def load(file_path:str):
         data = json.load(file)
     return data
 
-def simulated_data_generator(data:dict):
+
+def simulated_data_generator(data: dict, batch_size: int = 1):
     """
-    input is data or saved json from simulate_data()
+    Input is data or saved json from simulate_data().
     """
     if 'data' in data:
         data = data['data']
 
-    for item in data: # TODO: while true.
-        l = list(item.values())
-        l[0] = tf.constant([l[0]])
-        l[1] = tf.constant([l[1]])
-        l[2] = tf.constant([l[2]])
-        yield tuple(l)
+    batch_v = []
+    batch_w = []
+    batch_x = []
+    for item in data:
+        v, w, x = item.values()
+        batch_v.append(v)
+        batch_w.append(w)
+        batch_x.append(x)
+
+        if len(batch_v) == batch_size:
+            yield (
+                tf.constant(batch_v, dtype=tf.string),
+                tf.constant(batch_w, dtype=tf.string),
+                tf.constant(batch_x, dtype=tf.int32)
+            )
+            batch_v, batch_w, batch_x = [], [], []
+
+    # remaining items as a batch
+    if batch_v:
+        yield (
+            tf.constant(batch_v, dtype=tf.string),
+            tf.constant(batch_w, dtype=tf.string),
+            tf.constant(batch_x, dtype=tf.int32)
+        )
 
 
 def create_vocabulary(vocab_size:int=10):
