@@ -25,20 +25,28 @@ def simulate_data(vocab_size:int=10, dimensionality:int=3, n_datapoints:int=100,
     return data, theta, vocabulary
 
 
-def load_simulated_data_generator(file_path):
-    data = load(file_path) #can use ijson for more effiecient, incremental data loading.
-    for item in simulated_data_generator(data):
-        yield item
+def load_simulated_data_generator(file_path, batch_size: int=None):
+    """
+    If batch_size is None it yields all data in one batch
+    """
+    
+    data = load(file_path) 
+    while True:
+        for item in simulated_data_generator(data, batch_size):
+            yield item
 
 def load(file_path:str):
+    # Side note: can use ijson for more effiecient, incremental data loading.
     with open(file_path, 'r') as file:
         data = json.load(file)
     return data
 
 
-def simulated_data_generator(data: dict, batch_size: int = 1):
+def simulated_data_generator(data: dict, batch_size:int=None):
     """
     Input is data or saved json from simulate_data().
+
+    If batch_size is None it yields all data in one batch
     """
     if 'data' in data:
         data = data['data']
@@ -46,27 +54,28 @@ def simulated_data_generator(data: dict, batch_size: int = 1):
     batch_v = []
     batch_w = []
     batch_x = []
-    for item in data:
-        v, w, x = item.values()
-        batch_v.append(v)
-        batch_w.append(w)
-        batch_x.append(x)
+    while True:
+        for item in data:
+            v, w, x = item.values()
+            batch_v.append(v)
+            batch_w.append(w)
+            batch_x.append(x)
 
-        if len(batch_v) == batch_size:
+            if batch_size is not None and len(batch_v) == batch_size:
+                yield (
+                    tf.constant(batch_v, dtype=tf.string),
+                    tf.constant(batch_w, dtype=tf.string),
+                    tf.constant(batch_x, dtype=tf.float64)
+                )
+                batch_v, batch_w, batch_x = [], [], []
+
+        # remaining items as a batch
+        if batch_size is None or batch_v:
             yield (
                 tf.constant(batch_v, dtype=tf.string),
                 tf.constant(batch_w, dtype=tf.string),
-                tf.constant(batch_x, dtype=tf.int32)
+                tf.constant(batch_x, dtype=tf.float64)
             )
-            batch_v, batch_w, batch_x = [], [], []
-
-    # remaining items as a batch
-    if batch_v:
-        yield (
-            tf.constant(batch_v, dtype=tf.string),
-            tf.constant(batch_w, dtype=tf.string),
-            tf.constant(batch_x, dtype=tf.int32)
-        )
 
 
 def create_vocabulary(vocab_size:int=10):
