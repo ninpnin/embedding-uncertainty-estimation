@@ -99,7 +99,7 @@ def simulate_from_theta(vocabulary, theta, n_datapoints, seed:int=None):
         data_i["v"], data_i["w"] = v, w
 
         rho_v = theta[vocabulary[v], :]       # $\rho_v = \theta_v$
-        alpha_w = theta[vocabulary[v]+V, :]   # $\alpha_w = \theta_{V + w}$
+        alpha_w = theta[vocabulary[w]+V, :]   # $\alpha_w = \theta_{V + w}$
         eta =  rho_v.dot(alpha_w)             # $\eta = \rho_v^T \alpha_w$
         p = sigmoid(eta)                      # Run it through the link function $\sigma; p = \sigma(\eta)$
         x = rng.binomial(n=1, p=p, size=1)[0] # sample from Bernoulli(p)
