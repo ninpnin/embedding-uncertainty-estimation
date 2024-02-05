@@ -81,7 +81,7 @@ def simulated_data_generator(data: dict, batch_size:int=None):
 def create_vocabulary(vocab_size:int=10):
     words = {}
     for i in range(vocab_size):
-        words['word_%i'%i] = i
+        words['word%i'%i] = i
     return words
 
 def sample_theta(vocabulary, dimensionality, sd, seed:int=None):
