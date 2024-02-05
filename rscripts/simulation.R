@@ -37,12 +37,23 @@ N <- length(v)
 # Running stan code
 model = stan_model("stan-models/bernoulli_embeddings.stan")
 
-fit = sampling(model,list(D=D, M=M, N=N, v=v, w=w, x=x, sigma=2.0),iter=500,chains=4)
+fit = sampling(model,list(D=D, M=M, N=N, v=v, w=w, x=x, sigma=2.0),iter=1000,chains=2)
 
 print(fit)
 
-params = extract(fit)
+# calculate true co-occurence matrix
+p_ones = matrix(0, M, M)
+p_zeros = matrix(0, M, M)
+for (i in 1:N) {
+  if (x[i] == 1) {
+    p_ones[v[i], w[i]] <- p_ones[v[i], w[i]] + 1
+  } else {
+    p_zeros[v[i], w[i]] <- p_zeros[v[i], w[i]] + 1
+  }
+}
+p_true <- p_ones / (p_ones + p_zeros)
 
-par(mfrow=c(1,2))
-ts.plot(params$mu,xlab="Iterations",ylab="mu")
-hist(params$sigma,main="",xlab="sigma")
+p_true
+params = extract(fit)
+p_est <- apply(params$p, 2:3, mean)
+cor(c(p_true), c(p_est),use='complete.obs')
