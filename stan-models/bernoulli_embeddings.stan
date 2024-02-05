@@ -31,3 +31,10 @@ model {
     }
   }
 }
+
+generated quantities {
+  vector[2] p;
+  p[1] = inv_logit(dot_product(rho[1], alpha[3]));
+  p[2] = inv_logit(dot_product(rho[2], alpha[5]));
+  
+}
