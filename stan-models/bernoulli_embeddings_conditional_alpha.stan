@@ -1,10 +1,12 @@
 // Bernoulli embeddings SGNS / CBOW model, so that the estimation is conditional
 // on trained context vectors. These trained context vectors are provided as 
 // numerical values in the c_j variable
+
+// This code only estimates one word at a time
 data {
   int<lower=0> D;
   int<lower=0> J;
-  real<lower=0.0> a;
+  real<lower=0.0> a; // Weighting coefficient, in case you need to reweight positive and negative samples
   int<lower=0, upper=1> x[J];
   matrix[J, D] c_j;
 }
