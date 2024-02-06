@@ -57,6 +57,7 @@ def simulated_data_generator(data: dict, batch_size:int=None):
     while True:
         for item in data:
             v, w, x = item.values()
+            w += "_c"
             batch_v.append(v)
             batch_w.append(w)
             batch_x.append(x)
