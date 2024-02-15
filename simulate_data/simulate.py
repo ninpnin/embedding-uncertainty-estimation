@@ -25,14 +25,14 @@ def simulate_data(vocab_size:int=10, dimensionality:int=3, n_datapoints:int=100,
     return data, theta, vocabulary
 
 
-def load_simulated_data_generator(file_path, batch_size: int=None):
+def load_simulated_data_generator(file_path, batch_size: int=None, max_num_observations:int=None):
     """
     If batch_size is None it yields all data in one batch
     """
     
     data = load(file_path) 
     while True:
-        for item in simulated_data_generator(data, batch_size):
+        for item in simulated_data_generator(data, batch_size, max_num_observations):
             yield item
 
 def load(file_path:str):
@@ -42,14 +42,19 @@ def load(file_path:str):
     return data
 
 
-def simulated_data_generator(data: dict, batch_size:int=None):
+def simulated_data_generator(data: dict, batch_size:int=None, max_num_observations:int=None):
     """
     Input is data or saved json from simulate_data().
 
     If batch_size is None it yields all data in one batch
+
+    max_num_observations, cuts off the data and only uses the max_num_observations first data points.
     """
     if 'data' in data:
         data = data['data']
+
+    if max_num_observations and max_num_observations < len(data):
+        data = data[0:max_num_observations]
 
     batch_v = []
     batch_w = []
