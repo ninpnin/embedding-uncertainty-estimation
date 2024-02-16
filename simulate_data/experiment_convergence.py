@@ -13,6 +13,10 @@ from probabilistic_word_embeddings.estimation import map_estimate, mean_field_vi
 from probabilistic_word_embeddings.embeddings import Embedding
 
 
+# TODO seed does not work on embeddngs for some reason...
+#    - If you run fix seed in run_multiple_experiments (u have to do this manually in code) it will give u the same result for all experiements
+#    - If repeat above you get different result.
+
 def sigmoid(x:float): # might be a good idea to have this in a common library.
   return 1 / (1 + np.exp(-x))
 
@@ -43,7 +47,7 @@ def run_convergence_experiment(data_json_path, estimator, estimator_args:dict, e
     Output:
         if save_
     """ 
-    if not file_exists_check(save_path):
+    if False:#not file_exists_check(save_path):
         return
 
     data_json = load(data_json_path)
@@ -56,7 +60,7 @@ def run_convergence_experiment(data_json_path, estimator, estimator_args:dict, e
     
     words_and_contexts = list(vocabulary.keys()) + [w + '_c' for w in list(vocabulary.keys())]
 
-
+    seed = embedding_args.get('seed', None)
     batch_size = estimator_args.get('batch_size', None)
     if batch_size is None:
         warnings.warn('No batch_size specified in estimator args.')
@@ -81,7 +85,7 @@ def run_convergence_experiment(data_json_path, estimator, estimator_args:dict, e
         end_time = time.time()
 
         theta_estimated = e[words_and_contexts].numpy()
-        corr, store_estimated_p, store_true_p = p_correlation(vocabulary, theta_estimated, true_theta)
+        corr, store_estimated_p, store_true_p = p_correlation(vocabulary, theta_estimated, true_theta) # TODO We dont need to calculate p for true every loop.
         results.append({
             'data_size':current_size,
             'correlation': corr,
@@ -93,6 +97,12 @@ def run_convergence_experiment(data_json_path, estimator, estimator_args:dict, e
     output_dict = {}
     output_dict['results'] = results
     output_dict['data_json_path'] = data_json_path
+    output_dict['seed'] = seed
+
+    # Seed testing : 
+    e = embedding(vocabulary=set(vocabulary.keys()), **embedding_args)
+    output_dict['e'] = list(e[['word1','word1_c']].numpy()[0,:])
+    output_dict['ec'] = list(e[['word1','word1_c']].numpy()[1,:])
 
     if save_path:
         with open(save_path, 'w') as file:
@@ -100,6 +110,48 @@ def run_convergence_experiment(data_json_path, estimator, estimator_args:dict, e
             print(f'Saved to: {save_path}') # add check file exists
 
     return output_dict
+
+
+def run_multiple_experiments(data_json_path, estimator, estimator_args, embedding_args, increment, embedding, N_experiments, save_path=None):
+    
+    if False:#not file_exists_check(save_path):
+        return
+    
+    seed = embedding_args.get('seed', None)
+    
+    all_results = []  # Store results from all experiments
+    for experiment in range(N_experiments):
+        print(f"Running experiment {experiment + 1} of {N_experiments}")
+        
+        if seed is not None:
+            new_seed = int("%s%s"%(seed, experiment))
+        else:
+            new_seed = None
+
+        results = run_convergence_experiment(
+            data_json_path=data_json_path,
+            estimator=estimator,
+            estimator_args=estimator_args,
+            embedding_args=embedding_args if seed is None else {**embedding_args, 'seed': new_seed}, # replace seed without updating original dict.
+            increment=increment,
+            embedding=embedding,
+            save_path=None
+        )
+
+        all_results.append(results)
+
+    out_dict = {}
+    out_dict['all_results'] = all_results
+    out_dict['data_json_path'] = data_json_path
+
+    if save_path:
+        with open(save_path, 'w') as file:
+            json.dump(out_dict, file, indent=4)
+            print(f"Saved to: {save_path}")
+
+    return out_dict
+
+
       
 # --- Library ---
 def calculate_p(vi, wi, theta, V):
@@ -141,14 +193,43 @@ def file_exists_check(file_path:str):
             return False
     return True
 
+# --- Plotting ---
 
+import matplotlib.pyplot as plt
 
-if __name__ == '__main__':
+def plot_experiment_results(all_results):
+    """
+    TODO: fig/ax input.
+
+    Plots the correlation from multiple experiments against the data size.
+
+    Args:
+    - all_results (list of dicts): A list where each element is a result dictionary
+      from running an experiment. Each dictionary must have keys 'data_size' and 'correlation'.
 
     """
-    Example Usage,
-        this script is not suited to run entirely from command line.
-    """
+    plt.figure(figsize=(10, 6))  # Set the figure size for the plot
+
+    for result in all_results['all_results']:
+        if 'results' in result:
+            data_sizes = [experiment['data_size'] for experiment in result['results']]
+            correlations = [experiment['correlation'] for experiment in result['results']]
+            plt.plot(data_sizes, correlations, marker='o', linestyle='-') # label=f'Experiment Run'
+
+    plt.xlabel('Data Size')
+    plt.ylabel('Correlation')
+    title = 'Correlation vs. Data Size' + "" if 'data_json_path' not in all_results else '%s'%all_results['data_json_path']
+    plt.title(title)
+    #plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+
+# ---- MAIN -----
+
+def main_run_experiment():
+
 
     # python experiment_convergence.py --data_json_path test5k_d2_s08.json --increment 1000 --save_path results.json --estimator_type map --batch_size 100 --epochs 10
 
@@ -156,23 +237,24 @@ if __name__ == '__main__':
     parser.add_argument('--data_json_path', type=str, required=True, help='Path to the simulated data JSON file')
     parser.add_argument('--save_path', type=str, required=False, help='Path where the results JSON will be saved. If not provided, results will be printed.')
     parser.add_argument('--increment', type=int, required=True, help='Incremental step size for data.')
-    parser.add_argument('--embedding_dimension', type=int, default=2, help='Dimensionality of the embedding (default: 2).')
-    parser.add_argument('--batch_size', type=int, default=100, help='Batch size for the estimators (default: 100).')
+    parser.add_argument('--embedding_dimension', type=int, default=2, help='Dimensionality of the embedding ')
+    parser.add_argument('--batch_size', type=int, default=100, help='Batch size for the estimators')
     parser.add_argument('--estimator_type', type=str, choices=['map','map_estimate','mean_field_vi', 'vi'], default='map', help='Type of estimator to use.')
-    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs for training (default: 10).')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs for training ')
 
     args = parser.parse_args()
 
     embedding_args = {
         'dimensionality': args.embedding_dimension,
-        'lambda0':0.0
+        'lambda0':0.0,
+        'seed':1
     }
 
     estimator_args = {
         'batch_size': args.batch_size,
         'epochs': args.epochs,
-        'evaluate': False,
-        'model': 'sgns'
+        'evaluate': False, #required
+        'model': 'sgns' #required
     }
 
     if args.estimator_type in ['vi', 'mean_field_vi']:
@@ -195,3 +277,70 @@ if __name__ == '__main__':
     else:
         print("Results:")
         print(results)
+
+    
+def main_run_multiple():
+    parser = argparse.ArgumentParser(description="Run multiple convergence experiments with incremental dataset sizes.")
+    parser.add_argument('--data_json_path', type=str, required=True, help='Path to the simulated data JSON file')
+    parser.add_argument('--save_path', type=str, required=False, help='path where the results JSON will be saved')
+    parser.add_argument('--increment', type=int, required=True, help='Incremental step size for data.')
+    parser.add_argument('--embedding_dimension', type=int, default=2, help='Dimensionality of the embedding.')
+    parser.add_argument('--batch_size', type=int, default=100, help='Batch size for the estimators')
+    parser.add_argument('--estimator_type', type=str, choices=['map','map_estimate','mean_field_vi', 'vi'], default='map', help='Type of estimator to use.')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs for training ')
+    parser.add_argument('--N_experiments', type=int, default=5, help='Number of experiments to run')
+
+    args = parser.parse_args()
+
+    embedding_args = {
+        'dimensionality': args.embedding_dimension,
+        'lambda0': 0.0,
+        'seed': 1
+    }
+
+    estimator_args = {
+        'batch_size': args.batch_size,
+        'epochs': args.epochs,
+        'evaluate': False,  # Required for the estimator
+        'model': 'sgns'  # Required for the estimator
+    }
+
+    if args.estimator_type in ['vi', 'mean_field_vi']:
+        estimator = mean_field_vi
+    elif args.estimator_type in ['map', 'map_estimate']:
+        estimator = map_estimate
+
+    # Run multiple experiments
+    all_results = run_multiple_experiments(
+        data_json_path=args.data_json_path,
+        estimator=estimator,
+        estimator_args=estimator_args,
+        embedding_args=embedding_args,
+        increment=args.increment,
+        embedding=Embedding,
+        N_experiments=args.N_experiments,
+        save_path=args.save_path
+    )
+
+    return all_results
+
+
+if __name__ == '__main__':
+
+    """
+    Example/Test Usage,
+        this script is not suited to run entirely from command line, because of complicated arguments.
+    """
+
+    multiple_runs = True
+    if multiple_runs:
+        print('Multiple Runs')
+        #python experiment_convergence.py --data_json_path test5k_d2_s08.json --increment 1000 --save_path results.json --estimator_type map --batch_size 100 --epochs 10 --N_experiments 5
+        all_results = main_run_multiple()
+        print(all_results)
+        plot_experiment_results(all_results)
+
+    else:
+        print('Single Runs')
+        #python experiment_convergence.py --data_json_path test5k_d2_s08.json --increment 1000 --save_path results.json --estimator_type map --batch_size 100 --epochs 10
+        main_run_experiment()
