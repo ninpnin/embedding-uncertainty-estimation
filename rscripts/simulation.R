@@ -30,14 +30,16 @@ for (p in myData$data) {
 }
 print(v)
 # Simulating some data
-D <- 2
+D <- 3
 M <- max(v)
 N <- length(v)
 
 # Running stan code
 model = stan_model("stan-models/bernoulli_embeddings.stan")
-
 fit = sampling(model,list(D=D, M=M, N=N, v=v, w=w, x=x, sigma=2.0),iter=1000,chains=2)
+
+model = stan_model("stan-models/bernoulli_embeddings_fixed.stan")
+fit = sampling(model,list(D=D, M=M, N=N, v=v, w=w, x=x, sigma=2.0,fixed_indices=c(1,2)),iter=3000,chains=4)
 
 print(fit)
 
