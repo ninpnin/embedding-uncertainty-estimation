@@ -87,7 +87,7 @@ def run_convergence_experiment(data_json_path, estimator, estimator_args:dict, e
         estimate = estimator(e, data_generator=generator, N=current_size, **estimator_args) 
         end_time = time.time()
         
-        results_current = {'data_size':None, 'correlation':None, 'runtime':None}
+        results_current = {'data_size':None, 'correlation':None, 'runtime':None, 'theta': None}
         theta_estimated = e[words_and_contexts].numpy()
         if estimator.__name__ == 'mean_field_vi':
             # VI gives us standard deviation of parameters and so we can visualize variations per run: theta + N(0,1)*std
@@ -103,12 +103,15 @@ def run_convergence_experiment(data_json_path, estimator, estimator_args:dict, e
                 theta_resampled = theta_estimated + noise[:,:,i] * std_estimated
                 corr_i, _, _ = p_correlation(vocabulary, theta_resampled, true_theta)
                 p_corr_resampled.append(corr_i)
+            
+            results_current['std_theta'] = std_estimated.tolist()
             results_current['p_corr_resampled'] = p_corr_resampled
+            
         
         #theta_estimated = e[words_and_contexts].numpy()
-        corr, store_estimated_p, store_true_p = p_correlation(vocabulary, theta_estimated, true_theta) # TODO We dont need to calculate p for true every loop.
+        corr, estimated_p, true_p = p_correlation(vocabulary, theta_estimated, true_theta) # TODO We dont need to calculate p for true every loop.
 
-        results_current.update({'data_size':current_size, 'correlation':corr, 'runtime':end_time - start_time}) # Store store_estimated_p etc?
+        results_current.update({'data_size':current_size, 'correlation':corr, 'runtime':end_time - start_time, 'theta':theta_estimated.tolist()}) # Store store_estimated_p etc?
         results.append(results_current) 
 
     output_dict = {}
@@ -116,6 +119,7 @@ def run_convergence_experiment(data_json_path, estimator, estimator_args:dict, e
     output_dict['data_json_path'] = data_json_path
     output_dict['seed'] = seed
     output_dict['estimator'] = estimator.__name__
+    output_dict['true_theta'] = true_theta.tolist()
 
     # Seed testing : 
     e = embedding(vocabulary=set(vocabulary.keys()), **embedding_args)
@@ -355,6 +359,52 @@ def plot_average_and_std_correlations_multiple(*all_results_collections):
     plt.show()
 
 
+def plot_parameter_convergence(all_results):
+    """
+    all results or just one result.
+    """
+    if 'all_results' not in all_results: #In the case of single experiment.
+        all_results = {'all_results':[all_results]}
+
+    plt.figure(figsize=(10, 6))  # Set the figure size for the plot
+
+    colors = plt.cm.tab10(np.linspace(0, min(1, len(all_results['all_results'])/10 ), len(all_results['all_results'])))
+
+
+    for idx, result in enumerate(all_results['all_results']): #[0:1] remove [0:1].
+        true_theta = np.array(result['true_theta'])
+        if 'results' in result:
+            data_sizes = [experiment['data_size'] for experiment in result['results']]
+            avg_thetas = [np.mean(np.abs(experiment['theta'])) for experiment in result['results']] # avg of parameters
+
+            
+            color = colors[idx]  # Select color for this experiment
+
+            # Plot main correlation line
+            plt.plot(data_sizes, avg_thetas, marker='o', linestyle='-', linewidth=2, color=color, label=f'Experiment {idx+1}')
+
+            if 'std_theta' in result['results'][0]: # VI
+                avg_std = [np.mean(np.abs(experiment['std_theta'])) for experiment in result['results']]
+                plt.fill_between(data_sizes, np.array(avg_thetas) - np.array(avg_std), np.array(avg_thetas) + np.array(avg_std), alpha=0.2)
+                #plt.plot(data_sizes, np.array(avg_thetas) + np.array(avg_std), color=color, linestyle='--', alpha=0.75)
+                #plt.plot(data_sizes, np.array(avg_thetas) - np.array(avg_std), color=color, linestyle='--', alpha=0.75)
+
+
+    avg_true_theta = np.mean(np.abs(true_theta))
+    plt.plot([data_sizes[0], data_sizes[-1]], [avg_true_theta, avg_true_theta], linestyle='-', linewidth=2, color='r', label='True')
+
+    plt.xlabel('Data Size')
+    plt.ylabel('mean(abs(θ))')
+    title = 'Average Parameter Convergence' + ("" if 'data_json_path' not in all_results else '%s'%all_results['data_json_path'])
+    title += "" if 'estimator' not in all_results else '%s'%all_results['estimator']
+    plt.title(title)
+    #plt.ylim(0, 1)
+    #plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+
 # ---- MAIN -----
 
 def main_run_experiment():
@@ -468,8 +518,12 @@ if __name__ == '__main__':
         this script is not suited to run entirely from command line, because of complicated arguments.
     """
 
-    multiple_runs = True
-    plot_only = True
+    multiple_runs = False
+    plot_only = False
+    plot_vi_parameters=True
+
+
+
 
     if plot_only:
         if True:
@@ -479,8 +533,9 @@ if __name__ == '__main__':
             json_map = load('results_map.json')
             json_vi = load('results_vi1.json')
             plot_average_and_std_correlations_multiple(json_map, json_vi)
-
-
+    elif plot_vi_parameters:
+        json_vi = load('results_10k_vi.json')
+        plot_parameter_convergence(json_vi)
     else:
         if multiple_runs:
             print('Multiple Runs')
