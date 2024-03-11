@@ -8,12 +8,12 @@ import tensorflow as tf
 def sigmoid(x:float): # might be a good idea to have this in a common library.
   return 1 / (1 + np.exp(-x))
 
-def simulate_data(vocab_size:int=10, dimensionality:int=3, n_datapoints:int=100, sd:float=0.2, seed:int=None, save_path:str=None):
+def simulate_data(vocab_size:int=10, dimensionality:int=3, n_datapoints:int=100, eps_sd:float=1.0, seed:int=None, save_path:str=None): # sd:float=0.2
     """
     Main function for simulating artificial data.
     """
     vocabulary = create_vocabulary(vocab_size=vocab_size)
-    theta = sample_theta(vocabulary=vocabulary, dimensionality=dimensionality, sd=sd, seed=seed)
+    theta = sample_theta(vocabulary=vocabulary, dimensionality=dimensionality, eps_sd=eps_sd, seed=seed)
     data = simulate_from_theta(vocabulary, theta, n_datapoints=n_datapoints,  seed=seed)
 
     if save_path:
@@ -90,7 +90,9 @@ def create_vocabulary(vocab_size:int=10):
         words['word%i'%i] = i
     return words
 
-def sample_theta(vocabulary, dimensionality, sd, seed:int=None):
+def sample_theta(vocabulary, dimensionality, eps_sd, seed:int=None):
+    sd = eps_sd/float(dimensionality)
+
     return np.random.default_rng(seed=seed).normal(loc=0.0, scale=sd, size=(2*len(vocabulary), dimensionality)) # scale - standard deviation.
 
 def simulate_from_theta(vocabulary, theta, n_datapoints, seed:int=None):
@@ -139,7 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--vocab_size', type=int, default=10, help='Vocabulary size')
     parser.add_argument('--dimensionality', type=int, default=3, help='Dimension of embedding')
     parser.add_argument('--n_datapoints', type=int, default=10, help='n_datapoints in the artifical dataset')
-    parser.add_argument('--sd', type=float, default=0.02, help='standard deviation of embedding elements.')
+    parser.add_argument('--eps_sd', type=float, default=1.0, help='standard deviation factor of embedding elements. std = eps_std/dimensionality')
     parser.add_argument('--seed', type=int, default=None, help='seed')
 
     args = parser.parse_args()
