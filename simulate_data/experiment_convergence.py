@@ -366,12 +366,18 @@ def plot_parameter_convergence(all_results):
     if 'all_results' not in all_results: #In the case of single experiment.
         all_results = {'all_results':[all_results]}
 
+        try: # Try to find these. 
+            all_results['data_json_path'] = all_results['all_results'][0]['results'][0]['data_json_path']
+            all_results['estimator'] = all_results['all_results'][0]['results'][0]['estimator']
+        except:
+            pass
+
     plt.figure(figsize=(10, 6))  # Set the figure size for the plot
 
     colors = plt.cm.tab10(np.linspace(0, min(1, len(all_results['all_results'])/10 ), len(all_results['all_results'])))
 
 
-    for idx, result in enumerate(all_results['all_results']): #[0:1] remove [0:1].
+    for idx, result in enumerate(all_results['all_results'][0:1]): #[0:1] remove [0:1].
         true_theta = np.array(result['true_theta'])
         if 'results' in result:
             data_sizes = [experiment['data_size'] for experiment in result['results']]
@@ -395,8 +401,8 @@ def plot_parameter_convergence(all_results):
 
     plt.xlabel('Data Size')
     plt.ylabel('mean(abs(θ))')
-    title = 'Average Parameter Convergence' + ("" if 'data_json_path' not in all_results else '%s'%all_results['data_json_path'])
-    title += "" if 'estimator' not in all_results else '%s'%all_results['estimator']
+    title = 'Parameter Magnitude ' + ("" if 'data_json_path' not in all_results else '%s'%all_results['data_json_path'])
+    title += "" if 'estimator' not in all_results else ' %s'%all_results['estimator']
     plt.title(title)
     #plt.ylim(0, 1)
     #plt.legend()
@@ -411,6 +417,7 @@ def main_run_experiment():
 
 
     # python experiment_convergence.py --data_json_path test5k_d2_s08.json --increment 1000 --save_path results.json --estimator_type map --batch_size 100 --epochs 10
+    #python experiment_convergence.py --data_json_path test5k_d2_s08.json --increment 1000 --save_path results.json --estimator_type map --batch_size 100 --epochs 10
 
     parser = argparse.ArgumentParser(description="Convergence experiment with incremental dataset sizes.")
     parser.add_argument('--data_json_path', type=str, required=True, help='Path to the simulated data JSON file')
@@ -514,27 +521,34 @@ def load(file_path:str):
 if __name__ == '__main__':
 
     """
+    This part is a bit of mess...
+
     Example/Test Usage,
         this script is not suited to run entirely from command line, because of complicated arguments.
     """
 
-    multiple_runs = False
+    multiple_runs = True
     plot_only = False
     plot_vi_parameters=True
 
 
-
+    json_path = 'results_100k_i10k_d5_map.json'
 
     if plot_only:
         if True:
-            json_ = load('results_100k_vi.json')
+            print('Plotting')
+            json_ = load(json_path)
             plot_average_and_std_correlations(json_)
-        else:
-            json_map = load('results_map.json')
-            json_vi = load('results_vi1.json')
-            plot_average_and_std_correlations_multiple(json_map, json_vi)
+            #plot_experiment_results(json_['all_results'][0])
+        else: 
+            #json_map = load('results_map.json')
+            #json_vi = load('results_vi1.json')
+
+            json_ = load(json_path)
+            plot_average_and_std_correlations_multiple(json_)#json_map, json_vi)
     elif plot_vi_parameters:
-        json_vi = load('results_10k_vi.json')
+        print('Plotting')
+        json_vi = load(json_path)
         plot_parameter_convergence(json_vi)
     else:
         if multiple_runs:
