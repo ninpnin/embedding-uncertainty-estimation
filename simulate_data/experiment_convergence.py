@@ -375,7 +375,8 @@ def plot_parameter_magnitude(all_results):
 
         # Frobenius Norm
         eps = (np.linalg.norm(alpha, ord='fro') / np.linalg.norm(rho, ord='fro'))**(1/2) # 1/2 if norm^2, 1/4 otherwise
-        return eps*rho, alpha/rho
+        print(eps)
+        return np.concatenate((eps*rho, alpha/eps), axis=0) # corrected theta
 
     if 'all_results' not in all_results: #In the case of single experiment.
         all_results = {'all_results':[all_results]}
