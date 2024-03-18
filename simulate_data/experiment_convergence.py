@@ -374,7 +374,7 @@ def plot_parameter_magnitude(all_results):
         alpha = np.array(theta[V:])
 
         # Frobenius Norm
-        eps = (np.linalg.norm(alpha, ord='fro') / np.linalg.norm(rho, ord='fro'))**(1/4) # 1/2 if norm^2, 1/4 otherwise
+        eps = (np.linalg.norm(alpha, ord='fro') / np.linalg.norm(rho, ord='fro'))**(1/2) # 1/2 if norm^2, 1/4 otherwise
         print(eps)
         return np.concatenate((eps*rho, alpha/eps), axis=0) # corrected theta
 
