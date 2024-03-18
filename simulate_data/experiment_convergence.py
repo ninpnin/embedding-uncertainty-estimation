@@ -142,7 +142,7 @@ def run_multiple_experiments(data_json_path, estimator, estimator_args, embeddin
     
     seed = embedding_args.get('seed', None)
     
-    all_results = []  # Store results from all experiments
+    all_results = []
     for experiment in range(N_experiments):
         print(f"Running experiment {experiment + 1} of {N_experiments}")
         
@@ -244,7 +244,6 @@ def plot_experiment_results(all_results):
             correlations = [experiment['correlation'] for experiment in result['results']]
             color = colors[idx] 
 
-            # Plot main correlation line
             plt.plot(data_sizes, correlations, marker='o', linestyle='-', linewidth=2, color=color, label=f'Experiment {idx+1}')
 
             # VI: if 'p_corr_resampled' data is available
@@ -364,17 +363,18 @@ def plot_parameter_magnitude(all_results):
     """
     all results or just one result.
     """
-    def magnitude_correction(theta, V):
+    def magnitude_correction(theta):
         """
         In order to transform a randomly generated embedding to the one that minimizes a spherical prior,
         you need to do the following magnitude correction
         """
-        rho = theta[0:V, :]
-        alpha = theta[V:, :]
+        assert np.shape(theta)[0] % 2 == 0
+        V = int(np.shape(theta)[0]/2)
+        rho = np.array(theta[0:V])
+        alpha = np.array(theta[V:])
 
         # Frobenius Norm
-        eps = (np.linalg.norm(alpha, ord='fro') / np.linalg.norm(rho, ord='fro'))**(1/4) 
-
+        eps = (np.linalg.norm(alpha, ord='fro') / np.linalg.norm(rho, ord='fro'))**(1/2) # 1/2 if norm^2, 1/4 otherwise
         return eps*rho, alpha/rho
 
     if 'all_results' not in all_results: #In the case of single experiment.
@@ -393,14 +393,18 @@ def plot_parameter_magnitude(all_results):
 
     for idx, result in enumerate(all_results['all_results'][0:1]): #[0:1] remove [0:1].
         true_theta = np.array(result['true_theta'])
-        if 'results' in result:
+        if 'results' in result: # skip meta information (file name etc)
             data_sizes = [experiment['data_size'] for experiment in result['results']]
-            avg_thetas = [np.mean(np.abs(experiment['theta'])) for experiment in result['results']] # avg of parameters
+            
+
+            if True:
+                corrected_theta = [magnitude_correction(experiment['theta']) for experiment in result['results']]
+                avg_thetas = [np.mean(np.abs(theta)) for theta in corrected_theta]
+            else: # TODO remove after testing above.
+                avg_thetas = [np.mean(np.abs(experiment['theta'])) for experiment in result['results']] # avg of parameters
 
             
-            color = colors[idx]  # Select color for this experiment
-
-            # Plot main correlation line
+            color = colors[idx] 
             plt.plot(data_sizes, avg_thetas, marker='o', linestyle='-', linewidth=2, color=color, label=f'Experiment {idx+1}')
 
             if 'std_theta' in result['results'][0]: # VI
