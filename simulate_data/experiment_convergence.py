@@ -374,7 +374,7 @@ def plot_parameter_magnitude(all_results):
         alpha = np.array(theta[V:])
 
         # Frobenius Norm
-        eps = (np.linalg.norm(alpha, ord='fro') / np.linalg.norm(rho, ord='fro'))**(1/2) # 1/2 if norm^2, 1/4 otherwise
+        eps = (np.linalg.norm(alpha, ord='fro') / np.linalg.norm(rho, ord='fro'))**(1/4) # 1/2 if norm^2, 1/4 otherwise
         print(eps)
         return np.concatenate((eps*rho, alpha/eps), axis=0) # corrected theta
 
@@ -394,11 +394,12 @@ def plot_parameter_magnitude(all_results):
 
     for idx, result in enumerate(all_results['all_results'][0:1]): #[0:1] remove [0:1].
         true_theta = np.array(result['true_theta'])
+        true_theta = magnitude_correction(true_theta)
         if 'results' in result: # skip meta information (file name etc)
             data_sizes = [experiment['data_size'] for experiment in result['results']]
             
 
-            if True:
+            if False: # dont need correction on the estimated
                 corrected_theta = [magnitude_correction(experiment['theta']) for experiment in result['results']]
                 avg_thetas = [np.mean(np.abs(theta)) for theta in corrected_theta]
             else: # TODO remove after testing above.
