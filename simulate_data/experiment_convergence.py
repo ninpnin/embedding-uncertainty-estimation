@@ -234,7 +234,7 @@ def plot_experiment_results(all_results):
         print('added all results')
         all_results = {'all_results':[all_results]}
 
-    plt.figure(figsize=(10, 6))  # Set the figure size for the plot
+    plt.figure(figsize=(10, 6))  
 
     colors = plt.cm.tab10(np.linspace(0, min(1, len(all_results['all_results'])/10 ), len(all_results['all_results'])))
 
@@ -242,17 +242,16 @@ def plot_experiment_results(all_results):
         if 'results' in result:
             data_sizes = [experiment['data_size'] for experiment in result['results']]
             correlations = [experiment['correlation'] for experiment in result['results']]
-            color = colors[idx]  # Select color for this experiment
+            color = colors[idx] 
 
             # Plot main correlation line
             plt.plot(data_sizes, correlations, marker='o', linestyle='-', linewidth=2, color=color, label=f'Experiment {idx+1}')
 
-            # Check if 'p_corr_resampled' data is available
+            # VI: if 'p_corr_resampled' data is available
             if any('p_corr_resampled' in experiment for experiment in result['results']):
                 # Assuming the length of 'p_corr_resampled' is consistent within each experiment
                 num_resamples = min(len(experiment['p_corr_resampled']) for experiment in result['results'] if 'p_corr_resampled' in experiment)
                 for i in range(num_resamples):
-                    # Extract the i-th resampled correlation across all data sizes for this experiment
                     resampled_corrs = [experiment['p_corr_resampled'][i] for experiment in result['results'] if 'p_corr_resampled' in experiment]
                     plt.plot(data_sizes, resampled_corrs, linestyle='--', linewidth=1, color=color, alpha=0.3)
 
@@ -272,35 +271,29 @@ def plot_average_and_std_correlations(all_results):
     Args:
     - all_results: output of run_multiple_experiments
     """
-    if 'all_results' not in all_results:  # Adjust if the structure is different
+    if 'all_results' not in all_results: 
         all_results = {'all_results': [all_results]}
 
     plt.figure(figsize=(10, 6))
 
-    # Collect all unique data sizes across experiments
     all_data_sizes = sorted(set(experiment['data_size'] for result in all_results['all_results'] for experiment in result['results']))
 
     avg_correlations = []
     std_correlations = []
 
     for data_size in all_data_sizes:
-        # Collect correlations for the current data size across all experiments
         correlations = [experiment['correlation'] for result in all_results['all_results'] for experiment in result['results'] if experiment['data_size'] == data_size]
 
-        # Compute average and standard deviation of correlations
         avg_corr = np.mean(correlations)
         std_corr = np.std(correlations)
 
         avg_correlations.append(avg_corr)
         std_correlations.append(std_corr)
 
-    # Choose a nice color for all lines
     line_color = 'royalblue'
 
-    # Plot average correlation
     plt.plot(all_data_sizes, avg_correlations, label='Average Correlation', color=line_color, marker='o', linestyle='-')
 
-    # Plot mean ± std deviation lines
     plt.plot(all_data_sizes, np.array(avg_correlations) + np.array(std_correlations), label='Mean ± STD', color=line_color, linestyle='--')
     plt.plot(all_data_sizes, np.array(avg_correlations) - np.array(std_correlations), color=line_color, linestyle='--')
 
@@ -309,7 +302,7 @@ def plot_average_and_std_correlations(all_results):
     title = 'Average Correlation and Standard Deviation' + ("" if 'data_json_path' not in all_results else '\n%s'%all_results['data_json_path'])
     title += "" if 'estimator' not in all_results else '\n%s'%all_results['estimator']
     plt.title(title)
-    plt.ylim(0, 1)  # Set y-axis limits from 0 to 1
+    plt.ylim(0, 1)
     plt.legend()
     plt.grid(True)
     plt.show()
@@ -353,26 +346,47 @@ def plot_average_and_std_correlations_multiple(*all_results_collections):
     plt.xlabel('Data Size')
     plt.ylabel('Correlation')
     plt.title('Average Correlation and Standard Deviation For Multiple Experiments')
-    plt.ylim(0, 1)  # Set y-axis limits from 0 to 1
+    plt.ylim(0, 1)
     plt.legend()
     plt.grid(True)
     plt.show()
 
 
-def plot_parameter_convergence(all_results):
+def calculate_p(vi, wi, theta, V):
+    rho_v = theta[vi, :]          # $\rho_v = \theta_v$
+    alpha_w = theta[wi + V, :]    # $\alpha_w = \theta_{V + w}$
+    eta = rho_v.dot(alpha_w)      # $\eta = \rho_v^T \alpha_w$
+    p = sigmoid(eta)              # Run it through the link function $\sigma; p = \sigma(\eta)$
+    return p
+
+
+def plot_parameter_magnitude(all_results):
     """
     all results or just one result.
     """
+    def magnitude_correction(theta, V):
+        """
+        In order to transform a randomly generated embedding to the one that minimizes a spherical prior,
+        you need to do the following magnitude correction
+        """
+        rho = theta[0:V, :]
+        alpha = theta[V:, :]
+
+        # Frobenius Norm
+        eps = (np.linalg.norm(alpha, ord='fro') / np.linalg.norm(rho, ord='fro'))**(1/4) 
+
+        return eps*rho, alpha/rho
+
     if 'all_results' not in all_results: #In the case of single experiment.
         all_results = {'all_results':[all_results]}
 
-        try: # Try to find these. 
+        try:
             all_results['data_json_path'] = all_results['all_results'][0]['results'][0]['data_json_path']
             all_results['estimator'] = all_results['all_results'][0]['results'][0]['estimator']
         except:
             pass
 
-    plt.figure(figsize=(10, 6))  # Set the figure size for the plot
+    plt.figure(figsize=(10, 6)) 
 
     colors = plt.cm.tab10(np.linspace(0, min(1, len(all_results['all_results'])/10 ), len(all_results['all_results'])))
 
@@ -549,7 +563,7 @@ if __name__ == '__main__':
     elif plot_vi_parameters:
         print('Plotting')
         json_vi = load(json_path)
-        plot_parameter_convergence(json_vi)
+        plot_parameter_magnitude(json_vi)
     else:
         if multiple_runs:
             print('Multiple Runs')
