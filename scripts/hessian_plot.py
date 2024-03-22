@@ -4,9 +4,12 @@ import json
 import seaborn as sns
 import pandas as pd
 from matplotlib import pyplot as plt
+import numpy as np
+
 def main(args):
     df = pl.read_csv(args.samplepath)
     WS = args.ws
+    NS = 5
     print(df)
     words = set(df["word"])
     print(words)
@@ -40,20 +43,49 @@ def main(args):
         co_occurences = json.load(file)  # Optional: indent for readability
     print(co_occurences)
 
+    df = df.with_columns((pl.col("frequency") * 50000000).cast(pl.Int32).alias("N_w"))
+    print(df)
+
     rows = []
     for wordpair, count in co_occurences.items():
         w,v = wordpair.split()
-        row = [w, v, 1]
+        row = [w, v, -1]
         rows.append(row)
 
-    df = pd.DataFrame(rows, columns=["w", "v", "count"])
-    print(df)
-    pivoted = df.pivot(index="w", columns="v", values="count").fillna(0.0)
+    df_co = pd.DataFrame(rows, columns=["w", "v", "count"])
+    print(df_co)
+    pivoted = df_co.pivot(index="w", columns="v", values="count").fillna(0.0)
     print(pivoted)
 
-    sns.heatmap(pivoted, center=0.0, cmap=sns.cubehelix_palette(as_cmap=True))
+    sns.heatmap(pivoted, center=0.0, cmap="seismic", cbar=False)
     plt.show()
 
+
+    for w, N_w in zip(df["word"], df["N_w"]):
+        print(w, N_w)
+        total_ns = N_w * WS * NS * 2
+        print(total_ns)
+        for v, f_v in zip(df["word"], df["frequency"]):
+            ns = np.random.binomial(total_ns, f_v)
+            if ns != 0 and f"{w} {v}" not in co_occurences:
+                co_occurences[f"{w} {v}"] = - ns
+
+    rows = []
+    for wordpair, count in co_occurences.items():
+        w,v = wordpair.split()
+        if count > 0:
+            row = [w, v, -1]
+        else:
+            row = [w, v, 1]
+        rows.append(row)
+
+    df_co = pd.DataFrame(rows, columns=["w", "v", "count"])
+    print(df_co)
+    pivoted = df_co.pivot(index="w", columns="v", values="count").fillna(0.0)
+    print(pivoted)
+
+    sns.heatmap(pivoted, center=0.0, cmap="seismic", cbar=False)
+    plt.show()
 
 if __name__ == '__main__':
     import argparse
