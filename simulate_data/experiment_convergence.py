@@ -110,8 +110,9 @@ def run_convergence_experiment(data_json_path, estimator, estimator_args:dict, e
         
         #theta_estimated = e[words_and_contexts].numpy()
         corr, estimated_p, true_p = p_correlation(vocabulary, theta_estimated, true_theta) # TODO We dont need to calculate p for true every loop.
+        rmse = calculate_rmse(vocabulary, theta_estimated, true_theta)
 
-        results_current.update({'data_size':current_size, 'correlation':corr, 'runtime':end_time - start_time, 'theta':theta_estimated.tolist()}) # Store store_estimated_p etc?
+        results_current.update({'data_size':current_size, 'correlation':corr, 'rmse':rmse, 'runtime':end_time - start_time, 'theta':theta_estimated.tolist()}) # Store store_estimated_p etc?
         results.append(results_current) 
 
     output_dict = {}
@@ -207,6 +208,39 @@ def p_correlation(vocabulary, theta_1, theta_2):
     corr = np.corrcoef(store_p1, store_p2)[1,0]
     return corr, store_p1, store_p2
 
+
+def calculate_eta(vi, wi, theta, V):
+    rho_v = theta[vi, :]          # $\rho_v = \theta_v$
+    alpha_w = theta[wi + V, :]    # $\alpha_w = \theta_{V + w}$
+    eta = rho_v.dot(alpha_w)      # $\eta = \rho_v^T \alpha_w$
+    return eta
+
+def calculate_rmse(vocabulary, theta_1, theta_2):
+    """
+    Calculate rmse btween theta_1 and theta_2 (Usually estimated vs true)
+    """
+    words = list(vocabulary.keys())
+    
+    V = len(words)
+    store_1 = []
+    store_2 = []
+    for v in words:
+        for w in words:
+            if v != w: 
+                vi, wi = vocabulary[v], vocabulary[w]
+            
+                eta1 = calculate_p(vi, wi, theta_1, V)
+                eta2 = calculate_p(vi, wi, theta_2, V)
+                store_1.append(eta1)
+                store_2.append(eta2)
+
+    
+    #corr = np.corrcoef(store_p1, store_p2)[1,0]
+    store_1 = np.array(store_1)
+    store_2 = np.array(store_2)
+    rmse = np.sqrt(np.mean((store_1-store_2)**2))
+    return rmse
+
 def file_exists_check(file_path:str):
     if os.path.isfile(file_path):
         response = input(f"The file '{file_path}' already exists. Do you want to continue? (y/n): ").strip().lower()
@@ -265,7 +299,7 @@ def plot_experiment_results(all_results):
     plt.show()
 
 
-def plot_average_and_std_correlations(all_results):
+def plot_average_and_std_correlations(all_results, rmse=True):
     """
     Args:
     - all_results: output of run_multiple_experiments
@@ -281,7 +315,10 @@ def plot_average_and_std_correlations(all_results):
     std_correlations = []
 
     for data_size in all_data_sizes:
-        correlations = [experiment['correlation'] for result in all_results['all_results'] for experiment in result['results'] if experiment['data_size'] == data_size]
+        if rmse: #TODO name change *correlations to metric or w/e
+            correlations = [experiment['rmse'] for result in all_results['all_results'] for experiment in result['results'] if experiment['data_size'] == data_size]
+        else:
+            correlations = [experiment['correlation'] for result in all_results['all_results'] for experiment in result['results'] if experiment['data_size'] == data_size]
 
         avg_corr = np.mean(correlations)
         std_corr = np.std(correlations)
@@ -330,7 +367,7 @@ def plot_average_and_std_correlations_multiple(*all_results_collections):
 
         for data_size in all_data_sizes:
             correlations = [experiment['correlation'] for result in all_results['all_results'] for experiment in result['results'] if experiment['data_size'] == data_size]
-
+                
             avg_corr = np.mean(correlations)
             std_corr = np.std(correlations)
             avg_correlations.append(avg_corr)
@@ -548,17 +585,18 @@ if __name__ == '__main__':
     """
 
     multiple_runs = True
-    plot_only = False
-    plot_vi_parameters=True
+    plot_only = True
+    plot_vi_parameters=False
 
 
-    json_path = 'results_100k_i10k_d5_map.json'
+    json_path = 'results_test_rmse_small_sig.json'
 
     if plot_only:
         if True:
             print('Plotting')
             json_ = load(json_path)
-            plot_average_and_std_correlations(json_)
+            #plot_average_and_std_rmse(json_)
+            plot_average_and_std_correlations(json_, rmse=True)
             #plot_experiment_results(json_['all_results'][0])
         else: 
             #json_map = load('results_map.json')
