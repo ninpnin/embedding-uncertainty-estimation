@@ -112,6 +112,7 @@ if __name__ == '__main__':
     parser.add_argument("--word", type=str, default="word1")
     parser.add_argument("--context", type=str, default="word2_c")
     args = parser.parse_args()
+    LOGGER.train(f"Args: {args}")
 
     LOGGER.train(f"Load embedding from {args.embedding}...")
     e = Embedding(saved_model_path=args.embedding)
@@ -132,7 +133,7 @@ if __name__ == '__main__':
             data.append((w,v,x))
 
     if args.data_len is not None:
-        data = data[:data_len]
+        data = data[:args.data_len]
     #data = data[:20]
     #H, hessian_vocabulary = get_laplace_hessian(e, data)
     H, hessian_vocabulary = get_laplace_hessian_optimized(e, data)
@@ -186,16 +187,18 @@ if __name__ == '__main__':
         LOGGER.info(f"Sim (MAP) {sim}")
 
         df = pd.DataFrame(rows, columns=["w", "v", "p_hat"])
+        df["data-len"] = args.data_len
         LOGGER.info(df)
+        df.to_csv(f"logs/results-{np.random.randint(100000)}.csv", index=False)
 
         q05 = df["p_hat"].quantile(0.05)
         q95 = df["p_hat"].quantile(0.95)
         
 
-        LOGGER.info(f"q05 {q05}")
-        LOGGER.info(f"q95 {q95}")
+        LOGGER.train(f"q05 {q05}")
+        LOGGER.train(f"q95 {q95}")
         post_mean = df["p_hat"].mean()
-        LOGGER.info(f"mean {post_mean}")
+        LOGGER.train(f"mean {post_mean}")
     #print(Sigma_12)
 
     #L = np.linalg.cholesky(Sigma_12)    
