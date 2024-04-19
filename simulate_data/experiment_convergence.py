@@ -608,17 +608,17 @@ def main_run_multiple():
         'seed': 1
     }
 
-    words_to_fix_rotation = ['word0'] # if (args.embedding_dimension == 2) else None #Ugly hard code :)
+    words_to_fix_rotation = [f'word{i}' for i in range(args.embedding_dimension-1)] # if (args.embedding_dimension == 2) else None #Ugly hard code :)
     estimator_args = {
         'batch_size': args.batch_size,
         'epochs': args.epochs,
         'evaluate': False,  # Required for the estimator
         'model': 'sgns' , # Required for the estimator
-        'words_to_fix_rotation': words_to_fix_rotation
     }
-
+    
     if args.estimator_type in ['vi', 'mean_field_vi']:
         estimator = mean_field_vi
+        estimator_args['words_to_fix_rotation'] = words_to_fix_rotation
     elif args.estimator_type in ['map', 'map_estimate']:
         estimator = map_estimate
 
