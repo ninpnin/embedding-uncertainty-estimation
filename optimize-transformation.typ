@@ -10,7 +10,7 @@ $
 log p(x; rho, alpha) = log p(x; W rho, W^(-1) alpha)
 $
 
-For each $rho, alpha$, there is then a rotation $W$ that optimizes the loss given the value of the likelihood $p(x; rho, alpha)$, minimizing the following quantity
+(GL invariance). For each $rho, alpha$, there is then a rotation $W$ that optimizes the loss given the value of the likelihood $p(x; rho, alpha)$, minimizing the following quantity
 
 $
 lambda norm(W rho)_F^2 + lambda norm(W^(-1) alpha)_F^2 prop & norm(W rho)_F^2 + norm(W^(-1) alpha)_F^2 \
@@ -30,5 +30,7 @@ Finding an analytical solution for the optimal rotation for $W$ is complicated. 
 As #cite(<mu2019revisiting>, form: "prose") show, using a spherical prior identifies the posterior up until an orthogonal transformation ($W^T W= I$). For this reason, if we simulate $rho$ and $alpha$, the spherical prior is going to not only find $W rho$ and $W^(-1) alpha$ with any transformation $W$, but the optimal transformation. That might yield different $rho$ and $alpha$ than the simulated ones.
 
 To counter this, we want to simulate $rho$ and $alpha$, and then find the $W$ that minimizes the Frobenius norm of these. That would then be the reference embedding that we compare the values with. Note that the conditional probabilities $sigma(alpha_w^T rho_v)$ remain unchanged regardless, while cosine similarities between the words ($"cossim"(rho_v, rho_w)$) and vector norms ($norm(rho_v)$, $norm(alpha_w)$) will change after making this adjustment.
+
+The effects of the GL-invariance on the posterior (not just the mode) remain to be explored. We might or might not want to eliminate them.
 
 #bibliography("references.bib", style: "american-psychological-association")
