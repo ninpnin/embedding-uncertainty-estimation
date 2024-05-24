@@ -3,6 +3,7 @@ import numpy as np
 import stan
 import pickle
 import os
+import argparse
 
 """
 Fixate the top DxD context embeddings based on context embeddings from a previously fit model.
@@ -12,10 +13,19 @@ Fit unfixed model and use those as input to the new fixed.
 
 #D = 2 Determined by the loaded model fit.
 
-data_path = '100k_v10_d2_.json'
-stan_model_path = 'word2vec_dxd.stan'
-output_dir = 'stan_fit_dxdfix2'
-nofix_dir = 'stan_fit_nofix'
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_path", type=str, default='100k_v10_d2_.json')
+parser.add_argument("--stan_model_path", type=str, default='word2vec_dxd.stan')
+parser.add_argument("--output_dir", type=str, default='stan_fit_dxdfix2')
+parser.add_argument("--nofix_dir", type=str, default='stan_fit_nofix')
+parser.add_argument("--lambda0", type=float, default=1.0)
+args = parser.parse_args()
+
+data_path = args.data_path
+stan_model_path = args.stan_model_path
+output_dir = args.output_dir
+nofix_dir = args.nofix_dir
 
 with open(data_path) as f:
     data = json.load(f)
@@ -27,7 +37,7 @@ V = len(vocabulary)
 with open(stan_model_path, 'r') as file:
     stan_code = file.read()
 
-def create_stan_data(data_entries, size, vocabulary, fixed_context_matrix):
+def create_stan_data(data_entries, size, vocabulary, fixed_context_matrix, lambda0=1.0):
     target_word = []
     context_word = []
     posneg_labels = []
@@ -38,6 +48,7 @@ def create_stan_data(data_entries, size, vocabulary, fixed_context_matrix):
         posneg_labels.append(entry['x'])
 
     stan_data = {
+        'lambda': lambda0,
         'N': len(target_word),
         'V': len(vocabulary),
         'D': D,
@@ -68,7 +79,8 @@ for size in sizes:
     fixed_context_matrix = context_vectors[:D, :D]
     
     # -- Fit stan model --
-    stan_data = create_stan_data(data_entries, size, vocabulary, fixed_context_matrix)
+    lambda0 = 1.0
+    stan_data = create_stan_data(data_entries, size, vocabulary, fixed_context_matrix, lambda0=lambda0)
     posterior = stan.build(stan_code, data=stan_data)
     fit = posterior.sample(num_samples=1000, num_chains=1)
     
