@@ -2,8 +2,8 @@ data {
     int N; // data size
     int V; // vocab size
     int D; // embedding dim
-    array[N] target_word;
-    array[N] context_word;
+    array[N] int target_word;
+    array[N] int context_word;
     array[N] int<lower=0, upper=1> posneg_labels; // 1: positive or 0: negative sample
 }
 

@@ -13,9 +13,11 @@ Fit unfixed model and use those as input to the new fixed.
 #D = 2 Determined by the loaded model fit.
 
 data_path = '100k_v10_d2_.json'
-stan_model_path = 'word2vec_dxd.stan'
-output_dir = 'stan_fit_dxdfix2'
-nofix_dir = 'stan_fit_nofix'
+stan_model_path = 'models/sgns_dxd.stan'
+output_dir = 'stan_fit_dxdfix'
+nofix_dir = 'stan_fits_test'
+
+sizes = [100, 200] #[100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000] 
 
 with open(data_path) as f:
     data = json.load(f)
@@ -53,7 +55,7 @@ def save_fit(fit, size):
     with open(filename, 'wb') as f:
         pickle.dump(fit, f)
 
-sizes = [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
+
 
 os.makedirs(output_dir, exist_ok=True)
 

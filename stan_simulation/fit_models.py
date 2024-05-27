@@ -6,11 +6,11 @@ import sys
 
 
 data_path = '100k_v10_d2_.json'
-model_path = os.path.join('models', 'word2vec_fix.stan')
-save_dir = 'stan_fits'
+model_path = os.path.join('models', 'sgns_normalpriors.stan')
+save_dir = 'stan_fits_test'
 
 # --- fit settings ---
-sizes = None # None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
+sizes = None# None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
 D = 2
 num_samples = 1000
 num_chains = 1
