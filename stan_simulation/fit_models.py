@@ -4,10 +4,16 @@ import pickle
 import os
 import sys
 
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_path", type=str, default='100k_v10_d2_.json')
+parser.add_argument("--model_path", type=str, default='models/sgns_normalpriors.stan')
+parser.add_argument("--save_dir", type=str, default='stan_fits')
+args = parser.parse_args()
 
-data_path = '100k_v10_d2_.json'
-model_path = os.path.join('models', 'sgns_normalpriors.stan')
-save_dir = 'stan_fits_test'
+data_path = args.data_path
+model_path = args.model_path
+save_dir = args.save_dir
 
 # --- fit settings ---
 sizes = None# None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]

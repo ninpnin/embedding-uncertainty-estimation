@@ -1,4 +1,5 @@
 data {
+    real<lower=0.0> lambda; // prior strength
     int<lower=1> N; // data size
     int<lower=1> V; // vocab size
     int<lower=1> D; // embedding dim
@@ -33,12 +34,12 @@ model {
     // priors. Only apply prior to the non-fixed part
     for (v in (D+1):V) {
         for (d in 1:D) {
-            context_vectors_raw[v-D, d] ~ normal(0, 1);
+            context_vectors_raw[v-D, d] ~ normal(0, lambda);
         }
     }
     for (v in 1:V) {
         for (d in 1:D) {
-            word_vectors[v, d] ~ normal(0, 1);
+            word_vectors[v, d] ~ normal(0, lambda);
         }
     }
 
