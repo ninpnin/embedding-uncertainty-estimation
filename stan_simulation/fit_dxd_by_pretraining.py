@@ -3,7 +3,7 @@ import numpy as np
 import stan
 import pickle
 import os
-import argparse
+import sys
 
 """
 Fixate the top DxD context embeddings based on context embeddings from a previously fit model.
@@ -66,6 +66,22 @@ def save_fit(fit, size):
     filename = os.path.join(output_dir, f'stan_fit_{size}.pkl')
     with open(filename, 'wb') as f:
         pickle.dump(fit, f)
+
+
+def dir_exists_check(dir_path:str):
+    if os.path.isdir(dir_path):
+        response = input(f"The file '{dir_path}' already exists. Do you want to continue? (y/n): ").strip().lower()
+        if response == 'y':
+            return True
+        else:
+            return False
+    return True
+
+dir_flag = dir_exists_check(output_dir)
+if dir_flag:
+    os.makedirs(output_dir, exist_ok=True)
+else:
+    sys.exit()
 
 
 
