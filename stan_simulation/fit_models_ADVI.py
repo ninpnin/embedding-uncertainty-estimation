@@ -1,14 +1,14 @@
 import json
-import stan
 import pickle
 import os
 import sys
-
 import argparse
+from cmdstanpy import CmdStanModel
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, default='100k_v10_d2_.json')
 parser.add_argument("--model_path", type=str, default='models/sgns_normalpriors.stan')
-parser.add_argument("--save_dir", type=str, default='stan_fits')
+parser.add_argument("--save_dir", type=str, default='stan_fits_fullrank5k')
 args = parser.parse_args()
 
 data_path = args.data_path
@@ -16,10 +16,12 @@ model_path = args.model_path
 save_dir = args.save_dir
 
 # --- fit settings ---
-sizes = None# None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
+sizes = [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]  # None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
 D = 2
 num_samples = 1000
-num_chains = 1
+
+algorithm = 'fullrank' # 'fullrank' or 'meanfield'
+vi_iter=5000  # number of iterations for variational inference  optimization before drawing samples
 
 # --- Library ---
 def save_fit(fit, size, save_dir=save_dir):
@@ -27,8 +29,7 @@ def save_fit(fit, size, save_dir=save_dir):
     with open(filename, 'wb') as f:
         pickle.dump(fit, f)
 
-
-def dir_exists_check(dir_path:str):
+def dir_exists_check(dir_path: str):
     if os.path.isdir(dir_path):
         response = input(f"The file '{dir_path}' already exists. Do you want to continue? (y/n): ").strip().lower()
         if response == 'y':
@@ -40,12 +41,12 @@ def dir_exists_check(dir_path:str):
 def create_stan_data(data, size, vocab, D):
     target_word = []
     context_word = []
-    posneg_labels = [] # if the pair is pos or negative sample.
+    posneg_labels = []  # if the pair is pos or negative sample.
 
     for pair in data[:size]:
         # we add +1 because stan index starts on 1.
-        target_word.append(vocab[pair['v']]+1)
-        context_word.append(vocab[pair['w']]+1)
+        target_word.append(vocab[pair['v']] + 1)
+        context_word.append(vocab[pair['w']] + 1)
         posneg_labels.append(pair['x'])
 
     stan_data = {
@@ -70,15 +71,14 @@ else:
 with open(data_path) as f:
     data = json.load(f)
 
-with open(model_path, 'r') as file:
-    stan_code = file.read()
-
 if sizes is None:
     sizes = [len(data['data'])]
 
 for size in sizes:
     stan_data = create_stan_data(data['data'], size, data['vocabulary'], D=D)
-    posterior = stan.build(stan_code, data=stan_data)
-    fit = posterior.sample(num_samples=num_samples, num_chains=num_chains)
+    
+    model = CmdStanModel(stan_file=model_path)
+    fit = model.variational(data=stan_data, iter=vi_iter, output_samples=num_samples, require_converged=True, algorithm=algorithm) #algorithm='meanfield', 'fullrank'
+    
     save_fit(fit, size)
-    print(f"Saved fit for size {size}")
+    print(f"Saved variational fit for size {size}")
