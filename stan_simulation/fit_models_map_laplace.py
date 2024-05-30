@@ -6,6 +6,8 @@ import argparse
 import cmdstanpy
 from cmdstanpy import CmdStanModel
 
+# Does MAP estimation and samples using Laplace around MAP. saves both laplace fit and map (using added _map suffix)
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, default='100k_v10_d2_.json')
 parser.add_argument("--model_path", type=str, default='models/sgns_normalpriors.stan')
@@ -76,16 +78,16 @@ for size in sizes:
     stan_data = create_stan_data(data['data'], size, data['vocabulary'], D=D)
     
     model = CmdStanModel(stan_file=model_path)
-    
+    print('cmdstan version: ', cmdstanpy.cmdstan_version()) 
     # MAP
     # returns CmdStanMLE object...
     # Note: the optimize method finds the mode of the posterior distribution, which is MAP estimate if priors are included. MLE if no priors.
-    map = model.optimize(data=stan_data)  # , algorithm='lbfgs'
+    map = model.optimize(data=stan_data, jacobian=True)  # , algorithm='lbfgs'
     save_fit(map, f'map_{size}') #save map seperately
 
     # laplace approximation around the mode
-    print('cmdstan version: ', cmdstanpy.cmdstan_version()) 
-    laplace_fit = model.laplace_sample(data=stan_data, mode=map, draws=num_draws)
+    
+    laplace_fit = model.laplace_sample(data=stan_data, mode=map, draws=num_draws, jacobian=True)
     
     save_fit(laplace_fit, size)
     print(f"Saved Laplace approximation fit for size {size}")
