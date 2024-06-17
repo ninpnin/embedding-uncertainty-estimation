@@ -4,3 +4,4 @@ data/
 trained
 **/__pycache__/
 **/.DS_Store
+build/
