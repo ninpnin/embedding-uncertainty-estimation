@@ -6,7 +6,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 import numpy as np
 from polyagamma import random_polyagamma
-from probabilistic_word_embeddings import 
+#from probabilistic_word_embeddings import 
 import copy
 
 def get_v_omega(X, omega, sigma_prior):
@@ -33,7 +33,8 @@ def polyagamma_sampler(beta_init, X, y, iterations=2, N=None, mu_prior=None, sig
     if sigma_prior is None:
         sigma_prior = np.identity(X.shape[-1])
         
-    for _ in range(iterations):
+    for ix in range(iterations):
+        LOGGER.debug(f"iter {ix}")
         # Get a 5 by 1 array of PG(1, 2) variates.
         xTbeta = X @ beta
         omega = random_polyagamma(N, xTbeta)
@@ -44,10 +45,11 @@ def polyagamma_sampler(beta_init, X, y, iterations=2, N=None, mu_prior=None, sig
         beta = np.random.multivariate_normal(mean=mu_omega, cov=V_omega)
         yield beta
 
-def embedding_gibbs(e, data_generator, N=1, rounds=10, polyagamma_iter=50, yield_every=1):
+def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1):
     turns = ["word", "context"]
-    data = [next(data_generator) for _ in range(N)]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
+    sigma_prior = np.identity(2) * 1.0
+
     for ix, turn in enumerate(turns * rounds):
         LOGGER.train(f"Flip turn: {turn}, {ix}")
         for wd in words:
@@ -56,16 +58,15 @@ def embedding_gibbs(e, data_generator, N=1, rounds=10, polyagamma_iter=50, yield
                 wd = wd + "_c"
                 data_wd = [(i, x) for (i, j, x) in data if j == wd]
 
-            X = e[[ij for (ij, x) in data_wd]]
-            y = [x for (ij, x) in data_wd]
+            X = e[[ij for (ij, x) in data_wd]].numpy()
+            y = np.array([x for (ij, x) in data_wd])
 
-            e_wd = e[wd]
-            e_wd_new = polyagamma_sampler(e[wd], X, y, iterations=polyagamma_iter)
+            beta_init = e[wd].numpy()
+            e_wd_new_samples = list(polyagamma_sampler(beta_init, X, y, sigma_prior=sigma_prior, iterations=polyagamma_iter))
 
-            e[wd] = e_wd_new
+            e[wd] = e_wd_new_samples[-1]
 
-        if ix % yield_every == 0:
+        if ix % (yield_every * 2) == 0:
             e_sample = copy.deepcopy(e)
             yield e_sample
 
-        
