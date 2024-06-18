@@ -1,59 +1,46 @@
+from trainerlog import get_logger
+LOGGER = get_logger("sampling")
+LOGGER.info("Load modules..")
+import pandas as pd
+import seaborn as sns
+from matplotlib import pyplot as plt
 import numpy as np
-from polyagamma import random_polyagamma
-import progressbar
-
-DIM = 2
-DATALEN = 150
-np.random.seed(124)
-
-def sigmoid(x):
-    y_inv = 1 + np.exp(-x)
-    return 1 / y_inv
-
-beta = 3 * np.random.randn(DIM) / np.sqrt(DIM)
-print(beta)
-X = np.random.randn(DATALEN,DIM)
-etas = beta @ X.T
-probs = sigmoid(etas)
-print("eta", etas[:3])
-print("p  ", probs[:3])
-
-y = np.random.binomial(1, probs)
-#"print(y)
-def sample_beta(X, B, y, b, samples=1, burn_in=100, sample_every=1):
-    kappa = y - 0.5
-    B_inv = np.linalg.inv(B)
-    n, dim = X.shape[0], X.shape[1]
-    print("n", n)
-    beta_hat = np.random.randn(dim) * 0.001
-    omega = None
-    
-    l = np.zeros((samples, dim))
-    for i in progressbar.progressbar(list(range(samples * sample_every + burn_in))):
-        XTbeta = beta_hat @ X.T
-        omega = random_polyagamma(z=XTbeta)
+from embedding_uncertainty import polyagamma_sampler
         
-        omega_sum = np.sum(omega)
-        omega = omega / omega_sum
-        #Omega = np.diag(omega)
-        #V_omega_inv = X.T @ Omega @ X + B_inv
-        V_omega_inv = (X.T * omega) @ X + B_inv
-        V_omega = np.linalg.inv(V_omega_inv)
-        m_omega = V_omega @ (X.T @ kappa + B_inv @ b )
-        
-        
-        beta_hat = np.random.multivariate_normal(m_omega, V_omega)
-        
-        if i >= burn_in and i % sample_every == 0:
-            i_prime = (i - burn_in ) // sample_every
-            l[i_prime] = beta_hat
-            
-    return l
-        
-        
-b = np.zeros(DIM)
-B = np.identity(DIM)
-betas = sample_beta(X, B, y, b, burn_in=5000, samples=100, sample_every=10)
+LOGGER.train("Load data")
+bioassay = pd.read_csv("data/bioassay.csv")
+print(bioassay)
 
+#X = np.random.rand(3,2)
+#y = np.array([1,0,1])
+X = np.array([bioassay["x"], np.ones(len(bioassay))]).T
+y = np.array(bioassay["y"])
+N = np.array(bioassay["n"])
+sigma_prior = np.identity(2) * 100.0
+print(X)
+print(len(X))
+beta_init = np.random.randn(2) * 0.2
+LOGGER.train("Start sampling")
 
-print(np.mean(betas, axis=0))
+print("X.shape, y.shape, beta_init.shape", X.shape, y.shape, beta_init.shape)
+rows = [x for x in polyagamma_sampler(beta_init, X, y, N=N, sigma_prior=sigma_prior, iterations=100000)]
+LOGGER.train("Done!")
+df = pd.DataFrame(rows, columns=["beta1", "beta2"])
+df["method"] = "sequential"
+df = df.head(500)
+
+index = 50
+LOGGER.train(f"Take the {index}th sample of multiple chains..")
+rows = [[x for x in polyagamma_sampler(beta_init, X, y, N=N, sigma_prior=sigma_prior, iterations=50)][-1] for _ in range(500)]
+LOGGER.train("Done!")
+df2 = pd.DataFrame(rows, columns=["beta1", "beta2"])
+df2["method"] = f"one ({index}th iteration)"
+
+df = pd.concat([df, df2])
+
+sns.scatterplot(df, x="beta1", y="beta2", hue="method")
+plt.show()
+
+#plt.clf()
+#sns.scatterplot(df.tail(100), x="beta1", y="beta2")
+#plt.show()

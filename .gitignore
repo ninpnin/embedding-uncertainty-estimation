@@ -3,3 +3,4 @@ data/
 .Rhistory
 trained
 **/__pycache__/
+**/.DS_Store
