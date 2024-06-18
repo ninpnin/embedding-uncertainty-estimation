@@ -53,12 +53,30 @@ if __name__ == '__main__':
 
     x, y = [], []
     e = Embedding(vocab, dimensionality=2)
-    for e_sample in embedding_gibbs(e, data, rounds=args.samples, yield_every=1):
+    
+    rows = []
+    columns = sorted(list(e.vocabulary))
+    for sample_ix, e_sample in enumerate(embedding_gibbs(e, data, rounds=args.samples, yield_every=1)):
         print(e_sample)
         word0sample = e_sample["word0"].numpy()
         print(e_sample["word0"])
         x.append(word0sample[0])
         y.append(word0sample[1])
+
+        vectors = e_sample[columns].numpy()
+        print(vectors.shape)
+
+        newcols, row = [], []
+        for dim in range(vectors.shape[-1]):
+            newcols += [f"{wd}_{dim}" for wd in columns]
+            row += [vectors[ix][dim] for ix, _ in enumerate(columns)]
+        rows.append(row)
+
+        if sample_ix % 5 == 0:
+            df = pd.DataFrame(rows, columns=newcols)
+            df = df[sorted(newcols)]
+            print(df)
+            df.to_csv("gibbs-samples.csv", index=False)
 
     sns.set_theme()
     sns.lineplot(x=x, y=y, sort=False)
