@@ -76,7 +76,7 @@ if __name__ == '__main__':
             df = pd.DataFrame(rows, columns=newcols)
             df = df[sorted(newcols)]
             print(df)
-            df.to_csv("gibbs-samples.csv", index=False)
+            df.to_csv(f"gibbs-samples-N-{args.data_len}.csv", index=False)
 
     sns.set_theme()
     sns.lineplot(x=x, y=y, sort=False)
