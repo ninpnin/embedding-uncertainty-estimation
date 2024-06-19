@@ -10,8 +10,10 @@ from polyagamma import random_polyagamma
 import copy
 
 def get_v_omega(X, omega, sigma_prior):
-    Omega = np.diag(omega)
-    V_inv = X.T @ Omega @ X
+    # Equivalent to the following, but optimized
+    # Omega = np.diag(omega)
+    # V_inv = X.T @ Omega @ X
+    V_inv = (omega* X.T) @ X
     V_inv += np.linalg.inv(sigma_prior)
     return np.linalg.inv(V_inv)
 
@@ -48,7 +50,7 @@ def polyagamma_sampler(beta_init, X, y, iterations=2, N=None, mu_prior=None, sig
 def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1):
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
-    sigma_prior = np.identity(2) * 1.0
+    sigma_prior = np.identity(e.dimensionality) * 1.0
 
     for ix, turn in enumerate(turns * rounds):
         LOGGER.train(f"Flip turn: {turn}, {ix}")
@@ -63,7 +65,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1):
 
             beta_init = e[wd].numpy()
             e_wd_new_samples = list(polyagamma_sampler(beta_init, X, y, sigma_prior=sigma_prior, iterations=polyagamma_iter))
-
+            
             e[wd] = e_wd_new_samples[-1]
 
         if ix % (yield_every * 2) == 0:
