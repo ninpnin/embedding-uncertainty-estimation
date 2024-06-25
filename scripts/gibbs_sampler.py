@@ -29,6 +29,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--datapath", type=str, default=None)
+    parser.add_argument("--dim", type=int, default=2)
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
     args = parser.parse_args()
@@ -52,10 +53,13 @@ if __name__ == '__main__':
         data = data[:args.data_len]
 
     x, y = [], []
-    e = Embedding(vocab, dimensionality=2)
+    e = Embedding(vocab, dimensionality=args.dim)
     
     rows = []
     columns = sorted(list(e.vocabulary))
+
+    WARMUP = args.samples // 2
+    p_avg = None
     for sample_ix, e_sample in enumerate(embedding_gibbs(e, data, rounds=args.samples, yield_every=1)):
         print(e_sample)
         word0sample = e_sample["word0"].numpy()
@@ -72,11 +76,32 @@ if __name__ == '__main__':
             row += [vectors[ix][dim] for ix, _ in enumerate(columns)]
         rows.append(row)
 
+        rho = e_sample[[wd for wd in columns if "_c" not in wd]].numpy()
+        alpha = e_sample[[wd for wd in columns if "_c" in wd]].numpy()
+        eta = rho @ alpha.T
+        p = tf.math.sigmoid(eta)
+
+        if sample_ix >= WARMUP:
+            if p_avg is None:
+                p_avg = p
+            else:
+                p_avg += p
+
         if sample_ix % 5 == 0:
             df = pd.DataFrame(rows, columns=newcols)
             df = df[sorted(newcols)]
             print(df)
             df.to_csv(f"gibbs-samples-N-{args.data_len}.csv", index=False)
+
+    theta_true = np.array(d["theta"])
+    rho_true = theta_true[:theta_true.shape[0] // 2]
+    alpha_true = theta_true[theta_true.shape[0] // 2:]
+
+    p_true = tf.math.sigmoid(rho_true @ alpha_true.T).numpy()
+    p_avg = p_avg / (args.samples - WARMUP)
+
+    RMSE = np.sqrt(np.mean((p_true - p_avg) ** 2))
+    LOGGER.train(f"RMSE: {RMSE}")
 
     sns.set_theme()
     sns.lineplot(x=x, y=y, sort=False)
