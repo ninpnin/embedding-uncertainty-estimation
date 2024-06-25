@@ -99,7 +99,8 @@ if __name__ == '__main__':
 
     p_true = tf.math.sigmoid(rho_true @ alpha_true.T).numpy()
     p_avg = p_avg / (args.samples - WARMUP)
-
+    
+    LOGGER.train(f"RMSE baseline {np.sqrt(np.mean((p_true - np.mean(p_true)) ** 2))}")
     RMSE = np.sqrt(np.mean((p_true - p_avg) ** 2))
     LOGGER.train(f"RMSE: {RMSE}")
 
