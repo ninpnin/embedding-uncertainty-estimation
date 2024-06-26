@@ -32,6 +32,7 @@ if __name__ == '__main__':
     parser.add_argument("--dim", type=int, default=2)
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
+    parser.add_argument("--map_estimate", type=str, default=None)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -53,14 +54,27 @@ if __name__ == '__main__':
         data = data[:args.data_len]
 
     x, y = [], []
+
     e = Embedding(vocab, dimensionality=args.dim)
-    
+    freeze_params = []
+
+    if args.map_estimate is not None:
+
+        #freeze_params = [f"word{i}_c" for i in range(e.dimensionality)]
+        freeze_params = [wd for wd in sorted(list(e.vocabulary)) if "_c" in wd]
+        freeze_params = freeze_params[:e.dimensionality]
+        LOGGER.train(f"Copy from MAP and freeze following params {freeze_params}")
+        e_map = Embedding(saved_model_path=args.map_estimate)
+        LOGGER.train(f"e {e[freeze_params].shape} emap { e_map[freeze_params].shape}")
+        LOGGER.train(f"e {e[freeze_params].dtype} emap { e_map[freeze_params].dtype}")
+        e[freeze_params] = e_map[freeze_params]
+
     rows = []
     columns = sorted(list(e.vocabulary))
 
     WARMUP = args.samples // 2
     p_avg = None
-    for sample_ix, e_sample in enumerate(embedding_gibbs(e, data, rounds=args.samples, yield_every=1)):
+    for sample_ix, e_sample in enumerate(embedding_gibbs(e, data, rounds=args.samples, yield_every=1, freeze_params=freeze_params)):
         print(e_sample)
         word0sample = e_sample["word0"].numpy()
         print(e_sample["word0"])

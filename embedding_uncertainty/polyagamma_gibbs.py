@@ -6,7 +6,6 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 import numpy as np
 from polyagamma import random_polyagamma
-#from probabilistic_word_embeddings import 
 import copy
 
 def get_v_omega(X, omega, sigma_prior):
@@ -47,7 +46,7 @@ def polyagamma_sampler(beta_init, X, y, iterations=2, N=None, mu_prior=None, sig
         beta = np.random.multivariate_normal(mean=mu_omega, cov=V_omega)
         yield beta
 
-def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1):
+def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, freeze_params=[]):
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     sigma_prior = np.identity(e.dimensionality) * 1.0
@@ -66,7 +65,8 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1):
             beta_init = e[wd].numpy()
             e_wd_new_samples = list(polyagamma_sampler(beta_init, X, y, sigma_prior=sigma_prior, iterations=polyagamma_iter))
             
-            e[wd] = e_wd_new_samples[-1]
+            if wd not in freeze_params:
+                e[wd] = e_wd_new_samples[-1]
 
         if ix % (yield_every * 2) == 0:
             e_sample = copy.deepcopy(e)
