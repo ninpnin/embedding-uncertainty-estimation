@@ -5,7 +5,7 @@ import os
 import sys
 
 import stan
-import cmdstanpy
+from cmdstanpy import CmdStanModel
 
 """
 Fixate the top DxD context embeddings based on context embeddings from a previously fit model.
@@ -20,7 +20,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, default='100k_v10_d2_.json')
 parser.add_argument("--stan_model_path", type=str, default='models/sgns_dxd.stan')
-parser.add_argument("--output_dir", type=str, default='stan_fits_dxdfixmap')
+parser.add_argument("--output_dir", type=str, default='stan_fits_dxd_mapjacobian')
 parser.add_argument("--nofix_dir", type=str, default='stan_fits_map')
 parser.add_argument("--lambda0", type=float, default=1.0)
 args = parser.parse_args()
@@ -29,6 +29,10 @@ data_path = args.data_path
 stan_model_path = args.stan_model_path
 output_dir = args.output_dir
 nofix_dir = args.nofix_dir
+
+inference_type = 'laplace' # hmc, vi, laplace, map
+inference_type = inference_type.lower()
+
 
 #D = 2 Determined by the loaded model fit.
 sizes = [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000] # todo extract from nofix_dir
@@ -70,6 +74,12 @@ def save_fit(fit, size):
     with open(filename, 'wb') as f:
         pickle.dump(fit, f)
 
+def load_fit(size, save_dir):
+    filename = os.path.join(save_dir, f'stan_fit_{size}.pkl')
+    with open(filename, 'rb') as f:
+        fit = pickle.load(f)
+    return fit
+
 
 def dir_exists_check(dir_path:str):
     if os.path.isdir(dir_path):
@@ -105,15 +115,47 @@ for size in sizes:
 
     
     # -- Fit stan model --
+
+    # --- HMC ----
+    num_samples = 1000
     lambda0 = 1.0
     stan_data = create_stan_data(data_entries, size, vocabulary, fixed_context_matrix, lambda0=lambda0)
-    posterior = stan.build(stan_code, data=stan_data)
-    fit = posterior.sample(num_samples=1000, num_chains=1)
+    if inference_type=='hmc':
+        
+        
+        model = stan.build(stan_code, data=stan_data)
+        fit = model.sample(num_samples=num_samples, num_chains=1)
+
+    elif inference_type=='vi':
+        vi_iter = 5000
+        algorithm = 'meanfield'
+
+        model = CmdStanModel(stan_file=stan_model_path)
+        fit = model.variational(data=stan_data, iter=vi_iter, draws=num_samples, require_converged=True, algorithm=algorithm) #algorithm='meanfield', 'fullrank'
     
+    elif inference_type=='map':
+        model = CmdStanModel(stan_file=stan_model_path)
+        #algorithm = 'Newton'
+        jacobian = True #needed for laplace.
+        fit = model.optimize(data=stan_data, jacobian=jacobian) #, algorithm=algorithm
+
+    elif inference_type=='laplace':
+        print(size)
+        model = CmdStanModel(stan_file=stan_model_path) # the saved map needs to come from the same model.
+
+        #saved_map_dir = 'stan_fits_dxd_mapjacobian'
+        #print(f'loading map from {saved_map_dir}')
+        #map = load_fit(size, saved_map_dir)
+
+        map = model.optimize(data=stan_data, jacobian=True) 
+        save_fit(map, f'map_{size}')
+
+        fit = model.laplace_sample(data=stan_data, mode=map, draws=num_samples, jacobian=True)
+    
+
     save_fit(fit, size)
     print(f"Saved fit for size {size}")
-
-
+    
 """
 map_filename = os.path.join(output_dir, f'stan_fit_{size}.pkl')
 
