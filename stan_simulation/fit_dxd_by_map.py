@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import os
 import sys
+from collections import defaultdict
 
 import stan
 from cmdstanpy import CmdStanModel
@@ -14,13 +15,11 @@ Fit unfixed MAP and use those as input to the new fixed.
 NOTE: MAP estimate is only supported by CmdStanPy.
 """
 
-
-
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, default='100k_v10_d2_.json')
-parser.add_argument("--stan_model_path", type=str, default='models/sgns_dxd.stan')
-parser.add_argument("--output_dir", type=str, default='stan_fits_dxd_mapjacobian')
+parser.add_argument("--stan_model_path", type=str, default='models/sgns_dxd_aggregated.stan')
+parser.add_argument("--output_dir", type=str, default='aggregated_test') #stan_fits_dxd_mapjacobian
 parser.add_argument("--nofix_dir", type=str, default='stan_fits_map')
 parser.add_argument("--lambda0", type=float, default=1.0)
 args = parser.parse_args()
@@ -32,6 +31,13 @@ nofix_dir = args.nofix_dir
 
 inference_type = 'laplace' # hmc, vi, laplace, map
 inference_type = inference_type.lower()
+
+use_aggregated_data = False
+if stan_model_path.split('.')[-2].split('_')[-1] == 'aggregated':
+    print('Aggregated model detected.')
+    use_aggregated_data = True
+else:
+    print('No aggregation.')
 
 
 #D = 2 Determined by the loaded model fit.
@@ -47,7 +53,7 @@ V = len(vocabulary)
 with open(stan_model_path, 'r') as file:
     stan_code = file.read()
 
-def create_stan_data(data_entries, size, vocabulary, fixed_context_matrix, lambda0=1.0):
+def create_stan_data(data_entries, size, vocabulary, fixed_context_matrix, D, lambda0=1.0):
     target_word = []
     context_word = []
     posneg_labels = []
@@ -69,6 +75,44 @@ def create_stan_data(data_entries, size, vocabulary, fixed_context_matrix, lambd
     }
     return stan_data
 
+
+
+def create_aggregated_stan_data(data_entries, size, vocabulary, fixed_context_matrix, D, lambda0=1.0):
+    # dict to store the counts of each unique word pair. Counts positive and negative samples seperately.
+    aggregated_counts = defaultdict(int) #defualt value = 0
+
+    for entry in data_entries[:size]:
+        target_word = vocabulary[entry['v']] + 1  # +1 because Stan uses 1-based indexing
+        context_word = vocabulary[entry['w']] + 1
+        posneg_label = entry['x']
+        
+        # Count occurrences : (target_word, context_word, posneg_label)
+        aggregated_counts[(target_word, context_word, posneg_label)] += 1
+
+    unique_target_words = []
+    unique_context_words = []
+    unique_posneg_labels = []
+    counts = []
+    for (target, context, label), count in aggregated_counts.items():
+        unique_target_words.append(target)
+        unique_context_words.append(context)
+        unique_posneg_labels.append(label)
+        counts.append(count)
+
+    stan_data = {
+        'lambda': lambda0,
+        'U': len(unique_target_words),  # number of unique pairs
+        'V': len(vocabulary),
+        'D': D,
+        'target_word': unique_target_words,
+        'context_word': unique_context_words,
+        'posneg_labels': unique_posneg_labels,
+        'counts': counts,
+        'fixed_context_matrix': fixed_context_matrix
+    }
+
+    return stan_data
+
 def save_fit(fit, size):
     filename = os.path.join(output_dir, f'stan_fit_{size}.pkl')
     with open(filename, 'wb') as f:
@@ -79,7 +123,6 @@ def load_fit(size, save_dir):
     with open(filename, 'rb') as f:
         fit = pickle.load(f)
     return fit
-
 
 def dir_exists_check(dir_path:str):
     if os.path.isdir(dir_path):
@@ -119,7 +162,12 @@ for size in sizes:
     # --- HMC ----
     num_samples = 1000
     lambda0 = 1.0
-    stan_data = create_stan_data(data_entries, size, vocabulary, fixed_context_matrix, lambda0=lambda0)
+
+    if use_aggregated_data:
+        stan_data = create_aggregated_stan_data(data_entries, size, vocabulary, fixed_context_matrix, D=D, lambda0=lambda0)
+    else:
+        stan_data = create_stan_data(data_entries, size, vocabulary, fixed_context_matrix, D=D, lambda0=lambda0)
+    
     if inference_type=='hmc':
         
         
