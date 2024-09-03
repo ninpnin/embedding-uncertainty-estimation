@@ -8,9 +8,9 @@ import cmdstanpy
 from cmdstanpy import CmdStanModel
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", type=str, default='../real_data/movielens/movielens_with_ns.json') #'100k_v10_d2_.json'
+parser.add_argument("--data_path", type=str, default='100k_v100_d10_.json') #'100k_v10_d2_.json' #../real_data/movielens/movielens_with_ns.json
 parser.add_argument("--model_path", type=str, default='models/sgns_normalpriors_aggregated.stan')
-parser.add_argument("--save_dir", type=str, default='movielens/movielens_map')
+parser.add_argument("--save_dir", type=str, default='v100_d10/map')
 args = parser.parse_args()
 
 data_path = args.data_path
@@ -18,8 +18,8 @@ model_path = args.model_path
 save_dir = args.save_dir
 
 # --- fit settings ---
-sizes = [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]  # None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
-D = 2
+sizes = [50000, 100000]#[[100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]  # None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
+D = 10
 algorithm = 'Newton' # BFGS’, ‘LBFGS’, ‘Newton’
 lambda0 = 1.0
 
