@@ -1,0 +1,2 @@
+from embedding_uncertainty.polyagamma_gibbs import polyagamma_sampler
+from embedding_uncertainty.polyagamma_gibbs import embedding_gibbs
