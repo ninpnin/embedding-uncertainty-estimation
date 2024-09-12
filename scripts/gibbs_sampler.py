@@ -33,6 +33,7 @@ if __name__ == '__main__':
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--map_estimate", type=str, default=None)
+    parser.add_argument("--example_word", type=str, default="word0")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -76,8 +77,8 @@ if __name__ == '__main__':
     p_avg = None
     for sample_ix, e_sample in enumerate(embedding_gibbs(e, data, rounds=args.samples, yield_every=1, freeze_params=freeze_params)):
         print(e_sample)
-        word0sample = e_sample["word0"].numpy()
-        print(e_sample["word0"])
+        word0sample = e_sample[args.example_word].numpy()
+        print(e_sample[args.example_word])
         x.append(word0sample[0])
         y.append(word0sample[1])
 
@@ -120,5 +121,5 @@ if __name__ == '__main__':
 
     sns.set_theme()
     sns.lineplot(x=x, y=y, sort=False)
-    plt.savefig(f"gibbsample-word0-{args.samples}.png")
+    plt.savefig(f"gibbsample-{args.example_word}-{args.samples}.png")
     plt.show()
