@@ -11,19 +11,8 @@ LOGGER = get_logger("gibbs")
 LOGGER.info("Load modules..")
 import seaborn as sns
 from matplotlib import pyplot as plt
-
-def main(args):
-    epsilon_prime = np.random.randn(L.shape[0])
-    epsilon = L @ epsilon_prime
-    dim = e.dimensionality
-
-    e_sample = copy.deepcopy(e)
-
-    for v in e.vocabulary:
-        i = hessian_vocabulary[v]
-        e_sample[v] += epsilon[i: i+dim]
-    
-    return e_sample
+from pathlib import Path
+import random
 
 if __name__ == '__main__':
     import argparse
@@ -46,9 +35,11 @@ if __name__ == '__main__':
 
         LOGGER.debug(f"Keys: {d.keys()}")
 
+        random.shuffle(d["data"])
         for elem in d["data"]:
             w, v, x = elem["v"], elem["w"] + "_c", elem["x"]
             vocab.add(w)
+            vocab.add(elem["w"])
             data.append((w,v,x))
 
     if args.data_len is not None:
@@ -56,6 +47,7 @@ if __name__ == '__main__':
 
     x, y = [], []
 
+    print(vocab)
     e = Embedding(vocab, dimensionality=args.dim)
     freeze_params = []
 
@@ -75,6 +67,7 @@ if __name__ == '__main__':
 
     WARMUP = args.samples // 2
     p_avg = None
+    pathstem = Path(args.datapath).stem.replace("_", "-")
     for sample_ix, e_sample in enumerate(embedding_gibbs(e, data, rounds=args.samples, yield_every=1, freeze_params=freeze_params)):
         print(e_sample)
         word0sample = e_sample[args.example_word].numpy()
@@ -106,8 +99,9 @@ if __name__ == '__main__':
             df = pd.DataFrame(rows, columns=newcols)
             df = df[sorted(newcols)]
             print(df)
-            df.to_csv(f"gibbs-samples-N-{args.data_len}.csv", index=False)
-
+            Path()
+            df.to_csv(f"gibbs-samples-N-{args.data_len}-D-{args.dim}-{pathstem}.csv", index=False)
+    
     theta_true = np.array(d["theta"])
     rho_true = theta_true[:theta_true.shape[0] // 2]
     alpha_true = theta_true[theta_true.shape[0] // 2:]
