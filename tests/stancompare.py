@@ -13,7 +13,7 @@ class PolyaGammaTest(unittest.TestCase):
         y = np.array([1,0,1])
 
         beta_init = np.random.randn(2) / 10
-        samples = list(polyagamma_sampler(beta_init, X, y, iterations=250000, mu_prior=np.array([0,0]), sigma_prior=np.array([[1,0], [0,1]]), return_last=False))
+        samples = list(polyagamma_sampler(beta_init, X, y, iterations=250000, mu_prior=np.array([0,0]), sigma_prior=np.array([[1,0], [0,1]])))
         samples = samples[1000:]
 
         alphas = np.array([alpha for alpha, beta in samples])
