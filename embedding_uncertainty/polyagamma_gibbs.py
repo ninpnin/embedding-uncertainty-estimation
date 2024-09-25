@@ -156,13 +156,6 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lapla
                 kappa_cache[wd] = kappa_cache_wd
                 N_wd_cache[wd] = N_cache_wd
 
-                print(X_cache[wd])
-                print(kappa_cache[wd])
-                print(N_wd_cache[wd])
-                #exit()
-                print(X_cache_wd)
-                print(kappa_cache_wd)
-
     for ix, turn in enumerate(turns * rounds):
         LOGGER.train(f"Flip turn: {turn}, {ix}")
         prior_count = 0
