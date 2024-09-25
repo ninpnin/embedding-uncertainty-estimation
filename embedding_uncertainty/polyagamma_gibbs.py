@@ -21,12 +21,13 @@ def get_v_omega(X, omega, sigma_prior):
     V_inv += np.linalg.inv(sigma_prior)
     return np.linalg.inv(V_inv)
 
-def get_mu_omega(X, y, N, mu_prior, sigma_prior, V_omega):
-    kappa = y - N/2
+def get_mu_omega(X, y, N, mu_prior, sigma_prior, V_omega, kappa=None):
+    if kappa is None:
+        kappa = y - N/2
     parenthesis = X.T @ kappa + np.linalg.inv(sigma_prior) @ mu_prior
     return V_omega @ parenthesis
 
-def polyagamma_sampler(beta_init, X, y, iterations=2, N=None, mu_prior=None, sigma_prior=None, return_last=False):
+def polyagamma_sampler(beta_init, X, y, iterations=2, N=None, kappa=None, mu_prior=None, sigma_prior=None, return_last=False):
     """
 
     """
@@ -46,8 +47,8 @@ def polyagamma_sampler(beta_init, X, y, iterations=2, N=None, mu_prior=None, sig
         omega = random_polyagamma(N, xTbeta)
         #print(omega)
         V_omega = get_v_omega(X, omega, sigma_prior)
-        mu_omega = get_mu_omega(X, y, N, mu_prior, sigma_prior, V_omega)
-        
+        mu_omega = get_mu_omega(X, y, N, mu_prior, sigma_prior, V_omega, kappa=kappa)
+
         beta = np.random.multivariate_normal(mean=mu_omega, cov=V_omega)
         if not return_last:
             betas.append(beta)
@@ -100,7 +101,7 @@ def get_wd_data(data, wd, turn, cache={}):
             cache[wd] = data_wd
             return data_wd
 
-def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, laplace_approx_limit=None, freeze_params=[]):
+def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, laplace_approx_limit=None, freeze_params=[], aggregate=True):
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     sigma_prior = np.identity(e.dimensionality) * 1.0
@@ -111,6 +112,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lapla
     X_cache = {}
     y_cache = {}
     N_wd_cache = {}
+    kappa_cache = {}
 
     logprobs = []
 
@@ -120,45 +122,50 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lapla
             if turn == "context":
                 wd = wd + "_c"
             data_wd = get_wd_data(data, wd, turn, cache=data_wds_cache)
-            N_wd_cache[wd] = len(data_wd)
             X_cache[wd] = X_cache.get(wd, tf.constant([ij for (ij, x) in data_wd]))
             y_cache[wd] = y_cache.get(wd, np.array([x for (ij, x) in data_wd]))
+            N_wd_cache[wd] = np.ones(len(data_wd))
+
+    if aggregate:
+        for wd in words:#progressbar.progressbar(words):
+            for turn in turns:
+                if turn == "context":
+                    wd = wd + "_c"
+                data_wd = get_wd_data(data, wd, turn, cache=data_wds_cache)
+                N_wd_cache[wd] = len(data_wd)
+                X_cache_wd = [ij for (ij, x) in data_wd]
+                y_cache_wd = [x for (ij, x) in data_wd]
+
+                wd_ones_dict = {}
+                wd_N_dict = {}
+                for v_i, x_i in zip(X_cache_wd, y_cache_wd):
+                    wd_ones_dict[v_i] = wd_ones_dict.get(v_i, 0) + x_i
+                    wd_N_dict[v_i] = wd_N_dict.get(v_i, 0) + 1
+
+                X_cache_wd = []
+                kappa_cache_wd = []
+                N_cache_wd = []
+                for v in wd_ones_dict:
+                    # kappa = y - N/2
+                    X_cache_wd.append(v)
+                    N_cache_wd.append(wd_N_dict[v])
+                    kappa_v =  wd_ones_dict[v] - wd_N_dict[v] / 2
+                    kappa_cache_wd.append(kappa_v)
+
+                X_cache[wd] = X_cache_wd
+                kappa_cache[wd] = kappa_cache_wd
+                N_wd_cache[wd] = N_cache_wd
+
+                print(X_cache[wd])
+                print(kappa_cache[wd])
+                print(N_wd_cache[wd])
+                #exit()
+                print(X_cache_wd)
+                print(kappa_cache_wd)
 
     for ix, turn in enumerate(turns * rounds):
         LOGGER.train(f"Flip turn: {turn}, {ix}")
         prior_count = 0
-        
-        for wd in progressbar.progressbar(words):
-            e_theta = e.theta.numpy()
-            if turn == "context":
-                wd = wd + "_c"
-            if N_wd_cache[wd] > 0:
-                X = e[X_cache[wd]].numpy()
-                beta_init = e[wd].numpy()
-                y = y_cache[wd]
-
-                if N_wd_cache[wd] < laplace_approx_limit:
-                    e_wd_new_samples = polyagamma_sampler(beta_init, X, y, sigma_prior=sigma_prior, iterations=polyagamma_iter, return_last=True)
-                    
-                    if wd not in freeze_params:
-                        e[wd] = e_wd_new_samples
-                else:
-                    try:
-                        if wd not in freeze_params:
-                            e[wd] = logistic_laplace_approx(X, y, mu_prior=None, sigma_prior=sigma_prior)
-                    except Exception as error:
-                        LOGGER.error(f"MAP error {error}")
-                        e_wd_new_samples = polyagamma_sampler(beta_init, X, y, sigma_prior=sigma_prior, iterations=polyagamma_iter, return_last=True)
-                        if wd not in freeze_params:
-                            e[wd] = e_wd_new_samples
-            else:
-                prior_count += 1
-                if wd not in freeze_params:
-                    e[wd] = prior_sampler(e[wd].numpy(), sigma_prior=sigma_prior)
-        if prior_count >= len(words) * 0.2:
-            LOGGER.warning(f"sampled from prior: {prior_count} out of {len(words)}")
-        else:
-            LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
         if ix % (yield_every * 2) == 0:
             e_sample = copy.deepcopy(e)
             data_i = tf.constant([i for (i, j, x) in data])
@@ -175,4 +182,29 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lapla
             from matplotlib import pyplot as plt
             plt.plot(range(len(logprobs)), logprobs)
             plt.show()
+
+        for wd in progressbar.progressbar(words):
+            e_theta = e.theta.numpy()
+            if turn == "context":
+                wd = wd + "_c"
+            if sum(N_wd_cache[wd]) > 0:
+                X = e[X_cache[wd]].numpy()
+                beta_init = e[wd].numpy()
+                kappa_wd = kappa_cache.get(wd)
+                y = None
+                if kappa_wd is None:
+                    y = y_cache[wd]
+
+                e_wd_new_samples = polyagamma_sampler(beta_init, X, y, sigma_prior=sigma_prior, N=N_wd_cache[wd], iterations=polyagamma_iter, return_last=True, kappa=kappa_wd)
+                #exit()
+                if wd not in freeze_params:
+                    e[wd] = e_wd_new_samples
+            else:
+                prior_count += 1
+                if wd not in freeze_params:
+                    e[wd] = prior_sampler(e[wd].numpy(), sigma_prior=sigma_prior)
+        if prior_count >= len(words) * 0.2:
+            LOGGER.warning(f"sampled from prior: {prior_count} out of {len(words)}")
+        else:
+            LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
