@@ -47,7 +47,6 @@ if __name__ == '__main__':
 
     x, y = [], []
 
-    print(vocab)
     e = Embedding(vocab, dimensionality=args.dim)
     freeze_params = []
 
