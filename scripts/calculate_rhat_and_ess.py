@@ -55,11 +55,13 @@ def main(args):
 
     df = pd.DataFrame(data)
     df["ESS/N"] = df["ess"] / len(samples)
-    df["converged"] = df["rhat"] <= 1.01
+    df["converged-1.01"] = df["rhat"] <= 1.01
+    df["converged-1.05"] = df["rhat"] <= 1.05
     print(df)
 
     print("Mean ESS", df["ess"].mean())
-    print("Converged %", df["converged"].mean())
+    print("Converged %", df["converged-1.01"].mean(), "Rhat <= 1.01")
+    print("Converged %", df["converged-1.05"].mean(), "Rhat <= 1.05")
 
 if __name__ == "__main__":
     import argparse
