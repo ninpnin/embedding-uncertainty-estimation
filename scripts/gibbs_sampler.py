@@ -23,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--map_estimate", type=str, default=None)
     parser.add_argument("--example_word", type=str, default="word0")
+    parser.add_argument("--prefix", type=str, default="")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -99,7 +100,7 @@ if __name__ == '__main__':
             df = df[sorted(newcols)]
             print(df)
             Path()
-            df.to_csv(f"gibbs-samples-N-{args.data_len}-D-{args.dim}-{pathstem}.csv", index=False)
+            df.to_csv(f"gibbs-samples-N-{args.data_len}-D-{args.dim}-{args.prefix}{pathstem}.csv", index=False)
     
     theta_true = np.array(d["theta"])
     rho_true = theta_true[:theta_true.shape[0] // 2]
