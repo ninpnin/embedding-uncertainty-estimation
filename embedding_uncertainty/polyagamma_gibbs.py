@@ -14,6 +14,7 @@ def get_v_omega_tf(X, omega, sigma_prior_inv):
     XTomega = (XT2 * omega)
     XTomega = tf.transpose(XTomega, perm=[2,1,0])
     V_inv = tf.linalg.matmul(X, XTomega, transpose_a=True)
+    V_inv = tf.transpose(V_inv, perm=[0,2,1])
     V_inv += sigma_prior_inv
     return tf.linalg.inv(V_inv)
 
@@ -29,20 +30,22 @@ def polyagamma_sampler_tf(beta_init, X, y, iterations=2, N=None, mu_prior=None, 
     """
 
     """
+    dtype = beta_init.dtype
     beta = beta_init
+    M = X.shape[0]
     K = X.shape[-1]
     CHAINS = X.shape[0]
     
     if mu_prior is None:
         #mu_prior = np.zeros(X.shape[-1])
-        mu_prior = tf.stack([tf.zeros(X.shape[-1]) for _ in range(X.shape[0])])
+        mu_prior = tf.stack([tf.zeros(K, dtype=beta_init.dtype) for _ in range(M)])
     if sigma_prior is None:
-        sigma_prior = tf.stack([tf.eye(X.shape[-1]) for _ in range(X.shape[0])])
+        sigma_prior = tf.stack([tf.eye(K, dtype=beta_init.dtype) for _ in range(M)])
     XT = tf.transpose(X, perm=[1,0,2])
     NT = N.numpy().T
     kappa = y - N/2
     
-    omega = tf.Variable(NT, dtype=tf.float32)
+    omega = tf.Variable(NT, dtype=dtype)
     parenthesis = get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior)
     sigma_prior_inv = tf.linalg.inv(sigma_prior)
     
@@ -59,7 +62,7 @@ def polyagamma_sampler_tf(beta_init, X, y, iterations=2, N=None, mu_prior=None, 
         V_omega = get_v_omega_tf(X, omega, sigma_prior_inv)
         mu_omega = tf.reduce_sum(tf.linalg.matmul(V_omega, parenthesis, transpose_a=True), axis=-1)
         L = tf.linalg.cholesky(V_omega)
-        epsilon = tf.random.normal([CHAINS, K, 1])        
+        epsilon = tf.random.normal([CHAINS, K, 1], dtype=dtype)
         diff = tf.linalg.matmul(L, epsilon, transpose_a=True)
         beta = mu_omega + tf.reduce_sum(diff, axis=-1)
         #beta = np.random.multivariate_normal(mean=mu_omega, cov=V_omega)
