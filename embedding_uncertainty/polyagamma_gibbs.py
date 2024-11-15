@@ -61,11 +61,20 @@ def polyagamma_sampler_tf(beta_init, X, y, iterations=2, N=None, mu_prior=None, 
         #print(omega)
         V_omega = get_v_omega_tf(X, omega, sigma_prior_inv)
         mu_omega = tf.reduce_sum(tf.linalg.matmul(V_omega, parenthesis, transpose_a=True), axis=-1)
-        L = tf.linalg.cholesky(V_omega)
+
+        # Use the square root of the matrix U S^(1/2) V^T
+        # from the SVD to generate multivariate random vectors
+        
+        # x_prime = mu + (U S^(1/2) V^T) x
+
+        S, U, V = tf.linalg.svd(V_omega)
+        S_sqrt =  tf.linalg.diag(tf.sqrt(S))
+        U_S_sqrt = tf.linalg.matmul(U, S_sqrt)
+        sqrt_V_omega = tf.linalg.matmul(U_S_sqrt, V)
         epsilon = tf.random.normal([CHAINS, K, 1], dtype=dtype)
-        diff = tf.linalg.matmul(L, epsilon, transpose_a=True)
+        diff = tf.linalg.matmul(sqrt_V_omega, epsilon, transpose_a=True)
         beta = mu_omega + tf.reduce_sum(diff, axis=-1)
-        #beta = np.random.multivariate_normal(mean=mu_omega, cov=V_omega)
+
         yield beta
     print("Polya-Gamma sampling total:", np.sum(pg_tds), "(s)")
 
