@@ -1,4 +1,5 @@
 data {
+    real<lower=0.0> lambda;
     int N; // data size
     int V; // vocab size
     int D; // embedding dim
@@ -17,8 +18,8 @@ model {
     // prior
     for (v in 1:V) {
         for (d in 1:D) {
-            word_vectors[v, d] ~ normal(0,1);
-            context_vectors[v,d] ~ normal(0,1);
+            word_vectors[v, d] ~ normal(0,lambda);
+            context_vectors[v,d] ~ normal(0,lambda);
         }
     } 
 
