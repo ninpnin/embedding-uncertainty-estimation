@@ -3,12 +3,14 @@ import stan
 import pickle
 import os
 import sys
+#from time import time
+import time
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, default='100k_v10_d2_.json')
 parser.add_argument("--model_path", type=str, default='models/sgns_normalpriors.stan')
-parser.add_argument("--save_dir", type=str, default='stan_fits')
+parser.add_argument("--save_dir", type=str, default='stan_fits_hmc')
 args = parser.parse_args()
 
 data_path = args.data_path
@@ -16,7 +18,7 @@ model_path = args.model_path
 save_dir = args.save_dir
 
 # --- fit settings ---
-sizes = None# None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
+sizes = [1000]# None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
 D = 2
 num_samples = 1000
 num_chains = 1
@@ -77,8 +79,10 @@ if sizes is None:
     sizes = [len(data['data'])]
 
 for size in sizes:
+    t0 = time.time()
     stan_data = create_stan_data(data['data'], size, data['vocabulary'], D=D)
     posterior = stan.build(stan_code, data=stan_data)
     fit = posterior.sample(num_samples=num_samples, num_chains=num_chains)
     save_fit(fit, size)
     print(f"Saved fit for size {size}")
+    print("Time: %.3f"%(time.time()-t0))

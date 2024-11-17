@@ -18,21 +18,23 @@ NOTE: MAP estimate is only supported by CmdStanPy.
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, default='ten_2d_datasets/1.json') #'100k_v10_d2_.json'
-parser.add_argument("--output_dir", type=str, default='ten_2d_datasets/hmc/test') #stan_fits_dxd_mapjacobian
-parser.add_argument("--nofix_dir", type=str, default='ten_2d_datasets/map/1')
-parser.add_argument("--stan_model_path", type=str, default='models/sgns_dxd_aggregated.stan')
+parser.add_argument("--output_dir", type=str, default='ten_2d_datasets/hmc_nofit/test') #stan_fits_dxd_mapjacobian
+parser.add_argument("--stan_model_path", type=str, default='models/sgns_normalpriors_aggregated.stan')
 parser.add_argument("--lambda0", type=float, default=1.0)
+
 args = parser.parse_args()
 
 data_path = args.data_path
 stan_model_path = args.stan_model_path
 output_dir = args.output_dir
-nofix_dir = args.nofix_dir
+lambda0 = args.lambda0
+print('Using lambda0 = ', lambda0)
 
-inference_type = 'hmc' # hmc, vi, laplace, map
+inference_type = 'vi' # hmc, vi, laplace, map
 inference_type = inference_type.lower()
-lambda0 = 1.0
-num_samples = 2000#1000 I use 1k in the current plots/results.
+#lambda0 = np.sqrt(1.0/5.0) #1/K
+num_samples = 10000#1000 I use 1k in the current plots/results.
+num_chains = 2 # for HMC
 
 use_aggregated_data = True
 if stan_model_path.split('.')[-2].split('_')[-1] == 'aggregated':
@@ -42,8 +44,9 @@ else:
     print('No aggregation.')
 
 
-#D = 2 Determined by the loaded model fit.
-sizes = [10000]#[100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000] # todo extract from nofix_dir
+D = 5 # embedding dimension.
+#[100, 200, 500, 
+sizes = [1000, 5000, 10000, 20000, 50000, 100000, 500000, 1000000] # todo extract from nofix_dir
 
 with open(data_path) as f:
     data = json.load(f)
@@ -79,7 +82,7 @@ def create_stan_data(data_entries, size, vocabulary, fixed_context_matrix, D, la
 
 
 
-def create_aggregated_stan_data(data_entries, size, vocabulary, fixed_context_matrix, D, lambda0=1.0):
+def create_aggregated_stan_data(data_entries, size, vocabulary, D, lambda0=1.0):
     # dict to store the counts of each unique word pair. Counts positive and negative samples seperately.
     aggregated_counts = defaultdict(int) #defualt value = 0
 
@@ -110,7 +113,7 @@ def create_aggregated_stan_data(data_entries, size, vocabulary, fixed_context_ma
         'context_word': unique_context_words,
         'posneg_labels': unique_posneg_labels,
         'counts': counts,
-        'fixed_context_matrix': fixed_context_matrix
+        #'fixed_context_matrix': fixed_context_matrix
     }
 
     return stan_data
@@ -145,37 +148,39 @@ else:
 if sizes is None:
     sizes = [len(data['data'])]
 
+#print('Total length of data',len( data['data']))
+
 os.makedirs(output_dir, exist_ok=True)
 
 for size in sizes:
     # -- Load the corresponding MAP fit for the current size --
-    map_fit_to_load = os.path.join(nofix_dir, f'stan_fit_{size}.pkl')
-    with open(map_fit_to_load, 'rb') as f:
-        map = pickle.load(f)
+    #map_fit_to_load = os.path.join(nofix_dir, f'stan_fit_{size}.pkl')
+    #with open(map_fit_to_load, 'rb') as f:
+    #    map = pickle.load(f)
     
-    map_params = map.stan_variables()
-    map_context_vectors = map_params['context_vectors']
-    D = map_context_vectors.shape[1]
-    fixed_context_matrix = map_context_vectors[:D,:] #:D
+    #map_params = map.stan_variables()
+    #map_context_vectors = map_params['context_vectors']
+    #D = map_context_vectors.shape[1]
+    #fixed_context_matrix = map_context_vectors[:D,:] #:D
 
     
     # -- Fit stan model --
 
 
     if use_aggregated_data:
-        stan_data = create_aggregated_stan_data(data_entries, size, vocabulary, fixed_context_matrix, D=D, lambda0=lambda0)
+        stan_data = create_aggregated_stan_data(data_entries, size, vocabulary, D=D, lambda0=lambda0)
     else:
-        stan_data = create_stan_data(data_entries, size, vocabulary, fixed_context_matrix, D=D, lambda0=lambda0)
+        stan_data = create_stan_data(data_entries, size, vocabulary, D=D, lambda0=lambda0)
     
 
     if inference_type=='hmc':
     
         model = stan.build(stan_code, data=stan_data) 
-        fit = model.sample(num_samples=num_samples, num_chains=1)
+        fit = model.sample(num_samples=num_samples, num_chains=num_chains)
         #print(model.summary())
         print(fit.to_frame().columns)
     elif inference_type=='vi':
-        vi_iter = 5000
+        vi_iter = 5000 #?
         algorithm = 'meanfield'
 
         model = CmdStanModel(stan_file=stan_model_path)

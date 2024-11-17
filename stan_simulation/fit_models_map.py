@@ -8,9 +8,9 @@ import cmdstanpy
 from cmdstanpy import CmdStanModel
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", type=str, default='100k_v100_d10_.json') #'100k_v10_d2_.json' #../real_data/movielens/movielens_with_ns.json
+parser.add_argument("--data_path", type=str, default='ten_2d_datasets/10.json') #'100k_v10_d2_.json' #../real_data/movielens/movielens_with_ns.json
 parser.add_argument("--model_path", type=str, default='models/sgns_normalpriors_aggregated.stan')
-parser.add_argument("--save_dir", type=str, default='v100_d10/map')
+parser.add_argument("--save_dir", type=str, default='ten_2d_datasets/map/10')
 args = parser.parse_args()
 
 data_path = args.data_path
@@ -18,12 +18,12 @@ model_path = args.model_path
 save_dir = args.save_dir
 
 # --- fit settings ---
-sizes = [50000, 100000]#[[100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]  # None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
-D = 10
-algorithm = 'Newton' # BFGS’, ‘LBFGS’, ‘Newton’
+sizes = [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]#[[100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]  # None (uses all data) or list of data sizes [100, 200, 500, 1000, 5000, 10000, 20000, 50000, 100000]
+D = 2
+algorithm = 'LBFGS' # BFGS’, ‘LBFGS’, ‘Newton’ # LBFGS is the default one.
 lambda0 = 1.0
 
-use_aggregated_data = False
+use_aggregated_data = True
 if model_path.split('.')[-2].split('_')[-1] == 'aggregated':
     print('Aggregated model detected.')
     use_aggregated_data = True
@@ -130,10 +130,10 @@ for size in sizes:
         stan_data = create_aggregated_stan_data(data_entries, size, vocabulary, D=D, lambda0=lambda0)
     else:
         stan_data = create_stan_data(data_entries, size, vocabulary, D=D, lambda0=lambda0)
-    print('done data')
-    print(stan_data['U'], stan_data['V'])
+    #print('done data')
+    #print(stan_data['U'], stan_data['V'])
     model = CmdStanModel(stan_file=model_path)
-    print('model setup')   
+    #print('model setup')   
     # MAP
     # returns CmdStanMLE object...
     # Note: the optimize method finds the mode of the posterior distribution, which is MAP estimate if priors are included. MLE if no priors.
