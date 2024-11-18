@@ -7,3 +7,4 @@ trained
 build/
 logs
 results
+slurm*.out
