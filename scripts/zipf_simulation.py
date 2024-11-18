@@ -7,6 +7,7 @@ import json
 from probabilistic_word_embeddings.embeddings import Embedding
 import tqdm
 import tensorflow as tf
+from pathlib import Path
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
@@ -57,7 +58,7 @@ def main(args):
     np.random.seed(seed)
 
     w = [str(wd) for wd in get_random_word(freqs, size=args.N)]
-    v = [str(wd) for wd in get_random_word(freqs, size=args.N)]
+    v = [str(wd + "_c") for wd in get_random_word(freqs, size=args.N)]
     x = []
 
     chunk_size = 1000
@@ -82,6 +83,32 @@ def main(args):
         x += x_i
 
 
+    output_dict = {}
+    output_dict["theta"] = d["theta"]
+    output_dict["theta_seed"] = d["theta_seed"]
+    output_dict["eps_sd"] = d["eps_sd"]
+    output_dict["vocabulary"] = d["vocabulary"]
+    output_dict["seed"] = seed
+
+    new_data = []
+
+    for i in range(args.N):
+        dict_i = {}
+        dict_i["v"] = w[i]
+        dict_i["w"] = v[i].replace("_c", "")
+        dict_i["x"] = int(x[i])
+        new_data.append(dict_i)
+
+    output_dict["data"] = new_data
+
+    print(d["data"][:3])
+    print(output_dict["data"][:3])
+
+    filename = Path(args.ref_data).stem + "-zipf.json"
+    outpath = Path(args.outfolder) / filename
+
+    with outpath.open("w") as f:
+        json.dump(output_dict, f)
 
 
 
@@ -89,7 +116,7 @@ if __name__ == '__main__':
     import argparse
     argparser = argparse.ArgumentParser(description=__doc__)
     argparser.add_argument("--ref_data", type=str, required=True)
-    argparser.add_argument("--outpath", type=str, default=None)
+    argparser.add_argument("--outfolder", type=str, required=True)
     argparser.add_argument("--N", type=int, default=2000000)
     argparser.add_argument("--a", type=float, default=1.0, help="Zipf law exponent parameter, usually roughly 1.0")
     argparser.add_argument("--b", type=float, default=2.7, help="Zipf law offset parameter, 2.7 is a common value for English")
