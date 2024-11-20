@@ -210,11 +210,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
         sigma_prior = sigma_prior * lambda0
 
     data_wds_cache = {}
-    X_cache = {}
-    y_cache = {}
-    N_wd_cache = {}
-    kappa_cache = {}
-
+    X_cache, y_cache, N_wd_cache, kappa_cache = {}, {}, {}, {}
     logprobs = []
 
     # Preprocess data
@@ -227,14 +223,14 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
                 X_cache[wd] = X_cache.get(wd, tf.constant([ij for (ij, x) in data_wd]))
                 y_cache[wd] = y_cache.get(wd, np.array([x for (ij, x) in data_wd]))
                 N_wd_cache[wd] = np.ones(len(data_wd))
-
     else:
         X_cache, N_wd_cache, kappa_cache = aggregate_data(data, words, e)
-
 
     for ix, turn in enumerate(turns * rounds):
         LOGGER.train(f"Flip turn: {turn}, {ix}")
         prior_count = 0
+
+        # Calculate log_posterior and yield sample
         if ix % (yield_every * 2) == 0:
             e_sample = copy.deepcopy(e)
             data_i = tf.constant([i for (i, j, x) in data])
@@ -247,11 +243,14 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
             logprobs.append(posterior)
             LOGGER.train(f"Log posterior for the sample: {posterior}")
             yield e_sample
+
+        # Plot log_posterior graph
         if ix % (yield_every * 100) == 0 and ix > 0:
             from matplotlib import pyplot as plt
             plt.plot(range(len(logprobs)), logprobs)
             plt.show()
 
+        # Do sampling
         for wd in progressbar.progressbar(words):
             e_theta = e.theta.numpy()
             if turn == "context":
@@ -265,7 +264,6 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
                     y = y_cache[wd]
 
                 e_wd_new_samples = polyagamma_sampler(beta_init, X, y, sigma_prior=sigma_prior, N=N_wd_cache[wd], iterations=polyagamma_iter, return_last=True, kappa=kappa_wd)
-                #exit()
                 if wd not in freeze_params:
                     e[wd] = e_wd_new_samples
             else:
