@@ -1,4 +1,5 @@
 from embedding_uncertainty import embedding_gibbs
+from embedding_uncertainty import embedding_gibbs_tf
 from probabilistic_word_embeddings.embeddings import Embedding
 import numpy as np
 import tensorflow as tf
@@ -69,7 +70,7 @@ if __name__ == '__main__':
     WARMUP = args.samples // 2
     p_avg = None
     pathstem = Path(args.datapath).stem.replace("_", "-")
-    for sample_ix, e_sample in enumerate(embedding_gibbs(e, data, rounds=args.samples, yield_every=1, lambda0=args.lambda0, freeze_params=freeze_params)):
+    for sample_ix, e_sample in enumerate(embedding_gibbs_tf(e, data, rounds=args.samples, yield_every=1, lambda0=args.lambda0, freeze_params=freeze_params)):
         print(e_sample)
         word0sample = e_sample[args.example_word].numpy()
         print(e_sample[args.example_word])

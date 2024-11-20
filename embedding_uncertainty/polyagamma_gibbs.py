@@ -29,7 +29,7 @@ def get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior):
     parenthesis2 = tf.linalg.matmul(tf.linalg.inv(sigma_prior), mu_prior, transpose_a=True)
     return parenthesis + parenthesis2
 
-def polyagamma_sampler_tf(beta_init, X, y, iterations=2, N=None, mu_prior=None, sigma_prior=None):
+def polyagamma_sampler_tf(beta_init, X, y, iterations=2, kappa=None, N=None, mu_prior=None, sigma_prior=None):
     """
 
     """
@@ -46,7 +46,8 @@ def polyagamma_sampler_tf(beta_init, X, y, iterations=2, N=None, mu_prior=None, 
         sigma_prior = tf.stack([tf.eye(K, dtype=beta_init.dtype) for _ in range(M)])
     XT = tf.transpose(X, perm=[1,0,2])
     NT = N.numpy().T
-    kappa = y - N/2
+    if kappa is None:
+        kappa = y - N/2
     
     omega = tf.Variable(NT, dtype=dtype)
     parenthesis = get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior)
@@ -79,7 +80,7 @@ def polyagamma_sampler_tf(beta_init, X, y, iterations=2, N=None, mu_prior=None, 
         beta = mu_omega + tf.reduce_sum(diff, axis=-1)
 
         yield beta
-    print("Polya-Gamma sampling total:", np.sum(pg_tds), "(s)")
+    LOGGER.debug(f"Polya-Gamma sampling total: {np.sum(pg_tds)} (s)")
 
 def get_v_omega(X, omega, sigma_prior):
     # Equivalent to the following, but optimized
@@ -270,6 +271,91 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
                 prior_count += 1
                 if wd not in freeze_params:
                     e[wd] = prior_sampler(e[wd].numpy(), sigma_prior=sigma_prior)
+        if prior_count >= len(words) * 0.2:
+            LOGGER.warning(f"sampled from prior: {prior_count} out of {len(words)}")
+        else:
+            LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
+
+def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True):
+    turns = ["word", "context"]
+    words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
+    sigma_prior = np.identity(e.dimensionality) * 1.0
+    if lambda0 is not None:
+        sigma_prior = sigma_prior * lambda0
+
+    data_wds_cache = {}
+    #X_cache, y_cache, N_wd_cache, kappa_cache = {}, {}, {}, {}
+    logprobs = []
+
+    X_cache, N_wd_cache, kappa_cache = aggregate_data(data, words, e)
+
+    for ix, turn in enumerate(turns * rounds):
+        LOGGER.train(f"Flip turn: {turn}, {ix}")
+        prior_count = 0
+
+        # Calculate log_posterior and yield sample
+        if ix % (yield_every * 2) == 0:
+            e_sample = copy.deepcopy(e)
+            data_i = tf.constant([i for (i, j, x) in data])
+            data_j = tf.constant([j for (i, j, x) in data])
+            data_x = tf.constant([x for (i, j, x) in data], dtype=tf.float64)
+
+            LOGGER.info(f"Calculate log posterior for the sample...")
+            ll = tf.reduce_sum(sgns_likelihood(e, data_i, data_j, x=data_x))
+            posterior = ll + e.log_prob(len(data_i), len(data_i))
+            logprobs.append(posterior)
+            LOGGER.train(f"Log posterior for the sample: {posterior}")
+            yield e_sample
+
+        # Plot log_posterior graph
+        if ix % (yield_every * 100) == 0 and ix > 0:
+            from matplotlib import pyplot as plt
+            plt.plot(range(len(logprobs)), logprobs)
+            plt.show()
+
+        # Do sampling
+
+        block_size = 100
+        blocks = len(words) // block_size
+        if len(words) % block_size != 0:
+            blocks += 1
+
+        words_prime = sorted(words, key=lambda wd_i: N_wd_cache[wd_i])
+        for block_ix in progressbar.progressbar(range(blocks)):
+
+            wd = words_prime[block_ix * block_size: (1 +block_ix) * block_size]
+            e_theta = e.theta.numpy()
+            if turn == "context":
+                wd = [f"{wd_i}_c" for wd_i in wd]
+            wd = [wd_i for wd_i in wd if sum(N_wd_cache[wd_i]) >= 1]
+
+            X_wd = [X_cache[wd_i] for wd_i in wd]
+            X_wd = tf.ragged.constant(X_wd)
+            #print(X_wd)
+            X_padded = e[X_wd].to_tensor()
+            #print(X_padded)
+            beta_init = e[wd]
+            kappa_wd = tf.ragged.constant([kappa_cache.get(wd_i) for wd_i in wd])
+            kappa_padded = kappa_wd.to_tensor()
+            kappa_padded = tf.cast(kappa_padded, dtype=tf.float64)
+            #print()
+            #print(X_padded.shape)
+            #print(beta_init.shape)
+            #print(kappa_padded.shape)
+            
+            N_wd_ragged = tf.ragged.constant([N_wd_cache[wd_i] for wd_i in wd])
+            #print(N_wd_ragged.shape)
+            N_wd_padded = N_wd_ragged.to_tensor()
+            #print(N_wd_padded.shape)
+
+            N_wd_padded = tf.math.maximum(N_wd_padded, tf.ones(N_wd_padded.shape, dtype=N_wd_padded.dtype))
+            last_sample = None
+            for beta_sample in polyagamma_sampler_tf(beta_init, X_padded, None, kappa=kappa_padded, sigma_prior=sigma_prior, N=N_wd_padded, iterations=polyagamma_iter):
+                last_sample = beta_sample
+            #if wd not in freeze_params:
+            e[wd] = beta_sample
+            
+            # TODO: sample from prior
         if prior_count >= len(words) * 0.2:
             LOGGER.warning(f"sampled from prior: {prior_count} out of {len(words)}")
         else:
