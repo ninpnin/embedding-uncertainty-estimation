@@ -1,17 +1,85 @@
 from trainerlog import get_logger
 LOGGER = get_logger("sampling")
 LOGGER.info("Load modules..")
-import pandas as pd
-import seaborn as sns
-from matplotlib import pyplot as plt
 import numpy as np
 from polyagamma import random_polyagamma
 import copy
 import progressbar
-from numba import jit
 from sklearn.linear_model import LogisticRegression
 import tensorflow as tf
 from probabilistic_word_embeddings.models import sgns_likelihood
+
+LOGGER.info("Done!")
+from time import perf_counter as pc
+
+def get_v_omega_tf(X, omega, sigma_prior_inv):
+    XT2 = tf.transpose(X, perm=[2,1,0])
+    XTomega = (XT2 * omega)
+    XTomega = tf.transpose(XTomega, perm=[2,1,0])
+    V_inv = tf.linalg.matmul(X, XTomega, transpose_a=True)
+    V_inv = tf.transpose(V_inv, perm=[0,2,1])
+    V_inv += sigma_prior_inv
+    return tf.linalg.inv(V_inv)
+
+def get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior):
+    kappa = tf.transpose(tf.expand_dims(kappa, [1]), perm=[0,2,1])
+    parenthesis = tf.transpose(tf.linalg.matmul(kappa, X, transpose_a=True), perm=[0,2,1])
+    mu_prior = tf.expand_dims(mu_prior, axis=1)
+    mu_prior = tf.transpose(mu_prior, perm=[0,2,1])
+    parenthesis2 = tf.linalg.matmul(tf.linalg.inv(sigma_prior), mu_prior, transpose_a=True)
+    return parenthesis + parenthesis2
+
+def polyagamma_sampler_tf(beta_init, X, y, iterations=2, N=None, mu_prior=None, sigma_prior=None):
+    """
+
+    """
+    dtype = beta_init.dtype
+    beta = beta_init
+    M = X.shape[0]
+    K = X.shape[-1]
+    CHAINS = X.shape[0]
+    
+    if mu_prior is None:
+        #mu_prior = np.zeros(X.shape[-1])
+        mu_prior = tf.stack([tf.zeros(K, dtype=beta_init.dtype) for _ in range(M)])
+    if sigma_prior is None:
+        sigma_prior = tf.stack([tf.eye(K, dtype=beta_init.dtype) for _ in range(M)])
+    XT = tf.transpose(X, perm=[1,0,2])
+    NT = N.numpy().T
+    kappa = y - N/2
+    
+    omega = tf.Variable(NT, dtype=dtype)
+    parenthesis = get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior)
+    sigma_prior_inv = tf.linalg.inv(sigma_prior)
+    
+    pg_tds = []
+    for ix in range(iterations):
+        #LOGGER.debug(f"iter {ix}")
+        # Get a 5 by 1 array of PG(1, 2) variates.
+        xTbeta = tf.reduce_sum(XT * beta, axis=-1)
+        t0 = pc()
+        omega_numpy = random_polyagamma(NT, xTbeta.numpy())
+        pg_tds.append(pc() - t0)
+        omega.assign(omega_numpy)
+        #print(omega)
+        V_omega = get_v_omega_tf(X, omega, sigma_prior_inv)
+        mu_omega = tf.reduce_sum(tf.linalg.matmul(V_omega, parenthesis, transpose_a=True), axis=-1)
+
+        # Use the square root of the matrix U S^(1/2) V^T
+        # from the SVD to generate multivariate random vectors
+        
+        # x_prime = mu + (U S^(1/2) V^T) x
+
+        S, U, V = tf.linalg.svd(V_omega)
+        S_sqrt =  tf.linalg.diag(tf.sqrt(S))
+        U_S_sqrt = tf.linalg.matmul(U, S_sqrt)
+        sqrt_V_omega = tf.linalg.matmul(U_S_sqrt, V)
+        epsilon = tf.random.normal([CHAINS, K, 1], dtype=dtype)
+        diff = tf.linalg.matmul(sqrt_V_omega, epsilon, transpose_a=True)
+        beta = mu_omega + tf.reduce_sum(diff, axis=-1)
+
+        yield beta
+    print("Polya-Gamma sampling total:", np.sum(pg_tds), "(s)")
 
 def get_v_omega(X, omega, sigma_prior):
     # Equivalent to the following, but optimized
