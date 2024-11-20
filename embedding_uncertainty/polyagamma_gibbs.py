@@ -101,14 +101,12 @@ def get_wd_data(data, wd, turn, cache={}):
             cache[wd] = data_wd
             return data_wd
 
-def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, laplace_approx_limit=None, lambda0=None, freeze_params=[], aggregate=True):
+def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True):
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     sigma_prior = np.identity(e.dimensionality) * 1.0
     if lambda0 is not None:
         sigma_prior = sigma_prior * lambda0
-    if laplace_approx_limit is None:
-        laplace_approx_limit = 10000000
 
     data_wds_cache = {}
     X_cache = {}
