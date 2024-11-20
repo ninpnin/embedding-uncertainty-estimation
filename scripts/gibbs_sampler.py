@@ -25,6 +25,7 @@ if __name__ == '__main__':
     parser.add_argument("--map_estimate", type=str, default=None)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance)")
     parser.add_argument("--example_word", type=str, default="word0")
+    parser.add_argument("--use_tf", type=bool, default=False)
     parser.add_argument("--prefix", type=str, default="")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
@@ -70,7 +71,10 @@ if __name__ == '__main__':
     WARMUP = args.samples // 2
     p_avg = None
     pathstem = Path(args.datapath).stem.replace("_", "-")
-    for sample_ix, e_sample in enumerate(embedding_gibbs_tf(e, data, rounds=args.samples, yield_every=1, lambda0=args.lambda0, freeze_params=freeze_params)):
+    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, yield_every=1, lambda0=args.lambda0, freeze_params=freeze_params)
+    if args.use_tf:
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, yield_every=1, lambda0=args.lambda0, freeze_params=freeze_params)
+    for sample_ix, e_sample in enumerate(gibbs_generator):
         print(e_sample)
         word0sample = e_sample[args.example_word].numpy()
         print(e_sample[args.example_word])
