@@ -169,6 +169,39 @@ def get_wd_data(data, wd, turn, cache={}):
             cache[wd] = data_wd
             return data_wd
 
+def aggregate_data(data, words, e, turns=["word", "context"]):
+    X_cache, N_wd_cache, kappa_cache = {}, {}, {}
+
+    positive_samples = {}
+    total_samples = {}
+    for i, j, x in data:
+        positive_samples[(i,j)] = positive_samples.get((i,j), 0) + x
+        total_samples[(i,j)] = total_samples.get((i,j), 0) + 1
+
+        positive_samples[(j,i)] = positive_samples.get((j,i), 0) + x
+        total_samples[(j,i)] = total_samples.get((j,i), 0) + 1
+
+    for wd in words:
+        for turn in turns:
+            if turn == "context":
+                wd = wd + "_c"
+
+            X_cache_wd = []
+            N_cache_wd = []
+            kappa_cache_wd = []
+            for v in e.vocabulary:
+                if (wd, v) in total_samples:
+                    # kappa = y - N/2
+                    X_cache_wd.append(v)
+                    N_cache_wd.append(total_samples[(wd,v)])
+                    kappa_v =  positive_samples[(wd,v)] - total_samples[(wd,v)] / 2
+                    kappa_cache_wd.append(kappa_v)
+
+            X_cache[wd] = X_cache_wd
+            kappa_cache[wd] = kappa_cache_wd
+            N_wd_cache[wd] = N_cache_wd
+    return X_cache, N_wd_cache, kappa_cache
+
 def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True):
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
@@ -196,42 +229,8 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
                 N_wd_cache[wd] = np.ones(len(data_wd))
 
     else:
-        positive_samples = {}
-        total_samples = {}
-        for i, j, x in data:
-            positive_samples[(i,j)] = positive_samples.get((i,j), 0) + x
-            total_samples[(i,j)] = total_samples.get((i,j), 0) + 1
+        X_cache, N_wd_cache, kappa_cache = aggregate_data(data, words, e)
 
-            positive_samples[(j,i)] = positive_samples.get((j,i), 0) + x
-            total_samples[(j,i)] = total_samples.get((j,i), 0) + 1
-
-        for wd in words:
-            for turn in turns:
-                if turn == "context":
-                    wd = wd + "_c"
-
-                X_cache_wd = []
-                N_cache_wd = []
-                kappa_cache_wd = []
-                for v in e.vocabulary:
-                    if (wd, v) in total_samples:
-                        # kappa = y - N/2
-                        X_cache_wd.append(v)
-                        N_cache_wd.append(total_samples[(wd,v)])
-                        kappa_v =  positive_samples[(wd,v)] - total_samples[(wd,v)] / 2
-                        kappa_cache_wd.append(kappa_v)
-
-                X_cache[wd] = X_cache_wd
-                kappa_cache[wd] = kappa_cache_wd
-                N_wd_cache[wd] = N_cache_wd
-
-                #print(kappa_cache_wd)
-                #print(N_wd_cache[wd])
-                #print(wd, len(N_cache_wd), sum(N_cache_wd), len(N_cache_wd)  /sum(N_cache_wd))
-
-        #exit()
-        #print(X_cache)
-        
 
     for ix, turn in enumerate(turns * rounds):
         LOGGER.train(f"Flip turn: {turn}, {ix}")
