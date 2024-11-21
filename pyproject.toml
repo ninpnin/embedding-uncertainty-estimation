@@ -15,6 +15,7 @@ pandas = "*"
 seaborn = "*"
 trainerlog = "*"
 numba = "*"
+arviz = "*"
 
 [tool.poetry.dev-dependencies]
 
