@@ -24,3 +24,11 @@ jobs:
     - name: Compare Polya Gamma to Stan
       run: |
         python -m unittest tests.stancompare
+
+    - name: Test convergence and GPU sampling accuracy
+      run: |
+        python -m unittest tests.pg_accuracy
+
+    - name: Test Binomial aggregation with sufficient statistics
+      run: |
+        python -m unittest tests.suffstats_aggregation
