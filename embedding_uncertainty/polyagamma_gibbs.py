@@ -203,7 +203,7 @@ def aggregate_data(data, words, e, turns=["word", "context"]):
             N_wd_cache[wd] = N_cache_wd
     return X_cache, N_wd_cache, kappa_cache
 
-def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True):
+def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, plot=True):
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     sigma_prior = np.identity(e.dimensionality) * 1.0
@@ -246,7 +246,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
             yield e_sample
 
         # Plot log_posterior graph
-        if ix % (yield_every * 100) == 0 and ix > 0:
+        if plot and ix % (yield_every * 100) == 0 and ix > 0:
             from matplotlib import pyplot as plt
             plt.plot(range(len(logprobs)), logprobs)
             plt.show()
