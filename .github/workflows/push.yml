@@ -3,7 +3,7 @@ name: Perform unit tests
 on: [push]
 
 jobs:
-  unittest:
+  stan_compare:
 
     runs-on: ubuntu-latest
     strategy:
@@ -25,9 +25,47 @@ jobs:
       run: |
         python -m unittest tests.stancompare
 
+jobs:
+  convergence_and_gpu:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
+
     - name: Test convergence and GPU sampling accuracy
       run: |
         python -m unittest tests.pg_accuracy
+
+jobs:
+  binomial_aggregation:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
 
     - name: Test Binomial aggregation with sufficient statistics
       run: |
