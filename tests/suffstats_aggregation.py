@@ -7,7 +7,7 @@ import tensorflow as tf
 import progressbar
 import math
 import json
-
+import os
 
 def get_p_matrix(e):
     def sigmoid(x):
@@ -31,7 +31,8 @@ class Test(unittest.TestCase):
 
         vocab = set()
         data = []
-        with open("tests/data/testdata.json") as f:
+        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'data/testdata.json')
+        with open(TESTDATA_FILENAME) as f:
             d = json.load(f)
 
         for elem in d:
