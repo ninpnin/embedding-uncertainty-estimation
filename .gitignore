@@ -8,3 +8,5 @@ build/
 logs
 results
 slurm*.out
+**.csv
+**/*.zip
