@@ -1,5 +1,5 @@
 from trainerlog import get_logger
-LOGGER = get_logger("sampling")
+LOGGER = get_logger("sampling", splitsec=True)
 LOGGER.info("Load modules..")
 import numpy as np
 from polyagamma import random_polyagamma
@@ -29,7 +29,7 @@ def get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior):
     parenthesis2 = tf.linalg.matmul(tf.linalg.inv(sigma_prior), mu_prior, transpose_a=True)
     return parenthesis + parenthesis2
 
-def polyagamma_sampler_tf(beta_init, X, y, iterations=2, kappa=None, N=None, mu_prior=None, sigma_prior=None):
+def polyagamma_sampler_tf(beta_init, X, y, iterations=2, kappa=None, N=None, mu_prior=None, sigma_prior=None, multivariate_method="svd"):
     """
 
     """
@@ -55,28 +55,43 @@ def polyagamma_sampler_tf(beta_init, X, y, iterations=2, kappa=None, N=None, mu_
     
     pg_tds = []
     for ix in range(iterations):
-        #LOGGER.debug(f"iter {ix}")
+        LOGGER.debug(f"iter {ix}")
         # Get a 5 by 1 array of PG(1, 2) variates.
         xTbeta = tf.reduce_sum(XT * beta, axis=-1)
         t0 = pc()
+        LOGGER.debug(f"Sample PG")
         omega_numpy = random_polyagamma(NT, xTbeta.numpy())
         pg_tds.append(pc() - t0)
         omega.assign(omega_numpy)
         #print(omega)
+        LOGGER.debug(f"calculate V_omega")
         V_omega = get_v_omega_tf(X, omega, sigma_prior_inv)
         mu_omega = tf.reduce_sum(tf.linalg.matmul(V_omega, parenthesis, transpose_a=True), axis=-1)
 
-        # Use the square root of the matrix U S^(1/2) V^T
-        # from the SVD to generate multivariate random vectors
-        
-        # x_prime = mu + (U S^(1/2) V^T) x
+        L = None
+        if multivariate_method == "svd":
+            # Use the square root of the matrix U S^(1/2) V^T
+            # from the SVD to generate multivariate random vectors
+            # x_prime = mu + (U S^(1/2) V^T) x
 
-        S, U, V = tf.linalg.svd(V_omega)
-        S_sqrt =  tf.linalg.diag(tf.sqrt(S))
-        U_S_sqrt = tf.linalg.matmul(U, S_sqrt)
-        sqrt_V_omega = tf.linalg.matmul(U_S_sqrt, V)
+            # Batched SVD is very inefficient on TF/CUDA, use CPU instead
+            LOGGER.debug(f"Do tf cpu SVD on V_omega")
+            with tf.device('/cpu:0'):
+                S, U, V = tf.linalg.svd(V_omega)
+            LOGGER.debug(f"Calculate matrix sqrt")
+            S_sqrt =  tf.linalg.diag(tf.sqrt(S))
+            U_S_sqrt = tf.linalg.matmul(U, S_sqrt)
+            sqrt_V_omega = tf.linalg.matmul(U_S_sqrt, V)
+            L = sqrt_V_omega
+        elif multivariate_method == "cholesky":
+            # Use Cholesky LL^T to generate multivariate random vectors
+            # x_prime = mu + L x
+            LOGGER.debug(f"Do Cholesky on V_omega")
+            L = tf.linalg.cholesky(V_omega)
+        
+        LOGGER.debug(f"Sample multivariate normal")
         epsilon = tf.random.normal([CHAINS, K, 1], dtype=dtype)
-        diff = tf.linalg.matmul(sqrt_V_omega, epsilon, transpose_a=True)
+        diff = tf.linalg.matmul(L, epsilon, transpose_a=True)
         beta = mu_omega + tf.reduce_sum(diff, axis=-1)
 
         yield beta
