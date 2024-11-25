@@ -1,4 +1,5 @@
 from embedding_uncertainty import embedding_gibbs
+from embedding_uncertainty import embedding_gibbs_tf
 from probabilistic_word_embeddings.embeddings import Embedding
 import numpy as np
 import tensorflow as tf
@@ -22,7 +23,10 @@ if __name__ == '__main__':
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--map_estimate", type=str, default=None)
+    parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance)")
     parser.add_argument("--example_word", type=str, default="word0")
+    parser.add_argument("--use_tf", type=bool, default=False)
+    parser.add_argument("--prefix", type=str, default="")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -47,7 +51,6 @@ if __name__ == '__main__':
 
     x, y = [], []
 
-    print(vocab)
     e = Embedding(vocab, dimensionality=args.dim)
     freeze_params = []
 
@@ -68,7 +71,10 @@ if __name__ == '__main__':
     WARMUP = args.samples // 2
     p_avg = None
     pathstem = Path(args.datapath).stem.replace("_", "-")
-    for sample_ix, e_sample in enumerate(embedding_gibbs(e, data, rounds=args.samples, yield_every=1, freeze_params=freeze_params)):
+    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, yield_every=1, lambda0=args.lambda0, freeze_params=freeze_params)
+    if args.use_tf:
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, yield_every=1, lambda0=args.lambda0, freeze_params=freeze_params)
+    for sample_ix, e_sample in enumerate(gibbs_generator):
         print(e_sample)
         word0sample = e_sample[args.example_word].numpy()
         print(e_sample[args.example_word])
@@ -100,7 +106,7 @@ if __name__ == '__main__':
             df = df[sorted(newcols)]
             print(df)
             Path()
-            df.to_csv(f"gibbs-samples-N-{args.data_len}-D-{args.dim}-{pathstem}.csv", index=False)
+            df.to_csv(f"gibbs-samples-N-{args.data_len}-D-{args.dim}-{args.prefix}{pathstem}.csv", index=False)
     
     theta_true = np.array(d["theta"])
     rho_true = theta_true[:theta_true.shape[0] // 2]
