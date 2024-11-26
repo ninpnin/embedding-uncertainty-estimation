@@ -342,35 +342,34 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             e_theta = e.theta.numpy()
             if turn == "context":
                 wd = [f"{wd_i}_c" for wd_i in wd]
+
+            wd_skipped = [wd_i for wd_i in wd if sum(N_wd_cache[wd_i]) < 1]
             wd = [wd_i for wd_i in wd if sum(N_wd_cache[wd_i]) >= 1]
+            if len(wd) >= 1:
+                X_wd = [X_cache[wd_i] for wd_i in wd]
+                X_wd = tf.ragged.constant(X_wd)
+                X_padded = e[X_wd].to_tensor()
 
-            X_wd = [X_cache[wd_i] for wd_i in wd]
-            X_wd = tf.ragged.constant(X_wd)
-            #print(X_wd)
-            X_padded = e[X_wd].to_tensor()
-            #print(X_padded)
-            beta_init = e[wd]
-            kappa_wd = tf.ragged.constant([kappa_cache.get(wd_i) for wd_i in wd])
-            kappa_padded = kappa_wd.to_tensor()
-            kappa_padded = tf.cast(kappa_padded, dtype=tf.float64)
-            #print()
-            #print(X_padded.shape)
-            #print(beta_init.shape)
-            #print(kappa_padded.shape)
-            
-            N_wd_ragged = tf.ragged.constant([N_wd_cache[wd_i] for wd_i in wd])
-            #print(N_wd_ragged.shape)
-            N_wd_padded = N_wd_ragged.to_tensor()
-            #print(N_wd_padded.shape)
+                beta_init = e[wd]
+                kappa_wd = tf.ragged.constant([kappa_cache.get(wd_i) for wd_i in wd])
+                kappa_padded = kappa_wd.to_tensor()
+                kappa_padded = tf.cast(kappa_padded, dtype=tf.float64)
 
-            N_wd_padded = tf.math.maximum(N_wd_padded, tf.ones(N_wd_padded.shape, dtype=N_wd_padded.dtype))
-            last_sample = None
-            for beta_sample in polyagamma_sampler_tf(beta_init, X_padded, None, kappa=kappa_padded, sigma_prior=sigma_prior, N=N_wd_padded, iterations=polyagamma_iter):
-                last_sample = beta_sample
-            #if wd not in freeze_params:
-            e[wd] = beta_sample
-            
-            # TODO: sample from prior
+                N_wd_ragged = tf.ragged.constant([N_wd_cache[wd_i] for wd_i in wd])
+                N_wd_padded = N_wd_ragged.to_tensor()
+
+                N_wd_padded = tf.math.maximum(N_wd_padded, tf.ones(N_wd_padded.shape, dtype=N_wd_padded.dtype))
+                last_sample = None
+                for beta_sample in polyagamma_sampler_tf(beta_init, X_padded, None, kappa=kappa_padded, sigma_prior=sigma_prior, N=N_wd_padded, iterations=polyagamma_iter):
+                    last_sample = beta_sample
+                # TODO: if wd not in freeze_params:
+                e[wd] = beta_sample
+
+            # Sample from the prior
+            for wd_i in wd_skipped:
+                e[wd_i] = prior_sampler(e[wd_i].numpy(), sigma_prior=sigma_prior)
+            prior_count += len(wd_skipped)
+
         if prior_count >= len(words) * 0.2:
             LOGGER.warning(f"sampled from prior: {prior_count} out of {len(words)}")
         else:
