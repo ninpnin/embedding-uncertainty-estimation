@@ -60,6 +60,7 @@ def main(args):
     print(df)
 
     print("Mean ESS", df["ess"].mean())
+    print("Median ESS", df["ess"].median())
     print("Converged %", df["converged-1.01"].mean(), "Rhat <= 1.01")
     print("Converged %", df["converged-1.05"].mean(), "Rhat <= 1.05")
 
