@@ -4,7 +4,7 @@ import pickle
 import os
 import sys
 from collections import defaultdict
-import trainerlog
+from trainerlog import get_logger
 LOGGER = get_logger("stan", splitsec=True)
 
 import stan
@@ -186,7 +186,7 @@ for size in sizes:
         LOGGER.train(f"Run HMC for {num_samples} samples and {num_chains} chains")
         model = stan.build(stan_code, data=stan_data)
         fit = model.sample(num_samples=num_samples, num_chains=num_chains)
-        LOGGER.debug(f"Model summary:\n{model.summary()}")
+        #LOGGER.debug(f"Model summary:\n{model.summary()}")
         LOGGER.debug(f"{fit.to_frame().columns}")
     elif inference_type=='vi':
         vi_iter = 5000 #?
