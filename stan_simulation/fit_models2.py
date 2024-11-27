@@ -159,6 +159,7 @@ LOGGER.debug(f"Total length of data {len(data['data'])}")
 
 os.makedirs(output_dir, exist_ok=True)
 
+LOGGER.debug(f"Estimate model on subsets of sizes: {sizes}")
 for size in sizes:
     # -- Load the corresponding MAP fit for the current size --
     #map_fit_to_load = os.path.join(nofix_dir, f'stan_fit_{size}.pkl')
