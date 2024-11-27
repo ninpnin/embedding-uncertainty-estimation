@@ -4,6 +4,8 @@ import pickle
 import os
 import sys
 from collections import defaultdict
+import trainerlog
+LOGGER = get_logger("stan", splitsec=True)
 
 import stan
 from cmdstanpy import CmdStanModel
@@ -25,14 +27,15 @@ parser.add_argument("--lambda0", type=float, default=1.0)
 parser.add_argument("--estimator", type=str, default='vi')
 parser.add_argument("--num_chains", type=int, default=2)
 parser.add_argument("--num_samples", type=int, default=2000)
+parser.add_argument("--data_lengths", type=int, nargs="+", default=[1000, 2000, 5000])
 args = parser.parse_args()
 
-print(args)
+LOGGER.train(f"Run on args: {args}")
 data_path = args.data_path
 stan_model_path = args.stan_model_path
 output_dir = args.output_dir
 lambda0 = args.lambda0
-print('Using lambda0 = ', lambda0)
+LOGGER.info(f'Using lambda0 = {lambda0}')
 
 inference_type = args.estimator # 'vi' # hmc, vi, laplace, map
 inference_type = inference_type.lower()
@@ -42,15 +45,15 @@ num_chains = args.num_chains # for HMC
 
 use_aggregated_data = True
 if stan_model_path.split('.')[-2].split('_')[-1] == 'aggregated':
-    print('Aggregated model detected.')
+    LOGGER.info('Aggregated model detected.')
     use_aggregated_data = True
 else:
-    print('No aggregation.')
+    LOGGER.info('No aggregation.')
 
 
 D = args.dim # embedding dimension.
 #[100, 200, 500, 
-sizes = [1000, 5000, 10000, 20000, 50000, 100000, 500000, 1000000] # todo extract from nofix_dir
+sizes = args.data_lengths # todo extract from nofix_dir
 
 with open(data_path) as f:
     data = json.load(f)
@@ -152,7 +155,7 @@ def dir_exists_check(dir_path:str):
 if sizes is None:
     sizes = [len(data['data'])]
 
-#print('Total length of data',len( data['data']))
+LOGGER.debug(f"Total length of data {len(data['data'])}")
 
 os.makedirs(output_dir, exist_ok=True)
 
@@ -172,17 +175,19 @@ for size in sizes:
 
 
     if use_aggregated_data:
+        LOGGER.debug(f"Create aggregated dataset...")
         stan_data = create_aggregated_stan_data(data_entries, size, vocabulary, D=D, lambda0=lambda0)
     else:
+        LOGGER.debug(f"Create non-aggregated dataset...")
         stan_data = create_stan_data(data_entries, size, vocabulary, D=D, lambda0=lambda0)
     
 
     if inference_type=='hmc':
-    
-        model = stan.build(stan_code, data=stan_data) 
+        LOGGER.train(f"Run HMC for {num_samples} samples and {num_chains} chains")
+        model = stan.build(stan_code, data=stan_data)
         fit = model.sample(num_samples=num_samples, num_chains=num_chains)
-        #print(model.summary())
-        print(fit.to_frame().columns)
+        LOGGER.debug(f"Model summary:\n{model.summary()}")
+        LOGGER.debug(f"{fit.to_frame().columns}")
     elif inference_type=='vi':
         vi_iter = 5000 #?
         algorithm = 'meanfield'
@@ -211,8 +216,7 @@ for size in sizes:
     
 
     save_fit(fit, size)
-    print(f"Saved fit for size {size}")
-print(args)
+    LOGGER.train(f"Saved fit for size {size} in {output_dir}")
     
 
 """
