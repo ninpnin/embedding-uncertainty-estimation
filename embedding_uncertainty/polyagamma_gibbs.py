@@ -88,6 +88,11 @@ def polyagamma_sampler_tf(beta_init, X, y, iterations=2, kappa=None, N=None, mu_
             # x_prime = mu + L x
             LOGGER.debug(f"Do Cholesky on V_omega")
             L = tf.linalg.cholesky(V_omega)
+        elif multivariate_method == "eigh":
+            #eigvals, eigvecs = tf.linalg.eigh(V_omega)
+            #L =
+            raise NotImplementedError 
+
         
         LOGGER.debug(f"Sample multivariate normal")
         epsilon = tf.random.normal([CHAINS, K, 1], dtype=dtype)
@@ -291,7 +296,12 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
         else:
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
-def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True):
+def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="svd"):
+    if multivariate_method not in ["svd", "cholesky", "eigh"]:
+        raise ValueError("'multivariate_method' should be either 'svd', 'cholesky' or 'eigh'")
+    else:
+        print("Use method", multivariate_method)
+
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     sigma_prior = np.identity(e.dimensionality) * 1.0
@@ -360,7 +370,7 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
 
                 N_wd_padded = tf.math.maximum(N_wd_padded, tf.ones(N_wd_padded.shape, dtype=N_wd_padded.dtype))
                 last_sample = None
-                for beta_sample in polyagamma_sampler_tf(beta_init, X_padded, None, kappa=kappa_padded, sigma_prior=sigma_prior, N=N_wd_padded, iterations=polyagamma_iter):
+                for beta_sample in polyagamma_sampler_tf(beta_init, X_padded, None, kappa=kappa_padded, sigma_prior=sigma_prior, N=N_wd_padded, iterations=polyagamma_iter, multivariate_method=multivariate_method):
                     last_sample = beta_sample
                 # TODO: if wd not in freeze_params:
                 e[wd] = beta_sample
