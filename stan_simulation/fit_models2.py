@@ -20,21 +20,25 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, default='ten_2d_datasets/1.json') #'100k_v10_d2_.json'
 parser.add_argument("--output_dir", type=str, default='ten_2d_datasets/hmc_nofit/test') #stan_fits_dxd_mapjacobian
 parser.add_argument("--stan_model_path", type=str, default='models/sgns_normalpriors_aggregated.stan')
+parser.add_argument("--dim", type=int, default=5)
 parser.add_argument("--lambda0", type=float, default=1.0)
-
+parser.add_argument("--estimator", type=str, default='vi')
+parser.add_argument("--num_chains", type=int, default=2)
+parser.add_argument("--num_samples", type=int, default=2000)
 args = parser.parse_args()
 
+print(args)
 data_path = args.data_path
 stan_model_path = args.stan_model_path
 output_dir = args.output_dir
 lambda0 = args.lambda0
 print('Using lambda0 = ', lambda0)
 
-inference_type = 'vi' # hmc, vi, laplace, map
+inference_type = args.estimator # 'vi' # hmc, vi, laplace, map
 inference_type = inference_type.lower()
 #lambda0 = np.sqrt(1.0/5.0) #1/K
-num_samples = 10000#1000 I use 1k in the current plots/results.
-num_chains = 2 # for HMC
+num_samples = args.num_samples #I use 1k in the current plots/results.
+num_chains = args.num_chains # for HMC
 
 use_aggregated_data = True
 if stan_model_path.split('.')[-2].split('_')[-1] == 'aggregated':
@@ -44,7 +48,7 @@ else:
     print('No aggregation.')
 
 
-D = 5 # embedding dimension.
+D = args.dim # embedding dimension.
 #[100, 200, 500, 
 sizes = [1000, 5000, 10000, 20000, 50000, 100000, 500000, 1000000] # todo extract from nofix_dir
 
@@ -138,11 +142,11 @@ def dir_exists_check(dir_path:str):
             return False
     return True
 
-dir_flag = dir_exists_check(output_dir)
-if dir_flag:
-    os.makedirs(output_dir, exist_ok=True)
-else:
-    sys.exit()
+#dir_flag = dir_exists_check(output_dir)
+#if dir_flag:
+#    os.makedirs(output_dir, exist_ok=True)
+#else:
+#    sys.exit()
 
 
 if sizes is None:
