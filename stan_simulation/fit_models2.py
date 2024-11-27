@@ -6,6 +6,7 @@ import sys
 from collections import defaultdict
 from trainerlog import get_logger
 LOGGER = get_logger("stan", splitsec=True)
+from pathlib import Path
 
 import stan
 from cmdstanpy import CmdStanModel
@@ -50,6 +51,8 @@ if stan_model_path.split('.')[-2].split('_')[-1] == 'aggregated':
 else:
     LOGGER.info('No aggregation.')
 
+
+dataset_filename = Path(data_path).stem
 
 D = args.dim # embedding dimension.
 #[100, 200, 500, 
@@ -125,12 +128,13 @@ def create_aggregated_stan_data(data_entries, size, vocabulary, D, lambda0=1.0):
 
     return stan_data
 
-def save_fit(fit, size):
-    filename = os.path.join(output_dir, f'stan_fit_{size}.pkl')
+def save_fit(fit, size, dim, dataset_name):
+    filename = os.path.join(output_dir, f'stan_fit_{size}-K-{dim}-{dataset_name}.pkl')
     with open(filename, 'wb') as f:
         pickle.dump(fit, f)
 
 def load_fit(size, save_dir):
+    # TODO: match save_fit
     filename = os.path.join(save_dir, f'stan_fit_{size}.pkl')
     with open(filename, 'rb') as f:
         fit = pickle.load(f)
@@ -216,7 +220,7 @@ for size in sizes:
         fit = model.laplace_sample(data=stan_data, mode=map, draws=num_samples, jacobian=True)
     
 
-    save_fit(fit, size)
+    save_fit(fit, size, D, dataset_filename)
     LOGGER.train(f"Saved fit for size {size} in {output_dir}")
     
 
