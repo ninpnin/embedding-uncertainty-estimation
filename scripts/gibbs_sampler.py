@@ -75,7 +75,7 @@ if __name__ == '__main__':
     pathstem = Path(args.datapath).stem.replace("_", "-")
     gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, lambda0=args.lambda0, freeze_params=freeze_params)
     if args.use_tf:
-        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, lambda0=args.lambda0, freeze_params=freeze_params, multivariate_method=args.mvn_method)
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, lambda0=args.lambda0, freeze_params=freeze_params, multivariate_method=args.mvn_method)
     for sample_ix, e_sample in enumerate(gibbs_generator):
         print(e_sample)
         word0sample = e_sample[args.example_word].numpy()
