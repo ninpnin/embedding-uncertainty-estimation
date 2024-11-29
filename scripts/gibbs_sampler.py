@@ -27,6 +27,7 @@ if __name__ == '__main__':
     parser.add_argument("--example_word", type=str, default="word0")
     parser.add_argument("--use_tf", type=bool, default=False)
     parser.add_argument("--prefix", type=str, default="")
+    parser.add_argument("--pg_iter", type=int, default=50)
     parser.add_argument("--mvn_method", type=str, default="svd")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
@@ -72,9 +73,9 @@ if __name__ == '__main__':
     WARMUP = args.samples // 2
     p_avg = None
     pathstem = Path(args.datapath).stem.replace("_", "-")
-    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, yield_every=1, lambda0=args.lambda0, freeze_params=freeze_params)
+    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, lambda0=args.lambda0, freeze_params=freeze_params)
     if args.use_tf:
-        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, yield_every=1, lambda0=args.lambda0, freeze_params=freeze_params, multivariate_method=args.mvn_method)
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, lambda0=args.lambda0, freeze_params=freeze_params, multivariate_method=args.mvn_method)
     for sample_ix, e_sample in enumerate(gibbs_generator):
         print(e_sample)
         word0sample = e_sample[args.example_word].numpy()
