@@ -24,19 +24,17 @@ parser.add_argument("--data_path", type=str, default='ten_2d_datasets/1.json') #
 parser.add_argument("--output_dir", type=str, default='ten_2d_datasets/hmc_nofit/test') #stan_fits_dxd_mapjacobian
 parser.add_argument("--stan_model_path", type=str, default='models/sgns_normalpriors_aggregated.stan')
 parser.add_argument("--dim", type=int, default=5)
-parser.add_argument("--lambda0", type=float, default=1.0)
+parser.add_argument("--lambda0", type=float) # default=1.0
 parser.add_argument("--estimator", type=str, default='vi')
 parser.add_argument("--num_chains", type=int, default=2)
 parser.add_argument("--num_samples", type=int, default=2000)
-parser.add_argument("--data_lengths", type=int, nargs="+", default=[1000, 2000, 5000])
+parser.add_argument("--data_lengths", type=int, nargs="+", default=[100, 200])
 args = parser.parse_args()
 
 LOGGER.train(f"Run on args: {args}")
 data_path = args.data_path
 stan_model_path = args.stan_model_path
 output_dir = args.output_dir
-lambda0 = args.lambda0
-LOGGER.info(f'Using lambda0 = {lambda0}')
 
 inference_type = args.estimator # 'vi' # hmc, vi, laplace, map
 inference_type = inference_type.lower()
@@ -55,6 +53,13 @@ else:
 dataset_filename = Path(data_path).stem
 
 D = args.dim # embedding dimension.
+if args.lambda0 is not None:
+    lambda0 = args.lambda0
+else:
+    LOGGER.info('Default lambda0')
+    lambda0 = np.sqrt(1.0 / D)  # Default value
+LOGGER.info(f'Using lambda0 = {lambda0}')
+
 #[100, 200, 500, 
 sizes = args.data_lengths # todo extract from nofix_dir
 
@@ -128,8 +133,8 @@ def create_aggregated_stan_data(data_entries, size, vocabulary, D, lambda0=1.0):
 
     return stan_data
 
-def save_fit(fit, size, dim, dataset_name):
-    filename = os.path.join(output_dir, f'stan_fit_{size}-K-{dim}-{dataset_name}.pkl')
+def save_fit(fit, size, dim, dataset_name, estimator):
+    filename = os.path.join(output_dir, f'stan_fit_{estimator}_K{dim}_{dataset_name}_{size}.pkl')
     with open(filename, 'wb') as f:
         pickle.dump(fit, f)
 
@@ -207,7 +212,7 @@ for size in sizes:
         fit = model.optimize(data=stan_data, jacobian=jacobian) #, algorithm=algorithm
 
     elif inference_type=='laplace':
-        print(size)
+        #print(size)
         model = CmdStanModel(stan_file=stan_model_path) # the saved map needs to come from the same model.
 
         #saved_map_dir = 'stan_fits_dxd_mapjacobian'
@@ -215,12 +220,12 @@ for size in sizes:
         #map = load_fit(size, saved_map_dir)
 
         map = model.optimize(data=stan_data, jacobian=True) 
-        save_fit(map, f'map_{size}')
+        #save_fit(map, f'map_{size}')
 
         fit = model.laplace_sample(data=stan_data, mode=map, draws=num_samples, jacobian=True)
     
 
-    save_fit(fit, size, D, dataset_filename)
+    save_fit(fit, size, D, dataset_filename, inference_type)
     LOGGER.train(f"Saved fit for size {size} in {output_dir}")
     
 

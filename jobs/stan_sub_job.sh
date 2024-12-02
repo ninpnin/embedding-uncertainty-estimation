@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #SBATCH -A NAISS2024-22-1419
 #SBATCH -J fit_${datafile##*/}_${datalen}_${estimator}
-#SBATCH -t 0-00:15:00
+#SBATCH -t 0-03:00:00
 #SBATCH -n 1
-#SBATCH -c 1
+#SBATCH -c 16
 #SBATCH -p shared
 
 ml PDC/23.12

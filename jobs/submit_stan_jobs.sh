@@ -9,9 +9,9 @@
 # to see ful job name
 
 MODEL_PATH="../stan_simulation/models/sgns_normalpriors_aggregated.stan"
-BASE_OUTPUT_PATH="test/nofix"  #base path
+BASE_OUTPUT_PATH="../../results_ten_V100K5/nofix"  #base path
 DATASET_DIR="../../data/ten_V100K5/"
-DATALENS=(100 200)
+DATALENS=(1000 2000)
 ESTIMATORS=("hmc") 
 
 for DATALEN in "${DATALENS[@]}"; do
@@ -23,7 +23,11 @@ for DATALEN in "${DATALENS[@]}"; do
             mkdir -p "$OUTPUT_PATH" # -p to make sure nothing happens if folder exists.
 
 
+            SLURM_OUTPUT="${OUTPUT_PATH}/slurm-${DATALEN}-%j.out"
+            SLURM_ERROR="${OUTPUT_PATH}/slurm-${DATALEN}-%j.err"
+
             JOB_NAME="fit_${DATALEN}_$(basename "$DATAFILE" .json)_$ESTIMATOR"
+
 
             echo "Submitting job for $DATAFILE with N = $DATALEN, Estimator: $ESTIMATOR, OUTPUT: $OUTPUT_PATH"
             sbatch --export=datafile="$DATAFILE",datalen="$DATALEN",estimator="$ESTIMATOR",model_path="$MODEL_PATH",output_path="$OUTPUT_PATH" -J "$JOB_NAME" stan_sub_job.sh
