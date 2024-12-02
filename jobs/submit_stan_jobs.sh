@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # note!! Output path is dynamically set based on output_path/estimator/dataset
-# the idea is to use output_paths like: "results/nofix", "results/map", "results/fix"
+# the idea is to use output_paths like: "results/nofix", "results/fix"
 # then easily be able to extract experiments for desired estimator.
 
 # use
@@ -11,8 +11,8 @@
 MODEL_PATH="../stan_simulation/models/sgns_normalpriors_aggregated.stan"
 BASE_OUTPUT_PATH="../../results_ten_V100K5/nofix"  #base path
 DATASET_DIR="../../data/ten_V100K5/"
-DATALENS=(1000 2000)
-ESTIMATORS=("hmc") 
+DATALENS=(100 200)
+ESTIMATORS=("hmc vi") 
 
 for DATALEN in "${DATALENS[@]}"; do
     for DATAFILE in "$DATASET_DIR"*.json; do
@@ -30,7 +30,7 @@ for DATALEN in "${DATALENS[@]}"; do
 
 
             echo "Submitting job for $DATAFILE with N = $DATALEN, Estimator: $ESTIMATOR, OUTPUT: $OUTPUT_PATH"
-            sbatch --export=datafile="$DATAFILE",datalen="$DATALEN",estimator="$ESTIMATOR",model_path="$MODEL_PATH",output_path="$OUTPUT_PATH" -J "$JOB_NAME" stan_sub_job.sh
+            sbatch --output="$SLURM_OUTPUT" --error="$SLURM_ERROR" --export=datafile="$DATAFILE",datalen="$DATALEN",estimator="$ESTIMATOR",model_path="$MODEL_PATH",output_path="$OUTPUT_PATH" -J "$JOB_NAME" stan_sub_job.sh
         done
     done
 done

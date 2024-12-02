@@ -8,7 +8,7 @@
 
 ml PDC/23.12
 ml anaconda3/2024.02-1-cpeGNU-23.12
-source conda.init.sh
+# source conda.init.sh
 
 DATAFILE="$datafile"
 DATALEN="$datalen"
