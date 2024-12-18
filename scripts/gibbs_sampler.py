@@ -103,7 +103,7 @@ if __name__ == '__main__':
             else:
                 p_avg += p
 
-        if sample_ix % 5 == 0:
+        if sample_ix % 100 == 0:
             df = pd.DataFrame(rows, columns=newcols)
             df = df[sorted(newcols)]
             print(df)
