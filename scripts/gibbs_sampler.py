@@ -29,6 +29,7 @@ if __name__ == '__main__':
     parser.add_argument("--prefix", type=str, default="")
     parser.add_argument("--pg_iter", type=int, default=50)
     parser.add_argument("--mvn_method", type=str, default="svd")
+    parser.add_argument("--calculate_p", type=bool, default=False)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -92,18 +93,19 @@ if __name__ == '__main__':
             row += [vectors[ix][dim] for ix, _ in enumerate(columns)]
         rows.append(row)
 
-        rho = e_sample[[wd for wd in columns if "_c" not in wd]].numpy()
-        alpha = e_sample[[wd for wd in columns if "_c" in wd]].numpy()
-        eta = rho @ alpha.T
-        p = tf.math.sigmoid(eta)
+        if args.calculate_p:
+            rho = e_sample[[wd for wd in columns if "_c" not in wd]].numpy()
+            alpha = e_sample[[wd for wd in columns if "_c" in wd]].numpy()
+            eta = rho @ alpha.T
+            p = tf.math.sigmoid(eta)
 
-        if sample_ix >= WARMUP:
-            if p_avg is None:
-                p_avg = p
-            else:
-                p_avg += p
+            if sample_ix >= WARMUP:
+                if p_avg is None:
+                    p_avg = p
+                else:
+                    p_avg += p
 
-        if sample_ix % 100 == 0:
+        if sample_ix % 100 == 99:
             df = pd.DataFrame(rows, columns=newcols)
             df = df[sorted(newcols)]
             print(df)
@@ -114,12 +116,13 @@ if __name__ == '__main__':
     rho_true = theta_true[:theta_true.shape[0] // 2]
     alpha_true = theta_true[theta_true.shape[0] // 2:]
 
-    p_true = tf.math.sigmoid(rho_true @ alpha_true.T).numpy()
-    p_avg = p_avg / (args.samples - WARMUP)
-    
-    LOGGER.train(f"RMSE baseline {np.sqrt(np.mean((p_true - np.mean(p_true)) ** 2))}")
-    RMSE = np.sqrt(np.mean((p_true - p_avg) ** 2))
-    LOGGER.train(f"RMSE: {RMSE}")
+    if args.calculate_p:
+        p_true = tf.math.sigmoid(rho_true @ alpha_true.T).numpy()
+        p_avg = p_avg / (args.samples - WARMUP)
+        
+        LOGGER.train(f"RMSE baseline {np.sqrt(np.mean((p_true - np.mean(p_true)) ** 2))}")
+        RMSE = np.sqrt(np.mean((p_true - p_avg) ** 2))
+        LOGGER.train(f"RMSE: {RMSE}")
 
     sns.set_theme()
     sns.lineplot(x=x, y=y, sort=False)
