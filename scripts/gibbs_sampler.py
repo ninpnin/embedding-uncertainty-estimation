@@ -74,7 +74,7 @@ if __name__ == '__main__':
     samples_folder = f"{pathstem}-gibbs-N-{args.data_len}-D-{args.dim}-{args.prefix}"
 
     LOGGER.info(f"Make folder {samples_folder} ...")
-    Path(sample_folder).mkdir(exist_ok=True)
+    Path(samples_folder).mkdir(exist_ok=True)
 
     gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, lambda0=args.lambda0, freeze_params=freeze_params)
     if args.use_tf:
