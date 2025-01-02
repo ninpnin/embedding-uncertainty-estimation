@@ -68,30 +68,22 @@ if __name__ == '__main__':
         LOGGER.train(f"e {e[freeze_params].dtype} emap { e_map[freeze_params].dtype}")
         e[freeze_params] = e_map[freeze_params]
 
-    rows = []
-    columns = sorted(list(e.vocabulary))
-
     WARMUP = args.samples // 2
     p_avg = None
     pathstem = Path(args.datapath).stem.replace("_", "-")
+    samples_folder = f"{pathstem}-gibbs-N-{args.data_len}-D-{args.dim}-{args.prefix}"
+
+    LOGGER.info(f"Make folder {samples_folder} ...")
+    Path(sample_folder).mkdir(exist_ok=True)
+
     gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, lambda0=args.lambda0, freeze_params=freeze_params)
     if args.use_tf:
         gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, lambda0=args.lambda0, freeze_params=freeze_params, multivariate_method=args.mvn_method)
     for sample_ix, e_sample in enumerate(gibbs_generator):
-        print(e_sample)
         word0sample = e_sample[args.example_word].numpy()
-        print(e_sample[args.example_word])
+        LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
         x.append(word0sample[0])
         y.append(word0sample[1])
-
-        vectors = e_sample[columns].numpy()
-        print(vectors.shape)
-
-        newcols, row = [], []
-        for dim in range(vectors.shape[-1]):
-            newcols += [f"{wd}_{dim}" for wd in columns]
-            row += [vectors[ix][dim] for ix, _ in enumerate(columns)]
-        rows.append(row)
 
         if args.calculate_p:
             rho = e_sample[[wd for wd in columns if "_c" not in wd]].numpy()
@@ -105,13 +97,10 @@ if __name__ == '__main__':
                 else:
                     p_avg += p
 
-        if sample_ix % 100 == 99:
-            df = pd.DataFrame(rows, columns=newcols)
-            df = df[sorted(newcols)]
-            print(df)
-            Path()
-            df.to_csv(f"gibbs-samples-N-{args.data_len}-D-{args.dim}-{args.prefix}{pathstem}.csv", index=False)
-    
+        sample_path = f"{samples_folder}/sample-{sample_ix}.pkl"
+        LOGGER.info(f"Save sample to {sample_path} ...")
+        e_sample.save(sample_path)
+
     theta_true = np.array(d["theta"])
     rho_true = theta_true[:theta_true.shape[0] // 2]
     alpha_true = theta_true[theta_true.shape[0] // 2:]
