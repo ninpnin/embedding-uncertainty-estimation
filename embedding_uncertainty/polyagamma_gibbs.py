@@ -228,7 +228,11 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     sigma_prior = np.identity(e.dimensionality) * 1.0
     if lambda0 is not None:
-        sigma_prior = sigma_prior * lambda0
+        LOGGER.info(f"Use provided lambda0: {lambda0}")
+    else:
+        lambda0 = e.lambda0
+        LOGGER.info(f"Use lambda0 from the embedding object: {lambda0}")
+    sigma_prior = sigma_prior * lambda0
 
     data_wds_cache = {}
     X_cache, y_cache, N_wd_cache, kappa_cache = {}, {}, {}, {}
@@ -306,7 +310,12 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     sigma_prior = np.identity(e.dimensionality) * 1.0
     if lambda0 is not None:
-        sigma_prior = sigma_prior * lambda0
+        LOGGER.info(f"Use provided lambda0: {lambda0}")
+    else:
+        lambda0 = e.lambda0
+        LOGGER.info(f"Use lambda0 from the embedding object: {lambda0}")
+    sigma_prior = sigma_prior * lambda0
+
 
     data_wds_cache = {}
     #X_cache, y_cache, N_wd_cache, kappa_cache = {}, {}, {}, {}

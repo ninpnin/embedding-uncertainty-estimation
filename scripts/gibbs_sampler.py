@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     x, y = [], []
 
-    e = Embedding(vocab, dimensionality=args.dim)
+    e = Embedding(vocab, dimensionality=args.dim, lambda0=args.lambda0)
     freeze_params = []
 
     if args.map_estimate is not None:
@@ -76,9 +76,9 @@ if __name__ == '__main__':
     LOGGER.info(f"Make folder {samples_folder} ...")
     Path(samples_folder).mkdir(exist_ok=True)
 
-    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, lambda0=args.lambda0, freeze_params=freeze_params)
+    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params)
     if args.use_tf:
-        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, lambda0=args.lambda0, freeze_params=freeze_params, multivariate_method=args.mvn_method)
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, multivariate_method=args.mvn_method)
     for sample_ix, e_sample in enumerate(gibbs_generator):
         word0sample = e_sample[args.example_word].numpy()
         LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
