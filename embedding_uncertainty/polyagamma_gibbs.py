@@ -232,7 +232,10 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
     else:
         lambda0 = e.lambda0
         LOGGER.info(f"Use lambda0 from the embedding object: {lambda0}")
-    sigma_prior = sigma_prior * lambda0
+
+    # lambda0 is the precision;
+    # here we need the covariance so we divide
+    sigma_prior = sigma_prior / lambda0
 
     data_wds_cache = {}
     X_cache, y_cache, N_wd_cache, kappa_cache = {}, {}, {}, {}
@@ -314,7 +317,10 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
     else:
         lambda0 = e.lambda0
         LOGGER.info(f"Use lambda0 from the embedding object: {lambda0}")
-    sigma_prior = sigma_prior * lambda0
+
+    # lambda0 is the precision;
+    # here we need the covariance so we divide
+    sigma_prior = sigma_prior / lambda0
 
 
     data_wds_cache = {}
