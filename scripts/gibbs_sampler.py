@@ -23,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--map_estimate", type=str, default=None)
-    parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance)")
+    parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
     parser.add_argument("--example_word", type=str, default="word0")
     parser.add_argument("--use_tf", type=bool, default=False)
     parser.add_argument("--prefix", type=str, default="")
@@ -54,6 +54,9 @@ if __name__ == '__main__':
 
     x, y = [], []
 
+    lambda0 = args.lambda0
+    if lambda0 is None:
+        lambda0 = float(args.dim)
     e = Embedding(vocab, dimensionality=args.dim, lambda0=args.lambda0)
     freeze_params = []
 
