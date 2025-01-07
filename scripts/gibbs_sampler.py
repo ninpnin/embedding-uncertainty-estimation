@@ -57,7 +57,7 @@ if __name__ == '__main__':
     lambda0 = args.lambda0
     if lambda0 is None:
         lambda0 = float(args.dim)
-    e = Embedding(vocab, dimensionality=args.dim, lambda0=args.lambda0)
+    e = Embedding(vocab, dimensionality=args.dim, lambda0=lambda0)
     freeze_params = []
 
     if args.map_estimate is not None:
