@@ -13,7 +13,7 @@ LOGGER.info("Load modules..")
 import seaborn as sns
 from matplotlib import pyplot as plt
 from pathlib import Path
-import random
+import random, string
 
 if __name__ == '__main__':
     import argparse
