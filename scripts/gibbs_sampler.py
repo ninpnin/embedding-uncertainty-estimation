@@ -71,7 +71,10 @@ if __name__ == '__main__':
     WARMUP = args.samples // 2
     p_avg = None
     pathstem = Path(args.datapath).stem.replace("_", "-")
-    samples_folder = f"{pathstem}-gibbs-N-{args.data_len}-D-{args.dim}-{args.prefix}"
+
+    # Generate a random string to make runs pseudo unique
+    randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
+    samples_folder = f"{pathstem}-gibbs-N-{args.data_len}-D-{args.dim}-{args.prefix}-{randomchars}"
 
     LOGGER.info(f"Make folder {samples_folder} ...")
     Path(samples_folder).mkdir(exist_ok=True)
