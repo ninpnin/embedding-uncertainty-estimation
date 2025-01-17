@@ -92,8 +92,8 @@ if __name__ == '__main__':
         y.append(word0sample[1])
 
         if args.calculate_p:
-            rho = e_sample[[wd for wd in columns if "_c" not in wd]].numpy()
-            alpha = e_sample[[wd for wd in columns if "_c" in wd]].numpy()
+            rho = e_sample[[wd for wd in e.vocabulary if "_c" not in wd]].numpy()
+            alpha = e_sample[[wd for wd in e.vocabulary if "_c" in wd]].numpy()
             eta = rho @ alpha.T
             p = tf.math.sigmoid(eta)
 
