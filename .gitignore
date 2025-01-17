@@ -10,3 +10,4 @@ results
 slurm*.out
 **.csv
 **/*.zip
+**.pdf
