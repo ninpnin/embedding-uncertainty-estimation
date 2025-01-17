@@ -11,3 +11,6 @@ slurm*.out
 **.csv
 **/*.zip
 **.pdf
+**/u.*
+real_data/movielens/ml-100k/
+real_data/movielens/*.json
