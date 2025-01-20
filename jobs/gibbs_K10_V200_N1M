@@ -18,9 +18,9 @@ python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'
 python3 -c "import tensorflow_probability; print('moi')"
 # python src/main_laplacian.py --batch_size 12 --lr 0.00000352 --lr_warmup 1000 --n_epochs 15 --lambda_a 0.0 --lambda_w 10.0 --device "cuda:0" --data senate --pb_refresh 30.0 --partition True --base_model "trained/bert-pretrained-3b"
 
-for DATALEN in 2000 5000 10000 20000 50000 100000; do
+for DATALEN in 500000 1000000 200000 100000 50000; do
 	for DATAFILE in ../data/ten_V200K10/*.json; do
 		echo "Running datapath $DATAFILE and N $DATALEN"
-		PYTHONPATH="$PYTHONPATH:." python3 scripts/gibbs_sampler.py --datapath "$DATAFILE" --data_len "$DATALEN" --dim 10 --samples 2000 --example_word word10 --use_tf True
+		PYTHONPATH="$PYTHONPATH:." python3 scripts/gibbs_sampler.py --datapath "$DATAFILE" --data_len "$DATALEN" --dim 10 --samples 2000 --example_word word10 --use_tf True --mvn_method cholesky --pg_iter 10
 	done
 done

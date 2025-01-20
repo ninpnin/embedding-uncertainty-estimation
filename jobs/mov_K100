@@ -19,4 +19,4 @@ python3 -c "import tensorflow_probability; print('moi')"
 # python src/main_laplacian.py --batch_size 12 --lr 0.00000352 --lr_warmup 1000 --n_epochs 15 --lambda_a 0.0 --lambda_w 10.0 --device "cuda:0" --data senate --pb_refresh 30.0 --partition True --base_model "trained/bert-pretrained-3b"
 
 #export LOGLEVEL=DEBUG
-PYTHONPATH="$PYTHONPATH:." python3 scripts/gibbs_sampler.py --datapath ../data/movielens_with_ns.json --data_len 1000000 --dim 100 --samples 2000 --example_word 11 --use_tf True
+PYTHONPATH="$PYTHONPATH:." python3 scripts/gibbs_sampler.py --datapath ../data/movielens-train.json --data_len 1000000 --dim 100 --samples 2000 --example_word 11 --use_tf True --mvn_method cholesky --pg_iter 5
