@@ -1,5 +1,4 @@
 from probabilistic_word_embeddings.embeddings import Embedding
-from probabilistic_word_embeddings.estimation import map_estimate
 from probabilistic_word_embeddings.models import sgns_likelihood
 from probabilistic_word_embeddings.evaluation import posterior_mean, nearest_neighbors
 from probabilistic_word_embeddings.evaluation import evaluate_word_similarity
@@ -11,6 +10,7 @@ LOGGER = get_logger("gibbs")
 LOGGER.info("Load modules..")
 from pathlib import Path
 import random, json
+import polars as pl
 
 if __name__ == '__main__':
     import argparse
@@ -87,6 +87,28 @@ if __name__ == '__main__':
     #print(within_ci)
     ci_coverage = np.mean(within_ci)
     LOGGER.train(f"CI coverage: {ci_coverage}")
-    LOGGER.train(f"RMSE baseline {np.sqrt(np.mean((p_true - np.mean(p_true)) ** 2))}")
+    RMSE_base = np.sqrt(np.mean((p_true - np.mean(p_true)) ** 2))
+    LOGGER.train(f"RMSE baseline {RMSE_base}")
     RMSE = np.sqrt(np.mean((p_true - p_avg) ** 2))
     LOGGER.train(f"RMSE: {RMSE}")
+    
+    # results/5-gibbs-N-10000-D-5-simulation-zwcb/
+    folder = Path(args.sample_folder).stem
+    dataset_ix = int(folder.split("-")[0])
+    N = int(folder.split("-N-")[-1].split("-D-")[0])
+    resultdict = {"dataset_ix": dataset_ix, "N": N, "K": K_truth, "V": V_truth, "ci-90-coverage": ci_coverage, "RMSE": RMSE, "RMSE_normalized": RMSE / RMSE_base}
+    df = pl.DataFrame(resultdict)
+    #print(df)
+    coverage_path = Path("logs/coverage.csv")
+    if coverage_path.exists():
+        old_df = pl.read_csv(coverage_path)
+        united_df = pl.concat([old_df, df])
+        united_df = united_df.sort("dataset_ix", "N", "K", "V")
+        #print(united_df)
+        united_df = united_df.unique(["dataset_ix", "N", "K", "V"])
+        print(united_df)
+        united_df.write_csv(coverage_path)
+        pass
+    else:
+        print(df)
+        df.write_csv(coverage_path)
