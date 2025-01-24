@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#SBATCH -A NAISS2024-22-1419
+#SBATCH -J stanhmc_K5_V100
+#SBATCH -t 0-00:15:00
+#SBATCH -n 16
+# The number of cores per task
+#SBATCH -c 1
+#SBATCH -p shared
+
+ml PDC/23.12
+ml anaconda3/2024.02-1-cpeGNU-23.12
+source conda.init.sh
+conda activate eue-vin
+
+#for DATALEN in 2000 5000 10000 20000 50000 100000; do
+for DATALEN in 1000 500 200; do
+	for DATAFILE in ../data/ten_V100K5/*.json; do
+		echo "Running $DATAFILE with N = $DATALEN"
+		LOGLEVEL=DEBUG python stan_simulation/fit_models2.py --data_path "$DATAFILE" --stan_model_path stan_simulation/models/sgns_normalpriors_aggregated.stan --estimator hmc
+	done
+done

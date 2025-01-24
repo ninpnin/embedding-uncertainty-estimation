@@ -3,21 +3,30 @@ import sys
 import json
 import argparse
 import numpy as np
-import tensorflow as tf
+#import tensorflow as tf
 
 def sigmoid(x:float): # might be a good idea to have this in a common library.
   return 1 / (1 + np.exp(-x))
 
-def simulate_data(vocab_size:int=10, dimensionality:int=3, n_datapoints:int=100, eps_sd:float=1.0, seed:int=None, save_path:str=None): # sd:float=0.2
+def simulate_data(vocab_size:int=10, dimensionality:int=3, n_datapoints:int=100, eps_sd:float=1.0, seed:int=None, save_path:str=None, theta_seed:int=None): # sd:float=0.2
     """
     Main function for simulating artificial data.
+
+    - theta_seed: if theta seed ignore seed and only apply to theta
+    - seed: im not 100% sure this works all the way.
     """
     vocabulary = create_vocabulary(vocab_size=vocab_size)
-    theta = sample_theta(vocabulary=vocabulary, dimensionality=dimensionality, eps_sd=eps_sd, seed=seed)
-    data = simulate_from_theta(vocabulary, theta, n_datapoints=n_datapoints,  seed=seed)
+    if theta_seed:
+        print('Using theta_seed:', theta_seed)
+        theta = sample_theta(vocabulary=vocabulary, dimensionality=dimensionality, eps_sd=eps_sd, seed=theta_seed)
+        data = simulate_from_theta(vocabulary, theta, n_datapoints=n_datapoints,  seed=None)
+    else:
+        print('Using seed:', seed)
+        theta = sample_theta(vocabulary=vocabulary, dimensionality=dimensionality, eps_sd=eps_sd, seed=seed)
+        data = simulate_from_theta(vocabulary, theta, n_datapoints=n_datapoints,  seed=seed)
 
     if save_path:
-        json_ = {"data": data, "theta": theta.tolist(), "vocabulary": vocabulary, "seed": (seed if seed is not None else "None")}
+        json_ = {"data": data, "theta": theta.tolist(), "vocabulary": vocabulary, "seed": (seed if seed is not None else "None"), "theta_seed": (theta_seed if theta_seed is not None else "None"), 'eps_sd': eps_sd}
         with open(save_path, 'w') as file:
             json.dump(json_, file, indent=4)
             print(f'Saved to: {save_path}')
@@ -91,7 +100,7 @@ def create_vocabulary(vocab_size:int=10):
     return words
 
 def sample_theta(vocabulary, dimensionality, eps_sd, seed:int=None):
-    sd = eps_sd/float(dimensionality)
+    sd = eps_sd/np.sqrt(float(dimensionality))
 
     return np.random.default_rng(seed=seed).normal(loc=0.0, scale=sd, size=(2*len(vocabulary), dimensionality)) # scale - standard deviation.
 
@@ -143,6 +152,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_datapoints', type=int, default=10, help='n_datapoints in the artifical dataset')
     parser.add_argument('--eps_sd', type=float, default=1.0, help='standard deviation factor of embedding elements. std = eps_std/dimensionality')
     parser.add_argument('--seed', type=int, default=None, help='seed')
+    parser.add_argument('--theta_seed', type=int, default=None, help='seed for theta.')
 
     args = parser.parse_args()
     save_path = args.save_path

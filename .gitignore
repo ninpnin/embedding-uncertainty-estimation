@@ -6,3 +6,8 @@ trained
 **/.DS_Store
 build/
 logs/
+results
+slurm*.out
+**.csv
+**/*.zip**/*.plk
+**/*.pkl

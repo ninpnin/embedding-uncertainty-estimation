@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+#SBATCH -A NAISS2024-22-1419 -p alvis
+#SBATCH -N 1 --gpus-per-node=A100:1  # We're launching 2 nodes with 4 Nvidia T4 GPUs each
+#SBATCH -t 0-23:15:00
+
+#module load TensorFlow/2.5.0-fosscuda-2020b
+#pwd
+#ls
+#python app.py
+
+#module load tensorflow-probability/0.19.0-foss-2022a-CUDA-11.7.0
+module load TensorFlow/2.15.1-foss-2023a-CUDA-12.1.1  virtualenv/20.23.1-GCCcore-12.3.0
+#source ../../torch_test/bin/activate
+source eue-tf/bin/activate
+
+echo Test tesnorflow
+python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+python3 -c "import tensorflow_probability; print('moi')"
+# python src/main_laplacian.py --batch_size 12 --lr 0.00000352 --lr_warmup 1000 --n_epochs 15 --lambda_a 0.0 --lambda_w 10.0 --device "cuda:0" --data senate --pb_refresh 30.0 --partition True --base_model "trained/bert-pretrained-3b"
+
+for DATALEN in 50000 20000 100000; do
+	PYTHONPATH="$PYTHONPATH:." python3 scripts/gibbs_sampler.py --datapath ../data/movielens-train.json --data_len "$DATALEN" --dim 20 --samples 2000 --example_word 11 --use_tf True --mvn_method cholesky --pg_iter 10
+done
