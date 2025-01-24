@@ -35,12 +35,24 @@ def subhessian_analytic(n_plus, n_minus, rho, alpha, i=0, j=1):
     eta = tf.sigmoid(dotprod)
     eta_minus = 1.0 - tf.sigmoid(dotprod)
     logs_second_d = eta * eta_minus
-    raT = np.outer(rho, alpha).T
-    h = raT * logs_second_d * (n_plus + n_minus)
-    h_pos = - np.identity(K) * eta_minus
-    h_neg = np.identity(K) * eta
 
-    return h + h_pos * n_plus + h_neg * n_minus
+    if i != j:
+      raT = np.outer(rho, alpha).T
+      h = raT * logs_second_d * (n_plus + n_minus)
+      h_pos = - np.identity(K) * eta_minus
+      h_neg = np.identity(K) * eta
+      if i == 0 and j == 1:
+        return h + h_pos * n_plus + h_neg * n_minus
+      else:
+        return (h + h_pos * n_plus + h_neg * n_minus).T
+    elif i == 0 and j == 0:
+      aaT = np.outer(alpha, alpha).T
+      return aaT * logs_second_d * (n_plus + n_minus)
+    elif i == 1 and j == 1:
+      rrT = np.outer(rho, rho).T
+      return rrT * logs_second_d * (n_plus + n_minus)
+
+
 
 def subhessian(n_plus, n_minus, rho, alpha, i=0, j=1):
     """
