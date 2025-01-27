@@ -2,10 +2,11 @@ import tensorflow as tf
 import numpy as np
 from embedding_uncertainty.laplace_approx import subhessian, subhessian_analytic
 from embedding_uncertainty.laplace_approx import full_hessian, fixed_inverse_hessian, laplace_approx
+from embedding_uncertainty.laplace_approx import gradient_tf, gradient
 from probabilistic_word_embeddings.embeddings import Embedding
 from probabilistic_word_embeddings.estimation import map_estimate
 import unittest
-import random
+import random, json, os
 
 class Test(unittest.TestCase):
     def test_hessian(self):
@@ -62,53 +63,29 @@ class Test(unittest.TestCase):
 
 
     def test_laplace_approx(self):
+
+        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'data/1.json')
+        MAP_FILENAME = os.path.join(os.path.dirname(__file__), 'data/map_estimate.pkl')
+
         THRESHOLD = 0.00000001
-        K = 3
-        V = 5
-        lambda0 = 1.0
-        vocab = {f"wd{v+1}" for v in range(V)}
-        words = [wd for wd in vocab]
-        contexts = [f"{wd}_c" for wd in vocab]
-        e_ref = Embedding(vocab, dimensionality=K, lambda0=lambda0)
+        e_map = Embedding(saved_model_path=MAP_FILENAME)
+        print(e_map["word0"])
+        print(e_map["word1_c"])
+        with open(TESTDATA_FILENAME) as f:
+            d = json.load(f)
 
-        for N in [30000]:
-            BATCH_SIZE = N // 1000
+        data = []
+        for elem in d["data"]:
+            w, v, x = elem["v"], elem["w"] + "_c", float(elem["x"])
+            data.append((w,v,x))
 
-            data = []
+        e_grad = gradient_tf(e_map, data)
 
-            for _ in range(N):
-                w = random.choice(words)
-                v = random.choice(contexts)
-                rho = e_ref[w]
-                alpha = e_ref[v]
-                nu = np.dot(alpha, rho) * 10
-                eta = 1.0 / (1.0 + np.exp(-nu))
-                x = 0.0
-                if eta > random.uniform(0.0, 1.0):
-                    x = 1.0
+        print(e_grad["word0"])
+        print(e_grad["word2"])
 
-                data.append(dict(w=w, v=v, x=x))
-
-            def data_generator(batch_size):
-                while True:
-                    i, j, x = [], [], []
-                    for _ in range(batch_size):
-                        d = random.choice(data)
-                        i.append(d["w"])
-                        j.append(d["v"])
-                        x.append(d["x"])
-
-                    i = tf.constant(i)
-                    j = tf.constant(j)
-                    x = tf.constant(x, dtype=tf.float64)
-                    yield (i, j, x)
-
-            e = Embedding(vocab, dimensionality=K, lambda0=lambda0)
-            e = map_estimate(e, data_generator=data_generator(BATCH_SIZE), N=N, batch_size=BATCH_SIZE, epochs=100)
-
-
-            for e_sample in laplace_approx(e, data, samples=10, rotational_fix=True):
-                print(e_sample)
+        for e_sample in laplace_approx(e_map, data, samples=10, rotational_fix=True):
+            print(e_sample)
 """
     def test_full_hessian(self):
         THRESHOLD = 0.00000001
@@ -136,7 +113,7 @@ class Test(unittest.TestCase):
                 if eta > random.uniform(0.0, 1.0):
                     x = 1.0
 
-                data.append(dict(w=w, v=v, x=x))
+                data.append((w, v, x))
 
             def data_generator(batch_size):
                 while True:

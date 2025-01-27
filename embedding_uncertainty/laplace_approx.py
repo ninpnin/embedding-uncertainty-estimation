@@ -6,6 +6,81 @@ import numpy as np
 import copy
 import bidict
 LOGGER.info("Done!")
+from probabilistic_word_embeddings.models import sgns_likelihood
+
+def sigmoid(x):
+  return 1.0 / (1.0 + np.exp(-x))
+
+def aggregate_data(data):
+  LOGGER.info(f"Aggregate data ...")
+  pos_samples = {}
+  neg_samples = {}
+
+  for item in data:
+    i, j, x = item
+    pair = (i,j)
+    if x == 1.0:
+      pos_samples[pair] = pos_samples.get(pair, 0) + 1
+    elif x == 0.0:
+      neg_samples[pair] = neg_samples.get(pair, 0) + 1
+    else:
+      LOGGER.error(f"Wut, x was {x}")
+      return
+  return pos_samples, neg_samples
+
+def gradient(e, data):
+  """
+  Off-diagonal subhessian
+  """
+  e_grad = copy.deepcopy(e)
+  pos_samples, neg_samples = aggregate_data(data)
+
+  words = [wd for wd in e.vocabulary if "_c" not in wd]
+  contexts = [wd for wd in e.vocabulary if "_c" in wd]
+
+  e_grad[words] = e_grad[words] * 0.0
+  e_grad[contexts] = e_grad[contexts] * 0.0
+
+  LOGGER.info(f"Loop over {len(pos_samples)} and {len(neg_samples)} samples ...")
+  for w in words:
+    rho = e[w].numpy()
+    for v in contexts:
+      pair = (w, v)
+      if pair in pos_samples or pair in neg_samples:
+        alpha = e[v].numpy()
+        n_plus = pos_samples.get(pair, 0)
+        n_minus = neg_samples.get(pair, 0)
+        
+        eta = sigmoid(np.dot(rho, alpha))
+        multiplier = (n_plus + n_minus) * (n_plus / (n_plus + n_minus) - eta)
+        e_grad[w] = e_grad[w] + multiplier * alpha
+        e_grad[v] = e_grad[v] + multiplier * rho
+
+  for w in words:
+    e_grad[w] = e[w] * e.lambda0
+  for v in contexts:
+    e_grad[v] = e[v] * e.lambda0
+
+  return e_grad
+
+def gradient_tf(e, data):
+  """
+  Off-diagonal subhessian
+  """
+  e_grad = copy.deepcopy(e)
+  i_batch = tf.constant([i for i,j,x in data])
+  j_batch = tf.constant([j for i,j,x in data])
+  x_batch = tf.constant([x for i,j,x in data], dtype=tf.float64)
+  i, j, x = i_batch, j_batch, x_batch
+  N = len(i)
+  batch_size = N
+  
+  with tf.GradientTape() as t1:
+    objective = - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
+    g = t1.gradient(objective, e.theta)
+
+  e_grad.theta.assign(g)
+  return e_grad
 
 def subhessian(n_plus, n_minus, rho, alpha, i=0, j=1):
     """
@@ -93,21 +168,9 @@ def full_hessian(e, data):
   V = len(words)
   full_H = np.zeros((V * K * 2, V * K * 2))
 
-  pos_samples = {}
-  neg_samples = {}
+  pos_samples, neg_samples = aggregate_data(data)
 
-  for item in data:
-    i, j, x = item["w"], item["v"], item["x"]
-    pair = (i,j)
-    if x == 1.0:
-      pos_samples[pair] = pos_samples.get(pair, 0) + 1
-    elif x == 0.0:
-      neg_samples[pair] = neg_samples.get(pair, 0) + 1
-    else:
-      print(i, j, x)
-      print("Wut, x was:", x)
-      return
-
+  LOGGER.info(f"Loop over {len(pos_samples)} and {len(neg_samples)} samples ...")
   for w in words:
     rho = e[w].numpy()
     for v in contexts:
@@ -136,7 +199,7 @@ def full_hessian(e, data):
         
 
   # Add spherical Gaussian prior
-  full_H + np.eye(2 * K * V) * e.lambda0
+  full_H = full_H - np.eye(2 * K * V) * e.lambda0
   return full_H
 
 def fixed_inverse_hessian(H, K):
@@ -145,7 +208,6 @@ def fixed_inverse_hessian(H, K):
   Sigma_aug = Sigma[:-elim, :-elim]
   Sigma_12 = Sigma[:-elim, -elim:]
   Sigma_22_inv = H[-elim:, -elim:]
- 
   return Sigma_aug - Sigma_12 @ Sigma_22_inv @ Sigma_12.T
 
 
@@ -174,7 +236,9 @@ def laplace_approx(e, data, samples=None, rotational_fix=True):
     #L = np.linalg.cholesky(Sigma + np.eye(L_size) * 0.01)
     vals, vecs = np.linalg.eigh(Sigma + np.eye(L_size) * 0.00000001)
     L = vecs @ np.diag(np.sqrt(vals))
-    assert np.min(-vals) >= -0.001, f"eigenvals should be nonnegative, got min lambda = {np.min(-vals)}"
+    maxval = np.min(vals)
+    minval = np.max(vals)
+    assert maxval * minval >= 0.00, f"eigenvals should be nonnegative, got min lambda = {minval} , {maxval}"
 
     V_prime = L_size // K
     assert V_prime <= V * 2
