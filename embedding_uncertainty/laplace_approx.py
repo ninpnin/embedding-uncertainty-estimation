@@ -1,5 +1,11 @@
+from trainerlog import get_logger
+LOGGER = get_logger("laplace", splitsec=True)
+LOGGER.info("Load modules..")
 import tensorflow as tf
 import numpy as np
+import copy
+import bidict
+LOGGER.info("Done!")
 
 def subhessian(n_plus, n_minus, rho, alpha, i=0, j=1):
     """
@@ -79,6 +85,107 @@ def subhessian(n_plus, n_minus, rho, alpha, i=0, j=1):
 
     return h
 
+
+def full_hessian(e, data):
+  K = e.dimensionality
+  words = [wd for wd in e.vocabulary if "_c" not in wd]
+  contexts = [wd for wd in e.vocabulary if "_c" in wd]
+  V = len(words)
+  full_H = np.zeros((V * K * 2, V * K * 2))
+
+  pos_samples = {}
+  neg_samples = {}
+
+  for item in data:
+    i, j, x = item["w"], item["v"], item["x"]
+    pair = (i,j)
+    if x == 1.0:
+      pos_samples[pair] = pos_samples.get(pair, 0) + 1
+    elif x == 0.0:
+      neg_samples[pair] = neg_samples.get(pair, 0) + 1
+    else:
+      print(i, j, x)
+      print("Wut, x was:", x)
+      return
+
+  for w in words:
+    rho = e[w].numpy()
+    for v in contexts:
+      pair = (w, v)
+      if pair in pos_samples or pair in neg_samples:
+        alpha = e[v].numpy()
+        n_plus = pos_samples.get(pair, 0)
+        n_minus = neg_samples.get(pair, 0)
+
+        H_ww = subhessian_analytic(n_plus, n_minus, rho, alpha, i=0, j=0)
+        H_vv = subhessian_analytic(n_plus, n_minus, rho, alpha, i=1, j=1)
+        H_wv = subhessian_analytic(n_plus, n_minus, rho, alpha, i=0, j=1)
+        H_vw = H_wv.numpy().T
+
+        i, j = e.vocabulary[w], e.vocabulary[v]
+        i_ix = i * K
+        j_ix = j * K
+
+        # Diagonal
+        full_H[i_ix:i_ix+K, i_ix:i_ix+K] = H_ww
+        full_H[j_ix:j_ix+K, j_ix:j_ix+K] = H_vv
+
+        # Off-diagonal
+        full_H[i_ix:i_ix+K, j_ix:j_ix+K] = H_vw.T
+        full_H[j_ix:j_ix+K, i_ix:i_ix+K] = H_vw
+        
+
+  # Add spherical Gaussian prior
+  full_H + np.eye(2 * K * V) * e.lambda0
+  return full_H
+
+def fixed_inverse_hessian(H, K):
+  elim = K * K
+  Sigma = np.linalg.inv(H)
+  Sigma_aug = Sigma[:-elim, :-elim]
+  Sigma_12 = Sigma[:-elim, -elim:]
+  Sigma_22_inv = H[-elim:, -elim:]
+ 
+  return Sigma_aug - Sigma_12 @ Sigma_22_inv @ Sigma_12.T
+
+
+def laplace_approx(e, data, samples=None, rotational_fix=True):
+  LOGGER.info("Calculate Hessian")
+  H = full_hessian(e, data)
+  K = e.dimensionality
+  V = len([wd for wd in e.vocabulary if "_c" not in wd])
+  LOGGER.debug(f"K: {K}, V: {V}")
+  Sigma = None
+  if rotational_fix:
+    LOGGER.train("Freeze last K context vectors")
+    LOGGER.info("Invert Hessian...")
+    Sigma = fixed_inverse_hessian(H, K)
+  else:
+    LOGGER.info("Invert Hessian...")
+    Sigma = np.linalg.inv(H)
+
+  LOGGER.info("Done!")
+  if samples is None:
+    return Sigma
+  else:
+    LOGGER.train(f"Sample {samples} samples")
+    inv_vocab = bidict.bidict(e.vocabulary).inv
+    L_size = Sigma.shape[0]
+    #L = np.linalg.cholesky(Sigma + np.eye(L_size) * 0.01)
+    vals, vecs = np.linalg.eigh(Sigma + np.eye(L_size) * 0.00000001)
+    L = vecs @ np.diag(np.sqrt(vals))
+    assert np.min(-vals) >= -0.001, f"eigenvals should be nonnegative, got min lambda = {np.min(-vals)}"
+
+    V_prime = L_size // K
+    assert V_prime <= V * 2
+    for _ in range(samples):
+      e_sample = copy.deepcopy(e)
+      deviation = L @ np.random.randn(L_size)
+      deviation = deviation.reshape(V_prime, K)
+      wordlist = [inv_vocab[ix] for ix in range(V_prime)]
+
+      e_sample[wordlist] = e_sample[wordlist] + deviation
+      yield e_sample
 
 
 def _sample_rotation_tangent(e):
