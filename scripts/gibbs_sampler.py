@@ -19,6 +19,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--datapath", type=str, default=None)
+    parser.add_argument("--shuffle_data", type=bool, default=False)
     parser.add_argument("--dim", type=int, default=2)
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
@@ -42,7 +43,9 @@ if __name__ == '__main__':
 
         LOGGER.debug(f"Keys: {d.keys()}")
 
-        random.shuffle(d["data"])
+        if args.shuffle_data:
+            LOGGER.info(f"Shuffle data...")
+            random.shuffle(d["data"])
         for elem in d["data"]:
             w, v, x = elem["v"], elem["w"] + "_c", elem["x"]
             vocab.add(w)
