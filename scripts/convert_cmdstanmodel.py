@@ -22,35 +22,46 @@ def main(args):
     vocab_c = [f"{wd}_c" for wd in vocab]
     print(vocab)
 
-    theta = np.zeros((vocab_size*2, dimensionality))
+    if args.format == "json":
+        theta = np.zeros((vocab_size*2, dimensionality))
 
-    for ix, pair in enumerate(zip(vocab, vocab_c)):
-        wd, wd_c = pair
-        theta[ix] = fit.word_vectors[ix]
-        theta[ix+vocab_size] = fit.context_vectors[ix]
+        for ix, pair in enumerate(zip(vocab, vocab_c)):
+            wd, wd_c = pair
+            theta[ix] = fit.word_vectors[ix]
+            theta[ix+vocab_size] = fit.context_vectors[ix]
 
-    print(theta)
+        print(theta)
 
-    full_vocab = vocab + vocab_c
-    full_vocab = {wd: ix for ix, wd in enumerate(full_vocab)}
-    print(full_vocab)
+        full_vocab = vocab + vocab_c
+        full_vocab = {wd: ix for ix, wd in enumerate(full_vocab)}
+        print(full_vocab)
 
-    theta = theta.tolist()
+        theta = theta.tolist()
 
-    d = {"theta": theta, "vocabulary": full_vocab, "lambda0": 1.0}
+        d = {"theta": theta, "vocabulary": full_vocab, "lambda0": 1.0}
 
 
-    if args.outpath is None:
-        args.outpath = args.path.replace(".pkl", ".json")
+        if args.outpath is None:
+            args.outpath = args.path.replace(".pkl", ".json")
 
-    with open(args.outpath, "w") as f:
-        json.dump(d,f, indent=1, ensure_ascii=False)
+        with open(args.outpath, "w") as f:
+            json.dump(d,f, indent=1, ensure_ascii=False)
+    elif args.format == "embedding":
+        from probabilistic_word_embeddings.embeddings import Embedding
+        e = Embedding(set(vocab), dimensionality=dimensionality)
+        for ix, pair in enumerate(zip(vocab, vocab_c)):
+            wd, wd_c = pair
+            e[wd] = fit.word_vectors[ix]
+            e[wd_c] = fit.context_vectors[ix]
+
+        e.save(args.outpath)
 
 if __name__ == "__main__":
     import argparse
     argparser = argparse.ArgumentParser(description=__doc__)
     argparser.add_argument("--path", type=str, required=True)
     argparser.add_argument("--outpath", type=str, default=None)
+    argparser.add_argument("--format", type=str, default="json", choices=['json', 'embedding'])
     args = argparser.parse_args()
     print(args)
     main(args)
