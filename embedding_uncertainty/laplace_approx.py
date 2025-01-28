@@ -82,6 +82,30 @@ def gradient_tf(e, data):
   e_grad.theta.assign(g)
   return e_grad
 
+
+def hessian_tf(e, data, V, K):
+  """
+  Off-diagonal subhessian
+  """
+  e_grad = copy.deepcopy(e)
+  i_batch = tf.constant([i for i,j,x in data])
+  j_batch = tf.constant([j for i,j,x in data])
+
+  x_batch = tf.constant([x for i,j,x in data], dtype=tf.float64)
+  i, j, x = i_batch, j_batch, x_batch
+  N = len(i)
+  batch_size = N
+  
+  with tf.GradientTape() as t2:
+    with tf.GradientTape() as t1:
+      objective = - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
+      g = t1.gradient(objective, e.theta)
+
+    hessian = t2.jacobian(g, e.theta)
+
+  hessian = tf.reshape(hessian, [2*V*K, 2*V*K])
+  return hessian
+
 def subhessian(n_plus, n_minus, rho, alpha, i=0, j=1):
     """
     Off-diagonal subhessian
@@ -190,16 +214,16 @@ def full_hessian(e, data):
         j_ix = j * K
 
         # Diagonal
-        full_H[i_ix:i_ix+K, i_ix:i_ix+K] = H_ww
-        full_H[j_ix:j_ix+K, j_ix:j_ix+K] = H_vv
+        full_H[i_ix:i_ix+K, i_ix:i_ix+K] += H_ww
+        full_H[j_ix:j_ix+K, j_ix:j_ix+K] += H_vv
 
         # Off-diagonal
-        full_H[i_ix:i_ix+K, j_ix:j_ix+K] = H_vw.T
-        full_H[j_ix:j_ix+K, i_ix:i_ix+K] = H_vw
+        full_H[i_ix:i_ix+K, j_ix:j_ix+K] += H_vw.T
+        full_H[j_ix:j_ix+K, i_ix:i_ix+K] += H_vw
         
 
   # Add spherical Gaussian prior
-  full_H = full_H - np.eye(2 * K * V) * e.lambda0
+  full_H = -full_H - np.eye(2 * K * V) * e.lambda0
   return full_H
 
 def fixed_inverse_hessian(H, K):
