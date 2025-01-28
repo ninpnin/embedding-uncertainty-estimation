@@ -1,28 +1,30 @@
 import numpy as np
 import cmdstanpy
 import pickle, json
+from trainerlog import get_logger
+LOGGER = get_logger("conversion")
 
 def load_pickle_emb(path):
     with open(path, "rb") as f:
         d = pickle.load(f)
 
-    print(d.__dir__())
+    LOGGER.debug(f"{d.__dir__()}")
     return d
 
 def main(args):
     fit = load_pickle_emb(args.path)
-    print(fit.word_vectors)
-    print(fit.context_vectors)
+    #print(fit.word_vectors)
+    #print(fit.context_vectors)
     vocab_size = fit.word_vectors.shape[0]
     dimensionality = fit.word_vectors.shape[1]
 
-    print("vocab_size, dimensionality")
-    print(vocab_size, dimensionality)
+    LOGGER.info(f"V: {vocab_size}, K: {dimensionality}")
     vocab = [f"word{ix}" for ix in range(vocab_size)]
     vocab_c = [f"{wd}_c" for wd in vocab]
-    print(vocab)
+    LOGGER.debug(f"Vocabulary: {vocab}")
 
     if args.format == "json":
+        LOGGER.info(f"Convert to JSON...")
         theta = np.zeros((vocab_size*2, dimensionality))
 
         for ix, pair in enumerate(zip(vocab, vocab_c)):
@@ -30,11 +32,11 @@ def main(args):
             theta[ix] = fit.word_vectors[ix]
             theta[ix+vocab_size] = fit.context_vectors[ix]
 
-        print(theta)
+        #print(theta)
 
         full_vocab = vocab + vocab_c
         full_vocab = {wd: ix for ix, wd in enumerate(full_vocab)}
-        print(full_vocab)
+        #print(full_vocab)
 
         theta = theta.tolist()
 
@@ -44,16 +46,19 @@ def main(args):
         if args.outpath is None:
             args.outpath = args.path.replace(".pkl", ".json")
 
+        LOGGER.info(f"Save to {args.outpath}...")
         with open(args.outpath, "w") as f:
             json.dump(d,f, indent=1, ensure_ascii=False)
     elif args.format == "embedding":
+        LOGGER.info(f"Convert to pwe.Embedding...")
         from probabilistic_word_embeddings.embeddings import Embedding
         e = Embedding(set(vocab), dimensionality=dimensionality)
         for ix, pair in enumerate(zip(vocab, vocab_c)):
             wd, wd_c = pair
             e[wd] = fit.word_vectors[ix]
             e[wd_c] = fit.context_vectors[ix]
-
+        
+        LOGGER.info(f"Save to {args.outpath}...")
         e.save(args.outpath)
 
 if __name__ == "__main__":
