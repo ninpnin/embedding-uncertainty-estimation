@@ -223,7 +223,7 @@ def full_hessian(e, data):
         
 
   # Add spherical Gaussian prior
-  full_H = -full_H - np.eye(2 * K * V) * e.lambda0
+  full_H = full_H + np.eye(2 * K * V) * e.lambda0
   return full_H
 
 def fixed_inverse_hessian(H, K):

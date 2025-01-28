@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from embedding_uncertainty.laplace_approx import subhessian, subhessian_analytic
 from embedding_uncertainty.laplace_approx import full_hessian, fixed_inverse_hessian, laplace_approx
-from embedding_uncertainty.laplace_approx import gradient_tf, gradient
+from embedding_uncertainty.laplace_approx import gradient_tf, gradient, hessian_tf
 from probabilistic_word_embeddings.embeddings import Embedding
 from probabilistic_word_embeddings.estimation import map_estimate
 import unittest
@@ -62,30 +62,45 @@ class Test(unittest.TestCase):
         self.assertLessEqual(MAE, THRESHOLD, f"Error between tf and direct calculation should be less than {THRESHOLD} ({MAE})")
 
 
-    def test_laplace_approx(self):
+    def test_hessian(self):
 
         TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'data/1.json')
-        MAP_FILENAME = os.path.join(os.path.dirname(__file__), 'data/map_estimate.pkl')
+        MAP_FILENAME = os.path.join(os.path.dirname(__file__), 'data/map_estimate.json')
 
+        N = 1000
         THRESHOLD = 0.00000001
         e_map = Embedding(saved_model_path=MAP_FILENAME)
-        print(e_map["word0"])
-        print(e_map["word1_c"])
+        K = e_map.dimensionality
+        V = len([wd for wd in e_map.vocabulary if "_c" not in wd])
+        print(e_map.lambda0)
+        e_map.lambda0 = e_map.dimensionality
+        #print(e_map.lambda0)
+        #print(e_map["word0"])
+        #print(e_map["word1_c"])
         with open(TESTDATA_FILENAME) as f:
             d = json.load(f)
 
         data = []
-        for elem in d["data"]:
+        for elem in d["data"][:N]:
             w, v, x = elem["v"], elem["w"] + "_c", float(elem["x"])
             data.append((w,v,x))
 
-        e_grad = gradient_tf(e_map, data)
+        assert len(data) == N
+        e_grad_tf = gradient_tf(e_map, data)
+        e_grad = gradient(e_map, data)
+
+        print(e_grad_tf["word0"])
+        print(e_grad_tf["word2"])
 
         print(e_grad["word0"])
         print(e_grad["word2"])
 
-        for e_sample in laplace_approx(e_map, data, samples=10, rotational_fix=True):
-            print(e_sample)
+        H_tf = hessian_tf(e_map, data, V, K)
+        H = full_hessian(e_map, data)
+
+        print(H_tf[:K, :K] - H[:K, :K])
+        MAE = tf.reduce_mean(tf.abs(H_tf - H))
+        self.assertLessEqual(MAE, THRESHOLD, f"Error between tf and direct calculation should be less than {THRESHOLD} ({MAE})")
 """
     def test_full_hessian(self):
         THRESHOLD = 0.00000001
