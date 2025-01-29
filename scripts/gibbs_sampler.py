@@ -30,6 +30,7 @@ if __name__ == '__main__':
     parser.add_argument("--pg_iter", type=int, default=50)
     parser.add_argument("--mvn_method", type=str, default="svd")
     parser.add_argument("--calculate_p", type=bool, default=False)
+    parser.add_argument("--plot", type=bool, default=False)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -82,9 +83,9 @@ if __name__ == '__main__':
     LOGGER.info(f"Make folder {samples_folder} ...")
     Path(samples_folder).mkdir(exist_ok=True)
 
-    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params)
+    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, plot=args.plot)
     if args.use_tf:
-        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, multivariate_method=args.mvn_method)
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, multivariate_method=args.mvn_method, plot=args.plot)
     for sample_ix, e_sample in enumerate(gibbs_generator):
         word0sample = e_sample[args.example_word].numpy()
         LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
