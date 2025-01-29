@@ -303,7 +303,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
         else:
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
-def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="svd"):
+def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="svd", plot=True):
     if multivariate_method not in ["svd", "cholesky", "eigh"]:
         raise ValueError("'multivariate_method' should be either 'svd', 'cholesky' or 'eigh'")
     else:
@@ -348,7 +348,7 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             yield e_sample
 
         # Plot log_posterior graph
-        if ix % (yield_every * 100) == 0 and ix > 0:
+        if ix % (yield_every * 100) == 0 and ix > 0 and plot:
             from matplotlib import pyplot as plt
             plt.plot(range(len(logprobs)), logprobs)
             plt.show()
@@ -375,7 +375,9 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
                 X_wd = tf.ragged.constant(X_wd)
                 X_padded = e[X_wd].to_tensor()
 
-                beta_init = e[wd]
+                #beta_init = e[wd]
+                K = e.dimensionality
+                beta_init = tf.random.normal([len(wd), K], dtype=tf.float64) / K
                 kappa_wd = tf.ragged.constant([kappa_cache.get(wd_i) for wd_i in wd])
                 kappa_padded = kappa_wd.to_tensor()
                 kappa_padded = tf.cast(kappa_padded, dtype=tf.float64)
@@ -387,13 +389,16 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
                 last_sample = None
                 for beta_sample in polyagamma_sampler_tf(beta_init, X_padded, None, kappa=kappa_padded, sigma_prior=sigma_prior, N=N_wd_padded, iterations=polyagamma_iter, multivariate_method=multivariate_method):
                     last_sample = beta_sample
-                # TODO: if wd not in freeze_params:
-                e[wd] = beta_sample
+
+                wds_nonfreeze = [wd_i for wd_i in wd if wd_i not in freeze_params]
+                ids_nonfreeze = [ix for ix, wd_i in enumerate(wd) if wd_i not in freeze_params]
+                e[wds_nonfreeze] = tf.gather(beta_sample, ids_nonfreeze)
 
             # Sample from the prior
             for wd_i in wd_skipped:
-                e[wd_i] = prior_sampler(e[wd_i].numpy(), sigma_prior=sigma_prior)
-            prior_count += len(wd_skipped)
+                if wd_i not in freeze_params:
+                    e[wd_i] = prior_sampler(e[wd_i].numpy(), sigma_prior=sigma_prior)
+                    prior_count += 1
 
         if prior_count >= len(words) * 0.2:
             LOGGER.warning(f"sampled from prior: {prior_count} out of {len(words)}")
