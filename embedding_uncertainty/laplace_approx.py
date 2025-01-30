@@ -258,7 +258,7 @@ def laplace_approx(e, data, samples=None, rotational_fix=True):
     inv_vocab = bidict.bidict(e.vocabulary).inv
     L_size = Sigma.shape[0]
     #L = np.linalg.cholesky(Sigma + np.eye(L_size) * 0.01)
-    vals, vecs = np.linalg.eigh(Sigma + np.eye(L_size) * 0.00000001)
+    vals, vecs = np.linalg.eigh(Sigma)
     L = vecs @ np.diag(np.sqrt(vals))
     maxval = np.min(vals)
     minval = np.max(vals)
