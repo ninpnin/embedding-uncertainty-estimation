@@ -61,7 +61,11 @@ if __name__ == '__main__':
     if len(args.cossim_words) == 2:
         cossim_results = pd.DataFrame(cossim_rows, columns=["chain", "ix", "similarity"])
         print(cossim_results)
-        sns.kdeplot(cossim_results, x="similarity")
+        method1, method2 = ["Gibbs" if "vi" not in folder.lower() else "MFVI" for folder in args.sample_folder[:2]]
+        chain_info = list(cossim_results["chain"])
+        cossim_results["Method"] = [method1 if chain_ix == 0 else method2 for chain_ix in chain_info]
+        sns.kdeplot(cossim_results, x="similarity", hue="Method", common_norm=False)
+        sns.despine()
         plt.savefig(f"{args.cossim_words[0]}-{args.cossim_words[1]}-similarity.pdf")
         plt.show()
 
