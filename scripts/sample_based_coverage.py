@@ -106,6 +106,7 @@ if __name__ == '__main__':
         united_df = united_df.sort("dataset_ix", "N", "K", "V")
         #print(united_df)
         united_df = united_df.unique(["dataset_ix", "N", "K", "V"])
+        united_df = united_df.sort("K", "V", "N", "dataset_ix")
         print(united_df)
         united_df.write_csv(coverage_path)
         pass
