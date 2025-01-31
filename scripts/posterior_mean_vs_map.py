@@ -23,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=1000)
     parser.add_argument("--epochs", type=int, default=15)
     parser.add_argument("--lambda0", type=float, default=None)
+    parser.add_argument("--map_path", type=str, default=None)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
 
@@ -48,24 +49,29 @@ if __name__ == '__main__':
         lambda0 = ref_emb.lambda0
     dimensionality = ref_emb.dimensionality
     
-    e_map = Embedding(vocab, dimensionality=dimensionality, lambda0=lambda0)
-    datalen = len(data)
-    batch_size = args.batch_size
-    def datagen():
-        while True:
-            i, j, x = [], [], []
-            for _ in range(batch_size):
-                elem = data[random.randint(0, datalen-1)]
-                w, v, x_i = elem
-                i.append(w)
-                j.append(v)
-                x.append(x_i)
-            
-            yield tf.constant(i), tf.constant(j), tf.constant(x, dtype=tf.float64)
-        
-    e_map = map_estimate(e_map, data_generator=datagen(), model="sgns", epochs=args.epochs, N=datalen, batch_size=batch_size)
-    e_map.save(f"map-K-{args.dim}-N-{args.data_len}-{args.epochs}.pkl")
+    e_map = None
     
+    if args.map_path is None:
+        e_map = Embedding(vocab, dimensionality=dimensionality, lambda0=lambda0)
+        datalen = len(data)
+        batch_size = args.batch_size
+        def datagen():
+            while True:
+                i, j, x = [], [], []
+                for _ in range(batch_size):
+                    elem = data[random.randint(0, datalen-1)]
+                    w, v, x_i = elem
+                    i.append(w)
+                    j.append(v)
+                    x.append(x_i)
+                
+                yield tf.constant(i), tf.constant(j), tf.constant(x, dtype=tf.float64)
+        e_map = map_estimate(e_map, data_generator=datagen(), model="sgns", epochs=args.epochs, N=datalen, batch_size=batch_size)
+        e_map.save(f"map-K-{args.dim}-N-{args.data_len}-{args.epochs}.pkl")
+    else:
+        LOGGER.info(f"Load MAP estimate from {args.map_path}...")
+        e_map = Embedding(saved_model_path=args.map_path)
+
     # Discard warmup samples
     samples = sorted(sample_folder.glob("*.pkl"), key=lambda p: int(p.stem.split("-")[-1]))
     # By default the first half
