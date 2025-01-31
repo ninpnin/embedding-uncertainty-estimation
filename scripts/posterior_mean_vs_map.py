@@ -2,6 +2,7 @@ from probabilistic_word_embeddings.embeddings import Embedding
 from probabilistic_word_embeddings.estimation import map_estimate
 from probabilistic_word_embeddings.models import sgns_likelihood
 from probabilistic_word_embeddings.evaluation import posterior_mean, nearest_neighbors
+from probabilistic_word_embeddings.evaluation import evaluate_word_similarity
 import numpy as np
 import tensorflow as tf
 from trainerlog import get_logger
@@ -96,5 +97,15 @@ if __name__ == '__main__':
     print(tf.reduce_min(ll_pm))
     print("MAP mean", np.mean(ll_map))
     print("PM mean", np.mean(ll_pm))
-
+    
+    df_map = evaluate_word_similarity(e_map)
+    print("MAP wordsim")
+    print(df_map)
+    df_map_mean = np.mean(df_map["Rank Correlation"])
+    print(df_map_mean)
+    df_pm = evaluate_word_similarity(e_post_mean)
+    print("PM wordsim")
+    print(df_pm)
+    df_pm_mean = np.mean(df_pm["Rank Correlation"])
+    print(df_pm_mean)
     #print(nearest_neighbors(e_post_mean, ["StarWars1977", "MissionImpossible1996", "Jaws1975", "Titanic1997", "SpaceJam1996", "Pinocchio1940", "GodfatherThe1972"], K=5))
