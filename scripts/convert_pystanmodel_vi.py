@@ -49,6 +49,15 @@ def main(args):
     folder = Path(folder)
     folder.mkdir(exist_ok=True)
 
+    e_ref = None
+    if args.ref_emb is not None:
+        LOGGER.info(f"Load ref embedding from {args.ref_emb} for the vocabulary...")
+        e_ref = Embedding(saved_model_path=args.ref_emb)
+        words = [wd for wd in e_ref.vocabulary if "_c" not in wd]
+        words = sorted(words)
+        contexts = [wd + "_c" for wd in words]
+        vocab = bidict.bidict({ix: wd for ix, wd in enumerate(words)})
+
     for n in tqdm.tqdm(list(range(N))):
         e_sample = Embedding(set(words), dimensionality=K)
         theta_n = fit.variational_sample[n, 3:]
@@ -65,12 +74,12 @@ def main(args):
         
 
 
-
 if __name__ == "__main__":
     import argparse
     argparser = argparse.ArgumentParser(description=__doc__)
     argparser.add_argument("--path", type=str, required=True)
     argparser.add_argument("--vocab", type=str, default=None)
+    argparser.add_argument("--ref_emb", type=str, default=None)
     #argparser.add_argument("--outpath", type=str, default=None)
     #argparser.add_argument("--format", type=str, default="json", choices=['json', 'embedding'])
     args = argparser.parse_args()
