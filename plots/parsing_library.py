@@ -110,11 +110,12 @@ def extract_word_and_context_vectors_vi2(fit, vocabulary, D=2):
     return word_vectors, context_vectors
 
 
-def extract_word_and_context_vectors_vi(samples_pd, vocabulary, D=2):
+def extract_word_and_context_vectors_vi(samples_pd, vocabulary, D):
     """
     VI helper: extracts the word and context vectors from the variational parameters.
     """
     #variational_samples_pd = fit.variational_sample_pd
+    #for map use fit.optimized_params_pd
 
     # Drop the first three columns: 'lp__', 'log_p__', 'log_g__'
     relevant_params = samples_pd.drop(columns=['lp__','log_p__','log_g__'] , errors='ignore')
@@ -140,7 +141,28 @@ def extract_word_and_context_vectors_vi(samples_pd, vocabulary, D=2):
 
     return word_vectors, context_vectors
 
-def extract_word_and_context_vectors_gibbs(filepath, vocabulary, D=2):
+def load_gibbs_by_size_and_experiment(folder, file_base_name, size, id):
+    # ex : file_base_name = 'gibbs-samples-N-%i-D-5-%i.csv'
+    file_path = os.path.join(folder, file_base_name%(size,id))
+    return pd.read_csv(file_path)
+
+
+
+def extract_word_and_context_vectors_gibbs_from_df(df, vocabulary, D):
+    # df sampels df from load_gibbs_by_size_and_experiment
+    num_samples = df.shape[0]
+    V = len(vocabulary)
+    
+    word_vectors = np.zeros((V, D, num_samples))
+    context_vectors = np.zeros((V, D, num_samples))
+    
+    for n in range(V):
+        for d in range(D):
+            word_vectors[n, d, :] = df[f'word{n}_{d}'].values
+            context_vectors[n, d, :] = df[f'word{n}_c_{d}'].values
+    return word_vectors, context_vectors
+
+def extract_word_and_context_vectors_gibbs(filepath, vocabulary, D):
     df = pd.read_csv(filepath)
     num_samples = df.shape[0]
     V = len(vocabulary)

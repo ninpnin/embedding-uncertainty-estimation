@@ -11,6 +11,8 @@ from pathlib import Path
 import stan  # PyStan 3
 from cmdstanpy import CmdStanModel
 
+import time
+
 
 import argparse
 
@@ -39,7 +41,7 @@ num_samples = args.num_samples
 num_chains = args.num_chains
 
 # Detect aggregated vs. non-aggregated from the .stan filename
-use_aggregated_data = False
+use_aggregated_data = True
 if stan_model_path.split('.')[-2].split('_')[-1] == 'aggregated':
     LOGGER.info('Aggregated model detected.')
     use_aggregated_data = True
@@ -175,8 +177,9 @@ for size in sizes:
     #map_params = map.stan_variables()
     _, map_context_vectors = extract_word_and_context_vectors_vi(map_fit.optimized_params_pd, vocabulary, D=D)
     #map_context_vectors = map_params['context_vectors']
-    fixed_context_matrix = map_context_vectors[-D:, :]
-
+    fixed_context_matrix = map_context_vectors[-D:, :, 0]
+    LOGGER.train(np.shape(fixed_context_matrix))
+    LOGGER.train(fixed_context_matrix)
 
     # Create stan data
     if use_aggregated_data:
@@ -198,6 +201,7 @@ for size in sizes:
     if inference_type == 'hmc':
         LOGGER.train(f"Run HMC for {num_samples} samples and {num_chains} chains")
         model = stan.build(stan_code, data=stan_data)
+        t1 = time.time()
         fit = model.sample(num_samples=num_samples, num_chains=num_chains)
         # To reduce storage, we typically keep the main arrays only.
         # The new model has:
@@ -209,14 +213,16 @@ for size in sizes:
             'word_vectors': fit['word_vectors'],
             'context_vectors': fit['context_vectors']
         }
+        LOGGER.train('Time elapse hmc: %.3f'%(time.time()-t1))
 
     elif inference_type == 'vi':
         vi_iter = 5000
         algorithm = 'meanfield'
         LOGGER.train('Running VI...')
         cmd_model = CmdStanModel(stan_file=stan_model_path)
-        fit = cmd_model.variational(data=stan_data, iter=vi_iter, draws=num_samples,
-                                    require_converged=True, algorithm=algorithm)
+        t1 = time.time()
+        fit = cmd_model.variational(data=stan_data, iter=vi_iter, draws=num_samples,require_converged=True, algorithm=algorithm)
+        LOGGER.train('Time elapse vi: %.3f'%(time.time()-t1))
 
     elif inference_type == 'map':
         LOGGER.train("Running MAP via cmdstanpy.optimize()")
@@ -236,7 +242,6 @@ for size in sizes:
 
     LOGGER.train("finished fit.")
 
-    # 5) Save the fit
     save_fit(fit, size, D, dataset_filename, inference_type)
     LOGGER.train(f"Saved fit for size {size} in {output_dir}")
 
