@@ -63,6 +63,7 @@ if __name__ == '__main__':
             yield tf.constant(i), tf.constant(j), tf.constant(x, dtype=tf.float64)
         
     e_map = map_estimate(e_map, data_generator=datagen(), model="sgns", epochs=args.epochs, N=datalen, batch_size=batch_size)
+    e_map.save(f"map-K-{args.dim}-N-{args.datalen}-{args.epochs}.pkl")
     
     # Discard warmup samples
     samples = sorted(sample_folder.glob("*.pkl"), key=lambda p: int(p.stem.split("-")[-1]))
