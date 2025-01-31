@@ -36,11 +36,13 @@ data_path = args.data_path
 stan_model_path = args.stan_model_path
 output_dir = args.output_dir
 
-inference_type = args.estimator.lower() # 'vi' # hmc, vi, laplace, map
+inference_type = args.estimator # 'vi' # hmc, vi, laplace, map
+inference_type = inference_type.lower()
+#lambda0 = np.sqrt(1.0/5.0) #1/K
 num_samples = args.num_samples #I use 1k in the current plots/results.
 num_chains = args.num_chains # for HMC
 
-use_aggregated_data = True # should never not use aggregated really.
+use_aggregated_data = True
 if stan_model_path.split('.')[-2].split('_')[-1] == 'aggregated':
     LOGGER.info('Aggregated model detected.')
     use_aggregated_data = True
@@ -56,14 +58,13 @@ if args.lambda0 is not None:
 else:
     LOGGER.info('Default lambda0')
     lambda0 = np.sqrt(1.0 / D)  # Default value
-#lambda0 = 1.0
+lambda0 = 1.0
 LOGGER.info(f'Using lambda0 = {lambda0}')
 
 
 
 #[100, 200, 500, 
 sizes = args.data_lengths # todo extract from nofix_dir
-LOGGER.info(f"data_lengths = {sizes}")
 
 with open(data_path) as f:
     data = json.load(f)
@@ -206,7 +207,7 @@ for size in sizes:
         fit = model.sample(num_samples=num_samples, num_chains=num_chains)
         fit = {'word_vectors':fit['word_vectors'], 'context_vectors':fit['context_vectors']} ## To reduce disk storage only store nessecary.
         #LOGGER.debug(f"Model summary:\n{model.summary()}")
-        # LOGGER.debug(f"{fit.to_frame().columns}")
+        LOGGER.debug(f"{fit.to_frame().columns}")
     elif inference_type=='vi':
         vi_iter = 5000 #?
         algorithm = 'meanfield'
