@@ -128,5 +128,6 @@ class Test(unittest.TestCase):
         print(e_grad_tf["word0"])
         print(e_grad_tf["word2"])
 
-        for sample in laplace_approx(e_map, data, samples=5, rotational_fix=False):
-            print(sample)
+        for sample in laplace_approx(e_map, data, samples=5, rotational_fix=True):
+            print(sample["word0"])
+            print(sample["word2"])
