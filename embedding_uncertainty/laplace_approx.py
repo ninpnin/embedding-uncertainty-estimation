@@ -257,12 +257,20 @@ def laplace_approx(e, data, samples=None, rotational_fix=True):
     LOGGER.train(f"Sample {samples} samples")
     inv_vocab = bidict.bidict(e.vocabulary).inv
     L_size = Sigma.shape[0]
-    #L = np.linalg.cholesky(Sigma + np.eye(L_size) * 0.01)
+
     vals, vecs = np.linalg.eigh(Sigma)
-    L = vecs @ np.diag(np.sqrt(vals))
     maxval = np.min(vals)
     minval = np.max(vals)
-    assert maxval * minval >= 0.00, f"eigenvals should be nonnegative, got min lambda = {minval} , {maxval}"
+    if maxval * minval < 0.00:
+      LOGGER.warning(f"Inverse Hessian not positive definite: eigenvalues range [{minval} , {maxval}]")
+
+    if np.abs(minval) > np.abs(maxval):
+      vals = - vals
+
+    # Replacing negative eigenvalues with zeros gives us
+    # the closest positive semidefinite matrix
+    vals = np.maximum(vals, np.zeros(vals.shape))
+    L = vecs @ np.diag(np.sqrt(vals))
 
     V_prime = L_size // K
     assert V_prime <= V * 2
