@@ -261,10 +261,16 @@ def laplace_approx(e, data, samples=None, rotational_fix=True):
     vals, vecs = np.linalg.eigh(Sigma)
     maxval = np.min(vals)
     minval = np.max(vals)
+    posvals = np.sum(vals > 0.0)
+    negvals = np.sum(vals < 0.0)
     if maxval * minval < 0.00:
       LOGGER.warning(f"Inverse Hessian not positive definite: eigenvalues range [{minval} , {maxval}]")
+      LOGGER.warning(f"Positive eigenvals: {np.sum(vals > 0.0)}, negative eigenvals {np.sum(vals < 0.0)}")
+      #LOGGER.warning(f"{sorted(vals)}")
 
-    if np.abs(minval) > np.abs(maxval):
+    #if np.abs(minval) > np.abs(maxval):
+    #  vals = - vals
+    if posvals < negvals:
       vals = - vals
 
     # Replacing negative eigenvalues with zeros gives us
@@ -282,6 +288,24 @@ def laplace_approx(e, data, samples=None, rotational_fix=True):
 
       e_sample[wordlist] = e_sample[wordlist] + deviation
       yield e_sample
+
+def laplace_approx_sigma(e, data, samples=None, rotational_fix=True):
+  LOGGER.info("Calculate Hessian")
+  H = full_hessian(e, data)
+  K = e.dimensionality
+  V = len([wd for wd in e.vocabulary if "_c" not in wd])
+  LOGGER.debug(f"K: {K}, V: {V}")
+  Sigma = None
+  if rotational_fix:
+    LOGGER.train("Freeze last K context vectors")
+    LOGGER.info("Invert Hessian...")
+    Sigma = fixed_inverse_hessian(H, K)
+  else:
+    LOGGER.info("Invert Hessian...")
+    Sigma = np.linalg.inv(H)
+
+  LOGGER.info("Done!")
+  return Sigma
 
 
 def _sample_rotation_tangent(e):
