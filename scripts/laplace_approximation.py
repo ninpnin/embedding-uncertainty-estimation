@@ -37,6 +37,7 @@ if __name__ == '__main__':
     parser.add_argument("--samples", type=int, default=25)
     parser.add_argument("--ci_alpha", type=float, default=0.1)
     parser.add_argument("--elementwise", type=bool, default=False)
+    parser.add_argument("--save_folder", type=str, default=None)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
 
@@ -85,9 +86,15 @@ if __name__ == '__main__':
     LOGGER.info(f"RMSE_baseline: {RMSE_baseline}")
 
     p_samples = []
+    sample_ix = 0
+    save_folder = Path(args.save_folder)
+    save_folder.mkdir(exist_ok=True)
     for e_sample in laplace_approx(e_map, data, samples=args.samples, rotational_fix=True):
+        if args.save_folder is not None:
+            e_sample.save(str((save_folder / f"sample-{sample_ix}.pkl").absolute()))
         p_sample = get_p(e_sample, words, contexts)
         p_samples.append(p_sample)
+        sample_ix += 1
 
     p_samples = np.array(p_samples)
     LOGGER.info(f"p_samples: {p_samples.shape}")
