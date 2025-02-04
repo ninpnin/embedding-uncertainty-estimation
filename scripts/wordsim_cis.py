@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument("--sample_folder", type=str, default=None, nargs="+")
     parser.add_argument("--warmup", type=int, default=None)
     parser.add_argument("--cossim_words", type=str, default=[], nargs="+")
+    parser.add_argument("--do_wordsim", type=bool, default=False)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     
@@ -46,10 +47,12 @@ if __name__ == '__main__':
     for chain_ix, samples in enumerate(chains):
         for ix, sample in tqdm.tqdm(list(enumerate(samples))):
             e_sample = Embedding(saved_model_path=str(sample.absolute()))
-            results = evaluate_word_similarity(e_sample)
+            results = None
+            if args.do_wordsim:
+                results = evaluate_word_similarity(e_sample)
             #print(results)
-            results["chain"] = chain_ix
-            results["ix"] = ix
+                results["chain"] = chain_ix
+                results["ix"] = ix
 
             if len(args.cossim_words) == 2:
                 word1, word2 = args.cossim_words
@@ -59,11 +62,18 @@ if __name__ == '__main__':
             rows.append(results)
 
     if len(args.cossim_words) == 2:
+        def estimator_name(foldername):
+            if "vi" in foldername.lower():
+                return "MFVI"
+            elif "laplace" in foldername.lower():
+                return "Laplace"
+            else:
+                return "Gibbs"
         cossim_results = pd.DataFrame(cossim_rows, columns=["chain", "ix", "similarity"])
         print(cossim_results)
-        method1, method2 = ["Gibbs" if "vi" not in folder.lower() else "MFVI" for folder in args.sample_folder[:2]]
+        methods = [estimator_name(folder) for folder in args.sample_folder]
         chain_info = list(cossim_results["chain"])
-        cossim_results["Method"] = [method1 if chain_ix == 0 else method2 for chain_ix in chain_info]
+        cossim_results["Method"] = [methods[chain_ix] for chain_ix in chain_info]
         sns.kdeplot(cossim_results, x="similarity", hue="Method", common_norm=False)
         sns.despine()
         plt.savefig(f"{args.cossim_words[0]}-{args.cossim_words[1]}-similarity.pdf")
