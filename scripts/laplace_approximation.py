@@ -73,9 +73,9 @@ if __name__ == '__main__':
         data = data[:args.data_len]
 
     p_truth = get_p(e_truth, words, contexts)
-    LOGGER.info(f"p_truth: {p_truth.shape} {p_truth[:5,:5]}")
+    LOGGER.debug(f"p_truth: {p_truth.shape} {p_truth[:5,:5]}")
     p_map = get_p(e_map, words, contexts)
-    LOGGER.info(f"p_map: {p_map.shape} {p_map[:5,:5]}")
+    LOGGER.debug(f"p_map: {p_map.shape} {p_map[:5,:5]}")
 
     RMSE = np.sqrt(np.mean((p_map - p_truth) ** 2))
     LOGGER.info(f"RMSE: {RMSE}")
@@ -93,16 +93,12 @@ if __name__ == '__main__':
     lower = np.quantile(p_samples, args.ci_alpha / 2.0, axis=0)
     upper = np.quantile(p_samples, 1.0 - args.ci_alpha / 2.0, axis=0)
 
-    print(lower)
-    print(p_truth)
-    print(upper)
+    #print(lower)
+    #print(p_truth)
+    #print(upper)
 
     within_CI = (lower < p_truth) * (upper > p_truth)
-    print(np.mean(within_CI))
-
-    print(within_CI[0])
-    print(within_CI[1])
-    print(within_CI[-1])
+    LOGGER.info(f"Coverage: {np.mean(within_CI)}")
 
     if args.elementwise:
         Sigma = laplace_approx_sigma(e_map, data, samples=args.samples, rotational_fix=True)
