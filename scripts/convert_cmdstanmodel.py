@@ -13,13 +13,12 @@ def load_pickle_emb(path):
 
 def main(args):
     fit = load_pickle_emb(args.path)
-    #print(fit.word_vectors)
-    #print(fit.context_vectors)
     vocab_size = fit.word_vectors.shape[0]
     dimensionality = fit.word_vectors.shape[1]
 
     LOGGER.info(f"V: {vocab_size}, K: {dimensionality}")
-    vocab = [f"word{ix}" for ix in range(vocab_size)]
+    vocab = sorted([f"word{ix}" for ix in range(vocab_size)])
+    print(" ".join(vocab))
     vocab_c = [f"{wd}_c" for wd in vocab]
     LOGGER.debug(f"Vocabulary: {vocab}")
 
@@ -55,10 +54,12 @@ def main(args):
         e = Embedding(set(vocab), dimensionality=dimensionality)
         for ix, pair in enumerate(zip(vocab, vocab_c)):
             wd, wd_c = pair
+            LOGGER.debug(f"Copy {wd} and {wd_c} (index {ix})...")
             e[wd] = fit.word_vectors[ix]
             e[wd_c] = fit.context_vectors[ix]
         
         LOGGER.info(f"Save to {args.outpath}...")
+        LOGGER.info(f"K: {e.dimensionality}")
         e.save(args.outpath)
 
 if __name__ == "__main__":
