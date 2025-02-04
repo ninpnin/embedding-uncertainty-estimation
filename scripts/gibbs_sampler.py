@@ -29,7 +29,7 @@ if __name__ == '__main__':
     parser.add_argument("--use_tf", type=bool, default=False)
     parser.add_argument("--prefix", type=str, default="")
     parser.add_argument("--pg_iter", type=int, default=50)
-    parser.add_argument("--mvn_method", type=str, default="svd")
+    parser.add_argument("--mvn_method", type=str, default="cholesky", choices=["cholesky", "svd"])
     parser.add_argument("--calculate_p", type=bool, default=False)
     parser.add_argument("--plot", type=bool, default=False)
     args = parser.parse_args()
