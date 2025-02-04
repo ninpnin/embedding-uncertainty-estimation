@@ -104,7 +104,7 @@ if __name__ == '__main__':
     LOGGER.info(f"Coverage: {coverage}")
 
     map_stem = Path(args.embedding).stem
-    results_df = pl.DataFrame({"K": K, "V": V, "N": args.data_len, "map": map_stem, "coverage": coverage})
+    results_df = pl.DataFrame({"K": K, "V": V, "N": args.data_len, "map": map_stem, "coverage": coverage, "RMSE": RMSE, "RMSE_normalized": RMSE / RMSE_baseline})
     print(results_df)
 
     results_path = Path("logs") / "laplace-results.csv"
@@ -113,6 +113,7 @@ if __name__ == '__main__':
         results_df = pl.concat([old_results, results_df])
 
     results_df = results_df.sort("K", "V", "map", "N")
+    results_df = results_df.unique(["K", "V", "map", "N"])
 
     results_df.write_csv(results_path)
     if args.elementwise:
