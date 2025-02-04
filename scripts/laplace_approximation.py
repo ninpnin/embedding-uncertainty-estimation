@@ -10,6 +10,8 @@ import pandas as pd
 from trainerlog import get_logger
 import bidict
 from matplotlib import pyplot as plt
+import polars as pl
+from pathlib import Path
 
 LOGGER = get_logger("laplace")
 
@@ -98,8 +100,21 @@ if __name__ == '__main__':
     #print(upper)
 
     within_CI = (lower < p_truth) * (upper > p_truth)
-    LOGGER.info(f"Coverage: {np.mean(within_CI)}")
+    coverage = np.mean(within_CI)
+    LOGGER.info(f"Coverage: {coverage}")
 
+    map_stem = Path(args.embedding).stem
+    results_df = pl.DataFrame({"K": K, "V": V, "N": args.data_len, "map": map_stem, "coverage": coverage})
+    print(results_df)
+
+    results_path = Path("logs") / "laplace-results.csv"
+    if results_path.exists():
+        old_results = pl.read_csv(results_path)
+        results_df = pl.concat([old_results, results_df])
+
+    results_df = results_df.sort("K", "V", "map", "N")
+
+    results_df.write_csv(results_path)
     if args.elementwise:
         Sigma = laplace_approx_sigma(e_map, data, samples=args.samples, rotational_fix=True)
 
