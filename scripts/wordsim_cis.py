@@ -67,6 +67,8 @@ if __name__ == '__main__':
                 return "MFVI"
             elif "laplace" in foldername.lower():
                 return "Laplace"
+            elif "hmc" in foldername.lower():
+                return "HMC"
             else:
                 return "Gibbs"
         cossim_results = pd.DataFrame(cossim_rows, columns=["chain", "ix", "similarity"])
@@ -76,7 +78,7 @@ if __name__ == '__main__':
         cossim_results["Method"] = [methods[chain_ix] for chain_ix in chain_info]
         sns.kdeplot(cossim_results, x="similarity", hue="Method", common_norm=False)
         sns.despine()
-        plt.savefig(f"{args.cossim_words[0]}-{args.cossim_words[1]}-similarity.pdf")
+        plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity.pdf")
         plt.show()
 
     results = pd.concat(rows)
