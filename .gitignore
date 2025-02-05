@@ -11,3 +11,4 @@ slurm*.out
 **.csv
 **/*.zip**/*.plk
 **/*.pkl
+img
