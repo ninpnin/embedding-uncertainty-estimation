@@ -8,6 +8,7 @@ def load_pickle_emb(path):
     with open(path, "rb") as f:
         d = pickle.load(f)
 
+    LOGGER.debug(f"{type(d)}")
     LOGGER.debug(f"{d.__dir__()}")
     return d
 
