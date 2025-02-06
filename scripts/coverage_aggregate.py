@@ -1,8 +1,16 @@
 import polars as pl
 
-#df = pl.read_csv("logs/coverage.csv")
-df = pl.read_csv("logs/laplace-results.csv")
-df = df.with_columns(pl.col("coverage").alias("ci-90-coverage"))
+laplace = False
+df = None
+if not laplace:
+    print("Gibbs (probably)")
+    df = pl.read_csv("logs/coverage.csv")
+else:
+    print("Laplace (probably)")
+    df = pl.read_csv("logs/laplace-results.csv")
+    df = df.with_columns(pl.col("coverage").alias("ci-90-coverage"))
+    
+
 for K in [5, 10, 20]:
     for V in [100, 200]:
         df_KV = df.filter(pl.col("K") == K).filter(pl.col("V") == V)

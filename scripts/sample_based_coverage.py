@@ -94,7 +94,7 @@ if __name__ == '__main__':
     LOGGER.train(f"RMSE: {RMSE}")
     
     # results/5-gibbs-N-10000-D-5-simulation-zwcb/
-    folder = Path(args.sample_folder).stem
+    folder = Path(args.sample_folder).stem.replace("-K-", "-D-")
     dataset_ix = int(folder.split("-")[0])
     N = int(folder.split("-N-")[-1].split("-D-")[0])
     resultdict = {"dataset_ix": dataset_ix, "N": N, "K": K_truth, "V": V_truth, "ci-90-coverage": ci_coverage, "RMSE": RMSE, "RMSE_normalized": RMSE / RMSE_base}
