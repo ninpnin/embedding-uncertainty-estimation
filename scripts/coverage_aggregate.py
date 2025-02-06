@@ -1,6 +1,6 @@
 import polars as pl
-
-laplace = False
+import sys
+laplace = "laplace" in " ".join(sys.argv)
 df = None
 if not laplace:
     print("Gibbs (probably)")
