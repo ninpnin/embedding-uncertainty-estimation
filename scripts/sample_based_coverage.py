@@ -43,10 +43,11 @@ if __name__ == '__main__':
     print(theta_true.shape)
     K_truth, V_truth = theta_true.shape[1], theta_true.shape[0] // 2
     if K_truth == K_sample and V_truth == V_sample:
-        LOGGER.train(f"Truth K: {ref_emb.dimensionality}, V: { len(ref_emb.vocabulary) // 2}")
+        LOGGER.train(f"Truth K: {K_truth}, V: { V_truth}")
     else:
-        LOGGER.error(f"Truth K: {ref_emb.dimensionality}, V: { len(ref_emb.vocabulary) // 2}, does not match samples")
-    
+        LOGGER.error(f"Truth K: {K_truth}, V: { V_truth}, does not match samples")
+        exit()
+        
     e_truth = Embedding(saved_model_path=str(list(sample_folder.glob("*.pkl"))[-1].absolute()))
     for wd, ix in tqdm.tqdm(list(d["vocabulary"].items())):
         #print(wd, ix)
@@ -109,7 +110,6 @@ if __name__ == '__main__':
         united_df = united_df.sort("K", "V", "N", "dataset_ix")
         print(united_df)
         united_df.write_csv(coverage_path)
-        pass
     else:
         print(df)
         df.write_csv(coverage_path)
