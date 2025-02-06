@@ -87,8 +87,10 @@ if __name__ == '__main__':
 
     p_samples = []
     sample_ix = 0
-    save_folder = Path(args.save_folder)
-    save_folder.mkdir(exist_ok=True)
+    save_folder = None
+    if args.save_folder is not None:
+        save_folder = Path(args.save_folder)
+        save_folder.mkdir(exist_ok=True)
     for e_sample in laplace_approx(e_map, data, samples=args.samples, rotational_fix=True):
         if args.save_folder is not None:
             e_sample.save(str((save_folder / f"sample-{sample_ix}.pkl").absolute()))
