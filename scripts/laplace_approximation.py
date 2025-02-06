@@ -121,8 +121,8 @@ if __name__ == '__main__':
         old_results = pl.read_csv(results_path)
         results_df = pl.concat([old_results, results_df])
 
-    results_df = results_df.sort("K", "V", "map", "N")
     results_df = results_df.unique(["K", "V", "map", "N"])
+    results_df = results_df.sort("K", "V", "N", "map")
 
     results_df.write_csv(results_path)
     if args.elementwise:
