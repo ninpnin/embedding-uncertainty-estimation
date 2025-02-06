@@ -17,11 +17,11 @@ for K in [5, 10, 20]:
             df_t = df_t.sort("N").transpose(include_header=True)
             #print(df_t)
             row = df_t.filter(pl.col("column") == "N").row(0)
-            row = ", ".join([str(val) for val in row])
+            row = " & ".join([str(val) for val in row])
             print(row)
 
             row = df_t.filter(pl.col("column") == "ci-90-coverage").row(0)
-            row = ", ".join([val for val in row])
+            row = " & ".join([val for val in row])
             print(row)
         print()
             
