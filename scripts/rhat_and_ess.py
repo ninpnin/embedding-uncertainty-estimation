@@ -111,8 +111,8 @@ def main(args):
 if __name__ == "__main__":
     import argparse
     argparser = argparse.ArgumentParser(description=__doc__)
-    argparser.add_argument("--path", type=str, nargs="+", required=True)
-    argparser.add_argument("--burnin", type=int, default=None)
+    argparser.add_argument("--path", type=str, nargs="+", required=True, help="Path to the folder with sample-IX.pkl embedding files")
+    argparser.add_argument("--burnin", type=int, default=None, help="Number of iterations to be discarded")
     args = argparser.parse_args()
     print(args)
     main(args)

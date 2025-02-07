@@ -57,8 +57,8 @@ def main(args):
 if __name__ == "__main__":
     import argparse
     argparser = argparse.ArgumentParser(description=__doc__)
-    argparser.add_argument("--path", type=str, required=True)
-    argparser.add_argument("--outpath", type=str, default=None)
+    argparser.add_argument("--path", type=str, required=True, help="Path to the stan fit file")
+    argparser.add_argument("--outpath", type=str, default=None, help="Path to the output folder; optional")
     args = argparser.parse_args()
     print(args)
     main(args)
