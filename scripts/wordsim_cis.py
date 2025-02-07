@@ -38,6 +38,8 @@ if __name__ == '__main__':
         # By default the first half
         if args.warmup is None:
             samples = samples[len(samples) // 2:]
+        else:
+            samples = samples[args.warmup:]
         chains.append(samples)
         
     #e_post_mean = posterior_mean([str(s.absolute()) for s in samples])
@@ -76,8 +78,26 @@ if __name__ == '__main__':
         methods = [estimator_name(folder) for folder in args.sample_folder]
         chain_info = list(cossim_results["chain"])
         cossim_results["Method"] = [methods[chain_ix] for chain_ix in chain_info]
-        sns.kdeplot(cossim_results, x="similarity", hue="Method", common_norm=False)
+        g = sns.kdeplot(cossim_results, x="similarity", hue="Method", common_norm=False, legend=False, linewidth=3)
         sns.despine()
+        #g.legend(fontsize=20)
+        #plt.figure(figsize=(10, 6))
+        sns.set_theme(rc={'figure.figsize':(10, 6)})
+        plt.xlabel(None, fontsize=24)
+        #plt.yticks(fontsize=0)
+        #plt.yticks([], [])
+        ax = plt.gca()
+        ax.spines['left'].set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        plt.xticks(fontsize=24)
+        #plt.legend(fontsize=20)
+        #ax = plt.gca()
+        plt.xlim(-1.2, 1.2)
+        plt.rcParams["font.family"] = "cursive"
+
+
+        plt.xticks([-1.0, -0.5, 0.0, 0.5, 1.0])
+        
         plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity.pdf")
         plt.show()
 
