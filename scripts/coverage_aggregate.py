@@ -1,5 +1,7 @@
 import polars as pl
 import sys
+from pathlib import Path
+
 laplace = "laplace" in " ".join(sys.argv)
 df = None
 if not laplace:
@@ -9,6 +11,28 @@ else:
     print("Laplace (probably)")
     df = pl.read_csv("logs/laplace-results.csv")
     df = df.with_columns(pl.col("coverage").alias("ci-90-coverage"))
+    
+rmse_results = df.group_by("V", "K", "N").agg([
+    pl.col('RMSE').mean().alias('RMSE'),
+    pl.col('RMSE_normalized').mean().alias('RMSE_normalized'),
+    pl.count('RMSE').alias('no_of_datasets')
+])
+rmse_results = rmse_results.sort("K", "V", "N")
+print(rmse_results)
+
+if laplace:
+    rmse_results = rmse_results.with_columns(pl.lit("Laplace").alias("method"))
+else:
+    rmse_results = rmse_results.with_columns(pl.lit("Gibbs").alias("method"))
+
+rmse_path = Path("logs/rmse.csv")
+if rmse_path.exists():
+    rmse_results_old = pl.read_csv("logs/rmse.csv")
+    rmse_results = pl.concat([rmse_results, rmse_results_old], how="vertical_relaxed")
+    rmse_results = rmse_results.unique()
+    rmse_results = rmse_results.sort("method", "K", "V", "N")
+    
+rmse_results.write_csv("logs/rmse.csv")
     
 
 for K in [5, 10, 20]:
