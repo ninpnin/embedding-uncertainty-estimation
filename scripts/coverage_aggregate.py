@@ -1,6 +1,8 @@
 import polars as pl
 import sys
 from pathlib import Path
+import socket
+hostname = socket.gethostname()
 
 laplace = "laplace" in " ".join(sys.argv)
 df = None
@@ -25,14 +27,15 @@ if laplace:
 else:
     rmse_results = rmse_results.with_columns(pl.lit("Gibbs").alias("method"))
 
-rmse_path = Path("logs/rmse.csv")
+rmse_filename = f"logs/rmse-{hostname}.csv"
+rmse_path = Path(rmse_filename)
 if rmse_path.exists():
-    rmse_results_old = pl.read_csv("logs/rmse.csv")
+    rmse_results_old = pl.read_csv(rmse_filename)
     rmse_results = pl.concat([rmse_results, rmse_results_old], how="vertical_relaxed")
     rmse_results = rmse_results.unique()
     rmse_results = rmse_results.sort("method", "K", "V", "N")
     
-rmse_results.write_csv("logs/rmse.csv")
+rmse_results.write_csv(rmse_filename)
     
 
 for K in [5, 10, 20]:
