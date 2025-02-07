@@ -1,3 +1,6 @@
+"""
+Convert pickled stan fit file to a folder of pwe.Embedding files
+"""
 import numpy as np
 import cmdstanpy
 import pickle, json
