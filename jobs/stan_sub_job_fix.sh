@@ -6,11 +6,9 @@
 #SBATCH -c 16
 #SBATCH -p shared
 
-# Load your modules
 ml PDC/23.12
 ml anaconda3/2024.02-1-cpeGNU-23.12
 
-# Slurm environment variables to Python
 export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
 
 DATAFILE="$datafile"

@@ -4,17 +4,22 @@ import argparse
 import numpy as np
 from parsing_library import *
 
-DATA_SIZES = [1000, 2000, 5000, 10000, 20000, 50000, 100000]
+DATA_SIZES = [1000, 2000, 5000, 10000, 20000, 50000, 100000, 500000, 1000000, 2000000, 4000000, 8000000]
 
 def calculate_coverage(data_folder, fit_folder, output_path, experiment_id, estimator, fit_folder_base_name, base_data_name):
     results = {}  
-    output_path = os.path.join(output_path, fit_folder_base_name % experiment_id)
-    fit_folder = os.path.join(fit_folder, estimator ,fit_folder_base_name % experiment_id)
+    #output_path = os.path.join(output_path)
+    if estimator == 'gibbs':
+        fit_folder = fit_folder
+    else:
+        fit_folder = os.path.join(fit_folder, estimator ,fit_folder_base_name % experiment_id)
     print('folder info:')
     print('fit_folder', fit_folder)
     print('output_path', output_path)
     print('fit_folder_base_name', fit_folder_base_name)
     print('base_data_name', base_data_name)
+
+    print('\nestimator:', estimator)
     for size in DATA_SIZES:
         print(f"data size: {size}  experiment: {experiment_id}")
 
@@ -27,16 +32,26 @@ def calculate_coverage(data_folder, fit_folder, output_path, experiment_id, esti
         word_pairs = list(itertools.combinations(vocabulary, 2))
         total_pairs = len(word_pairs) * 2
 
+        D = true_theta.shape[1]
+
         #fit_folder_size = os.path.join(fit_folder, estimator ,fit_folder_base_name % experiment_id)
 
         if estimator == 'vi':
             fit = load_fit_by_size(size, fit_folder)
-            estimated_word_vectors, estimated_context_vectors = extract_word_and_context_vectors_vi(fit.variational_sample_pd, vocabulary)
+            estimated_word_vectors, estimated_context_vectors = extract_word_and_context_vectors_vi(fit.variational_sample_pd, vocabulary, D=D)
             num_samples = estimated_word_vectors.shape[2]
         elif estimator == 'hmc':
             fit = load_fit_by_size(size, fit_folder)
             estimated_word_vectors = fit['word_vectors']
             estimated_context_vectors = fit['context_vectors']
+            num_samples = estimated_word_vectors.shape[2]
+        elif estimator in ('laplace', 'map'):
+            estimated_word_vectors, estimated_context_vectors = extract_word_and_context_vectors_vi(fit.draws_pd(), vocabulary, D=D)
+            num_samples = estimated_word_vectors.shape[2]
+        elif estimator == 'gibbs':
+            #filepath = os.path.join(saved_fit_dir_i, f'gibbs-samples-N-{size}.csv.fix')
+            df = load_gibbs_by_size_and_experiment(fit_folder, fit_folder_base_name, size, experiment_id)
+            estimated_word_vectors, estimated_context_vectors = extract_word_and_context_vectors_gibbs_from_df(df, vocabulary, D=D)
             num_samples = estimated_word_vectors.shape[2]
 
         theta_samples = []
