@@ -40,6 +40,7 @@ if __name__ == '__main__':
     parser.add_argument("--warmup", type=int, default=None)
     parser.add_argument("--cossim_words", type=str, default=[], nargs="+")
     parser.add_argument("--do_wordsim", type=bool, default=False)
+    parser.add_argument("--full_xaxis", type=bool, default=False, help="Force the x axis to range from -1 to 1")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     
@@ -113,10 +114,9 @@ if __name__ == '__main__':
         plt.yticks(fontsize=TICKSIZE)
         #plt.legend(fontsize=20)
         #ax = plt.gca()
-        plt.xlim(-1.2, 1.2)
-        #plt.rcParams["font.family"] = "cursive"
-
-        plt.xticks([-1.0, -0.5, 0.0, 0.5, 1.0])
+        if args.full_xaxis:
+            plt.xlim(-1.2, 1.2)
+            plt.xticks([-1.0, -0.5, 0.0, 0.5, 1.0])
 
         plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity.pdf")
         plt.show()
