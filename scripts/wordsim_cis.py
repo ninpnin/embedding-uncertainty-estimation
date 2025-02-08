@@ -16,6 +16,19 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 from matplotlib import pyplot as plt
 import seaborn as sns
+import re
+
+COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c'}
+def increment_number_in_string(s):
+    # Extract the number from the string
+    number = re.search(r'\d+', s)
+    if number:
+        # Convert to integer, increment, and convert back to string
+        incremented = str(int(number.group()) + 1)
+        # Replace the original number with the incremented one
+        s = re.sub(r'\d+', incremented, s, count=1)
+    s = s.replace("word", "")
+    return s
 
 def cossim(a,b):
     return np.dot(a, b) /(np.linalg.norm(a) * np.linalg.norm(b))
@@ -78,26 +91,33 @@ if __name__ == '__main__':
         methods = [estimator_name(folder) for folder in args.sample_folder]
         chain_info = list(cossim_results["chain"])
         cossim_results["Method"] = [methods[chain_ix] for chain_ix in chain_info]
-        g = sns.kdeplot(cossim_results, x="similarity", hue="Method", common_norm=False, legend=False, linewidth=3)
+        
+        # Hard code methods to certain colors        
+        method_order = [methods[chain_ix] for chain_ix in range(max(chain_info)+1)]
+        custom_palette = sns.color_palette([COLORS[method] for method in method_order])
+        sns.set_palette(custom_palette)
+
+        g = sns.kdeplot(cossim_results, x="similarity", hue="Method", common_norm=False, linewidth=2.0, legend=False)
         sns.despine()
-        #g.legend(fontsize=20)
-        #plt.figure(figsize=(10, 6))
-        sns.set_theme(rc={'figure.figsize':(10, 6)})
-        plt.xlabel(None, fontsize=24)
+        plt.ylabel(None, fontsize=24)
+        w1, w2 = [increment_number_in_string(s) for s in args.cossim_words]
+
+        plt.xlabel(f"cossim(ρ_{w1}, ρ_{w2})", fontsize=13)
         #plt.yticks(fontsize=0)
         #plt.yticks([], [])
-        ax = plt.gca()
-        ax.spines['left'].set_visible(False)
-        ax.get_yaxis().set_visible(False)
-        plt.xticks(fontsize=24)
+        #ax = plt.gca()
+        #ax.spines['left'].set_visible(False)
+        #ax.get_yaxis().set_visible(False)
+        TICKSIZE = 15
+        plt.xticks(fontsize=TICKSIZE)
+        plt.yticks(fontsize=TICKSIZE)
         #plt.legend(fontsize=20)
         #ax = plt.gca()
         plt.xlim(-1.2, 1.2)
-        plt.rcParams["font.family"] = "cursive"
-
+        #plt.rcParams["font.family"] = "cursive"
 
         plt.xticks([-1.0, -0.5, 0.0, 0.5, 1.0])
-        
+
         plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity.pdf")
         plt.show()
 
