@@ -30,6 +30,8 @@ parser.add_argument("--data_lengths", type=int, nargs="+", default=[100])
 
 args = parser.parse_args()
 
+SAVE_FULL_HMC = True
+
 LOGGER.train(f"Run on args: {args}")
 data_path = args.data_path
 stan_model_path = args.stan_model_path
@@ -209,10 +211,11 @@ for size in sizes:
         #   transformed parameters { context_vectors ... }
         # If you want 'context_vectors' directly, do fit['context_vectors'] (if it’s declared).
         # Or store the entire `fit` object for now:
-        fit = {
-            'word_vectors': fit['word_vectors'],
-            'context_vectors': fit['context_vectors']
-        }
+        if not SAVE_FULL_HMC:
+            fit = {
+                'word_vectors': fit['word_vectors'],
+                'context_vectors': fit['context_vectors']
+            }
         LOGGER.train('Time elapse hmc: %.3f'%(time.time()-t1))
 
     elif inference_type == 'vi':

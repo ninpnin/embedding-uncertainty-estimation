@@ -31,6 +31,8 @@ parser.add_argument("--num_samples", type=int, default=2000)
 parser.add_argument("--data_lengths", type=int, nargs="+", default=[100, 200])
 args = parser.parse_args()
 
+SAVE_FULL_HMC = False # True takes a lot of disk space. only applicable to hmc.
+
 LOGGER.train(f"Run on args: {args}")
 data_path = args.data_path
 stan_model_path = args.stan_model_path
@@ -204,7 +206,9 @@ for size in sizes:
         LOGGER.train(f"Run HMC for {num_samples} samples and {num_chains} chains")
         model = stan.build(stan_code, data=stan_data)
         fit = model.sample(num_samples=num_samples, num_chains=num_chains)
-        fit = {'word_vectors':fit['word_vectors'], 'context_vectors':fit['context_vectors']} ## To reduce disk storage only store nessecary.
+        if not SAVE_FULL_HMC:
+            fit = {'word_vectors':fit['word_vectors'], 'context_vectors':fit['context_vectors']} ## To reduce disk storage only store nessecary.
+           
         #LOGGER.debug(f"Model summary:\n{model.summary()}")
         # LOGGER.debug(f"{fit.to_frame().columns}")
     elif inference_type=='vi':
