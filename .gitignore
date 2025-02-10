@@ -14,3 +14,14 @@ slurm*.out
 img
 **/*.json
 **/*.zip
+**/u.*
+**/README
+**/u1.*
+**/u2.*
+**/u3.*
+**/u4.*
+**/u5.*
+**/ua.*
+**/ub.*
+**/allbut.pl
+**/mku.sh
