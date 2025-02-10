@@ -1,5 +1,5 @@
 data {
-    real<lower=0.0> lambda;               // prior strength
+    real<lower=0.0> lambda;               // prior standard dev.
     int<lower=1> U;                       // unique pairs count
     int<lower=1> V;                       // vocab size
     int<lower=1> D;                       // embedding dim
@@ -8,7 +8,7 @@ data {
     array[U] int<lower=0, upper=1> posneg_labels; // 1 => positive or 0 => negative sample
     array[U] int counts;                  // counts for each unique pair
     
-    // *last* D rows we fix
+    // constraint D last context embeddings.
     matrix[D, D] fixed_context_matrix;
 }
 
@@ -36,7 +36,7 @@ transformed parameters {
 
 model {
 
-    // Only apply priors to the free portion of the context vectors:
+    // Only apply priors to the unconstrained the context vectors:
     for (v in 1:(V - D)) {
         for (d in 1:D) {
             context_vectors_raw[v, d] ~ normal(0, lambda);
