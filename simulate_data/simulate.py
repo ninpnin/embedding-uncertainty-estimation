@@ -147,8 +147,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Simulate Data')
     parser.add_argument('--save_path', type=str, default=None, help='Path to save the simulated data. If unspecified will print the result.')
-    parser.add_argument('--vocab_size', type=int, default=10, help='Vocabulary size')
-    parser.add_argument('--dimensionality', type=int, default=3, help='Dimension of embedding')
+    parser.add_argument('--vocab_size', type=int, default=10, help='Vocabulary size (V)')
+    parser.add_argument('--dimensionality', type=int, default=3, help='Dimension of embedding (K)')
     parser.add_argument('--n_datapoints', type=int, default=10, help='n_datapoints in the artifical dataset')
     parser.add_argument('--eps_sd', type=float, default=1.0, help='standard deviation factor of embedding elements. std = eps_std/dimensionality')
     parser.add_argument('--seed', type=int, default=None, help='seed')
