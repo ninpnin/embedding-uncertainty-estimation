@@ -25,3 +25,5 @@ img
 **/ub.*
 **/allbut.pl
 **/mku.sh
+stan_simulation/.fit_models2_dxd.py.swp
+stan_simulation/uncertainty_word_embedd.code-workspace
