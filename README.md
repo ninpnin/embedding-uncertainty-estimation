@@ -106,4 +106,6 @@ options:
 
 A simulated dataset can be created using ```simulate_data/simulate.py```. Based on such a dataset, a Zipf distributed dataset can be generated using ```scripts/zipf_simulation.py```.
 
+The MovieLens data was preprocessed using ```real_data/movielens/analyze_data.ipynb```.
+
 The US congress data was preprocessed using ```scripts/us-congress-convert-and-lemmatize.py``` and ```scripts/us-congress-create-sgns-data.py```, and a JSON file that contained the 5000 most common words in the data.
