@@ -4,6 +4,8 @@ This repository implements the methods presented in _Posterior Sampling of Proba
 
 The required packages are included in ```pyproject.toml```. The most straightforward way is to install the module in ```embedding_uncertainty``` with ```pip install .```.
 
+All algorithms use the same preprocessed data format. An example is provided in ```data/sim-format.json```.
+
 ## Gibbs sampler
 
 The Gibbs sampler is implemented in ```embedding_uncertainty/polyagamma_gibbs.py```. This includes a logistic regression posterior sampler and a full Gibbs sampler for SGNS embeddings.
