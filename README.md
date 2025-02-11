@@ -109,3 +109,15 @@ A simulated dataset can be created using ```simulate_data/simulate.py```. Based 
 The MovieLens data was preprocessed using ```real_data/movielens/analyze_data.ipynb```.
 
 The US congress data was preprocessed using ```scripts/us-congress-convert-and-lemmatize.py``` and ```scripts/us-congress-create-sgns-data.py```.
+
+## Jobs
+
+The ```jobs/``` folder contains scripts and slurm job files that run the experiments in the article.
+
+## Logs
+
+Logs and aggregated results of the experiments are saved in the ```logs/``` folder.
+
+## Tests
+
+The Polya-Gamma sampler and Laplace approximation are tested via the ```unittest``` Python module in the ```tests``` folder.
