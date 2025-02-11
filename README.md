@@ -2,7 +2,7 @@
 
 This repository implements the methods presented in _Posterior Sampling of Probabilistic Word Embeddings_, along with the baseline methods of mean-field variational inference and Hamiltonian Monte Carlo.
 
-The required packages are included in ```pyproject.toml```. The most straightforward way is to install the module in ```embedding_uncertainty``` with ```pip install .```.
+The required packages are included in ```pyproject.toml```. The most straightforward way is to install the module in ```embedding_uncertainty``` with ```pip install .```. On some systems ```pystan``` needs to be installed in a separate environment, which is why it is not included in ```pyproject.toml```.
 
 All algorithms use the same preprocessed data format. An example is provided in ```data/sim-format.json```.
 

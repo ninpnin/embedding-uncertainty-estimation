@@ -18,10 +18,10 @@ numba = "*"
 arviz = "*"
 bidict = "*"
 scipy = "~1.12"
-pystan = "*"
 tqdm = "*"
 nltk = "*"
 polars = "*"
+cmdstanpy = "*"
 
 [tool.poetry.dev-dependencies]
 
