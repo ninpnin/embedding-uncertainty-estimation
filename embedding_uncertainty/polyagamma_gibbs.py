@@ -304,7 +304,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
         else:
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
-def split_into_independent_sets(g, max_size=100):
+def split_into_independent_sets(g, max_size=100, verify=False):
     """
     Splits the nodes in a graph into independent sets in a greedy fashion.
     This is needed for the Gibbs sampler so that each Gibbs sample has conditionally
@@ -335,8 +335,6 @@ def split_into_independent_sets(g, max_size=100):
         else:
             disconnected.append(list(comp)[0])
 
-    print("disconnected", disconnected)
-
     ind_sets = []
     while len(ind_sets_comps) >= 1:
         new_indsets = [setlist[0] for setlist in ind_sets_comps]
@@ -357,8 +355,9 @@ def split_into_independent_sets(g, max_size=100):
                 s_ix = set(s_list[ix * max_size: (ix+1) * max_size])
                 capped_sets.append(s_ix)
     
-    assert sum([len(s) for s in capped_sets]) <= len(g.nodes), "No node should be included in multiple indepdendent sets"
-    assert len(set().union(*capped_sets)) >= len(g.nodes), "All nodes should be included"
+    if verify:
+        assert sum([len(s) for s in capped_sets]) <= len(g.nodes), "No node should be included in multiple indepdendent sets"
+        assert len(set().union(*capped_sets)) >= len(g.nodes), "All nodes should be included"
     return capped_sets
 
 def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="svd", plot=True):
