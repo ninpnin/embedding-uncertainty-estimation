@@ -316,20 +316,26 @@ def split_into_independent_sets(g, max_size=100):
 
     connected_components = list(nx.connected_components(g))
     ind_sets_comps = []
+    disconnected = []
     #print(connected_components)
     for comp in connected_components:
-        ind_sets_comp = []
-        while len(comp) >= 1:
-            subg = nx.subgraph(g, comp)
-            maxind = set(nx.maximal_independent_set(subg))
-            #print(maxind)
+        if len(comp) >= 2:
+            ind_sets_comp = []
+            while len(comp) >= 1:
+                subg = nx.subgraph(g, comp)
+                maxind = set(nx.maximal_independent_set(subg))
+                #print(maxind)
 
-            comp = [elem for elem in comp if elem not in maxind]
-            ind_sets_comp.append(maxind)
-            #exit()
-        ind_sets_comp = sorted(ind_sets_comp, key=lambda x: -len(x))
-        #print(ind_sets_comp)
-        ind_sets_comps.append(ind_sets_comp)
+                comp = [elem for elem in comp if elem not in maxind]
+                ind_sets_comp.append(maxind)
+                #exit()
+            ind_sets_comp = sorted(ind_sets_comp, key=lambda x: -len(x))
+            #print(ind_sets_comp)
+            ind_sets_comps.append(ind_sets_comp)
+        else:
+            disconnected.append(list(comp)[0])
+
+    print("disconnected", disconnected)
 
     ind_sets = []
     while len(ind_sets_comps) >= 1:
@@ -337,8 +343,23 @@ def split_into_independent_sets(g, max_size=100):
         ind_sets.append(set().union(*new_indsets))
         ind_sets_comps = [setlist[1:] for setlist in ind_sets_comps if len(setlist) >= 2]
 
-    #print("\n".join(ind_sets))
-    return ind_sets
+    capped_sets = []
+    for elem in disconnected:
+        ind_sets[0].add(elem)
+
+    for s in ind_sets:
+        if len(s) <= max_size:
+            capped_sets.append(s)
+        else:
+            no = len(s) // max_size if len(s) % max_size == 0 else len(s) // max_size + 1
+            s_list = list(s)
+            for ix in range(no):
+                s_ix = set(s_list[ix * max_size: (ix+1) * max_size])
+                capped_sets.append(s_ix)
+    
+    assert sum([len(s) for s in capped_sets]) <= len(g.nodes), "No node should be included in multiple indepdendent sets"
+    assert len(set().union(*capped_sets)) >= len(g.nodes), "All nodes should be included"
+    return capped_sets
 
 def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="svd", plot=True):
     if multivariate_method not in ["svd", "cholesky", "eigh"]:
