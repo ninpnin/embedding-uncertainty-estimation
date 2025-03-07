@@ -8,6 +8,7 @@ import progressbar
 from sklearn.linear_model import LogisticRegression
 import tensorflow as tf
 from probabilistic_word_embeddings.models import sgns_likelihood
+import networkx as nx
 
 LOGGER.info("Done!")
 from time import perf_counter as pc
@@ -303,6 +304,42 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
         else:
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
+def split_into_independent_sets(g, max_size=100):
+    """
+    Splits the nodes in a graph into independent sets in a greedy fashion.
+    This is needed for the Gibbs sampler so that each Gibbs sample has conditionally
+    independent priors.
+
+    max_size determines the maximum size of each independent set
+
+    """
+
+    connected_components = list(nx.connected_components(g))
+    ind_sets_comps = []
+    #print(connected_components)
+    for comp in connected_components:
+        ind_sets_comp = []
+        while len(comp) >= 1:
+            subg = nx.subgraph(g, comp)
+            maxind = set(nx.maximal_independent_set(subg))
+            #print(maxind)
+
+            comp = [elem for elem in comp if elem not in maxind]
+            ind_sets_comp.append(maxind)
+            #exit()
+        ind_sets_comp = sorted(ind_sets_comp, key=lambda x: -len(x))
+        #print(ind_sets_comp)
+        ind_sets_comps.append(ind_sets_comp)
+
+    ind_sets = []
+    while len(ind_sets_comps) >= 1:
+        new_indsets = [setlist[0] for setlist in ind_sets_comps]
+        ind_sets.append(set().union(*new_indsets))
+        ind_sets_comps = [setlist[1:] for setlist in ind_sets_comps if len(setlist) >= 2]
+
+    #print("\n".join(ind_sets))
+    return ind_sets
+
 def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="svd", plot=True):
     if multivariate_method not in ["svd", "cholesky", "eigh"]:
         raise ValueError("'multivariate_method' should be either 'svd', 'cholesky' or 'eigh'")
@@ -354,7 +391,6 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             plt.show()
 
         # Do sampling
-
         block_size = 100
         blocks = len(words) // block_size
         if len(words) % block_size != 0:
