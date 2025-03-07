@@ -304,7 +304,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
         else:
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
-def split_into_independent_sets(g, max_size=100, verify=False):
+def split_into_independent_sets(e=None, g=None, wordcounts=None, max_size=100, verify=False):
     """
     Splits the nodes in a graph into independent sets in a greedy fashion.
     This is needed for the Gibbs sampler so that each Gibbs sample has conditionally
@@ -313,6 +313,16 @@ def split_into_independent_sets(g, max_size=100, verify=False):
     max_size determines the maximum size of each independent set
 
     """
+    if g is None:
+        words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
+        no_of_blocks = len(words) // max_size
+        if len(words) % max_size != 0:
+            no_of_blocks += 1
+        words_prime = sorted(words, key=lambda wd_i: wordcounts[wd_i])
+        blocks = []
+        for block_ix in range(no_of_blocks):
+            wd = words_prime[block_ix * max_size: (1 + block_ix) * max_size]
+            blocks.append(wd)
 
     connected_components = list(nx.connected_components(g))
     ind_sets_comps = []
@@ -351,6 +361,8 @@ def split_into_independent_sets(g, max_size=100, verify=False):
         else:
             no = len(s) // max_size if len(s) % max_size == 0 else len(s) // max_size + 1
             s_list = list(s)
+            if wordcounts is not None:
+                s_list = sorted(s_list, key=lambda wd_i: wordcounts[wd_i])
             for ix in range(no):
                 s_ix = set(s_list[ix * max_size: (ix+1) * max_size])
                 capped_sets.append(s_ix)
@@ -359,6 +371,15 @@ def split_into_independent_sets(g, max_size=100, verify=False):
         assert sum([len(s) for s in capped_sets]) <= len(g.nodes), "No node should be included in multiple indepdendent sets"
         assert len(set().union(*capped_sets)) >= len(g.nodes), "All nodes should be included"
     return capped_sets
+
+def _replace_nan(t):
+    indices = tf.where(tf.math.is_nan(t))
+    newzeros = tf.zeros((tf.shape(indices)[0]), dtype=t.dtype)
+    return tf.tensor_scatter_nd_update(t, indices, newzeros)
+
+def get_means(e, ragged_edges):
+    raw_means = tf.reduce_mean(e[ragged_edges])
+    return _replace_nan(raw_means)
 
 def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="svd", plot=True):
     if multivariate_method not in ["svd", "cholesky", "eigh"]:
@@ -379,6 +400,13 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
     # here we need the covariance so we divide
     sigma_prior = sigma_prior / lambda0
 
+
+    # Laplacian prior is a Gaussian with
+    # mu = N lambda1 / (lambda0 + lambda1 N ) mean(rho_E)
+    # where mean(rho_E) is the mean vector of the connected edges
+    # and a diagonal Sigma with the variance 1/( lambda0 + lambda1 N)
+
+    prior_edges, prior_counts = [], []
 
     data_wds_cache = {}
     #X_cache, y_cache, N_wd_cache, kappa_cache = {}, {}, {}, {}
