@@ -1,6 +1,6 @@
 import unittest
 
-from embedding_uncertainty import embedding_gibbs
+from embedding_uncertainty import embedding_gibbs, embedding_gibbs_tf
 from probabilistic_word_embeddings.embeddings import Embedding
 import numpy as np
 import tensorflow as tf
@@ -73,6 +73,55 @@ class Test(unittest.TestCase):
         self.assertLessEqual(MAE, 0.025, f"MAE should be less than 0.025, was {MAE}")
         self.assertNotEqual(MAE, 0.00, f"MAE not be 0.0")
 
+
+    def test_gpu(self):
+        """
+        Check that aggregating the sufficient statistics yields the same results as not doing that
+        """
+
+        vocab = set()
+        data = []
+        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'data/testdata.json')
+        with open(TESTDATA_FILENAME) as f:
+            d = json.load(f)
+
+        for elem in d:
+            w, v, x = elem["v"], elem["w"] + "_c", elem["x"]
+            vocab.add(w)
+            vocab.add(elem["w"])
+            data.append((w,v,x))
+
+        e_aggregated = Embedding(vocab, dimensionality=3)
+        e_reference = Embedding(vocab, dimensionality=3)
+
+        ROUNDS = 1000
+
+        aggregated_generator = embedding_gibbs(e_aggregated, data, rounds=ROUNDS, plot=False)
+        reference_generator = embedding_gibbs_tf(e_reference, data, rounds=ROUNDS, plot=False)
+
+        aggregated_ps = []
+        for _, e_sample in enumerate(aggregated_generator):
+            p = get_p_matrix(e_sample)
+            aggregated_ps.append(p)
+
+        aggregated_ps = np.array(aggregated_ps)
+
+        reference_ps = []
+        for _, e_sample in enumerate(reference_generator):
+            p = get_p_matrix(e_sample)
+            reference_ps.append(p)
+        reference_ps = np.array(reference_ps)
+
+        bar_agg = np.mean(aggregated_ps, axis=0)
+        bar_ref = np.mean(reference_ps, axis=0)
+        print(bar_agg)
+        print(bar_ref)
+
+        diff = np.abs(bar_ref - bar_agg)
+        MAE = np.mean(diff)
+
+        self.assertLessEqual(MAE, 0.025, f"MAE should be less than 0.025, was {MAE}")
+        self.assertNotEqual(MAE, 0.00, f"MAE not be 0.0")
 
 
 
