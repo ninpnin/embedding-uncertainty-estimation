@@ -389,6 +389,33 @@ def get_means(e, ragged_edges):
     raw_means = tf.reduce_mean(e[ragged_edges])
     return _replace_nan(raw_means)
 
+def get_sigma_wd(e, M, dtype, edgecounts=None):
+    K = e.dimensionality
+    if edgecounts is None:
+        return tf.stack([tf.eye(K, dtype=dtype) for _ in range(M)]) / e.lambda0
+    else:
+        lambdas = [e.lambda0 + e.lambda1 * ec for ec in edgecounts]
+        return tf.stack([tf.eye(K, dtype=dtype) / lambdas[ix] for ix in range(M)])
+
+def get_mu_wd(e, edges=None, edgecounts=None):
+    if edges is None:
+        return None
+    else:
+        assert edgecounts is not None
+        scaling = (edgecounts * e.lambda1) / (e.lambda0 + e.lambda1 * edgecounts)
+        #print(scaling)
+        mu_prior_wd = tf.transpose(tf.reduce_mean(e[edges], axis=1))
+        #print(mu_prior_wd)
+        nan_indices = tf.where(tf.math.is_nan(mu_prior_wd))
+        mu_prior_wd = tf.tensor_scatter_nd_update(
+            mu_prior_wd,
+            nan_indices,
+            tf.zeros((tf.shape(nan_indices)[0]), dtype=mu_prior_wd.dtype)
+        )
+        mu_prior_wd = mu_prior_wd * scaling
+        #print(mu_prior_wd)
+        return tf.transpose(mu_prior_wd)
+
 def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="svd", plot=True):
     if multivariate_method not in ["svd", "cholesky", "eigh"]:
         raise ValueError("'multivariate_method' should be either 'svd', 'cholesky' or 'eigh'")
@@ -398,6 +425,7 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     sigma_prior = np.identity(e.dimensionality) * 1.0
+    #sigma_prior = tf.stack([tf.eye(K, dtype=beta_init.dtype) for _ in range(M)])
     if lambda0 is not None:
         LOGGER.info(f"Use provided lambda0: {lambda0}")
     else:
@@ -454,7 +482,23 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
 
         #words_prime = sorted(words, key=lambda wd_i: N_wd_cache[wd_i])
         blocks = split_into_independent_sets(e=e, wordcounts=N_wd_cache)
-        for wd in progressbar.progressbar(blocks):
+        edges, edgecounts = None, None
+        if hasattr(e, "graph"):
+            edges, edgecounts = [], []
+            for wd in blocks:
+                edges_wd = [list(e.graph.neighbors(wd_i)) for wd_i in wd]
+                print(edges_wd)
+                edges.append(edges_wd)
+
+                edgecounts_wd = [len(e.graph.edges(wd_i)) for wd_i in wd]
+                edgecounts.append(edgecounts_wd)
+
+            edges = tf.ragged.constant(edges)
+            #print(edges)
+            edgecounts = tf.ragged.constant(edgecounts, dtype=tf.float64)
+            #print(edgecounts)
+
+        for block_ix, wd in progressbar.progressbar(enumerate(blocks)):
 
             #wd = words_prime[block_ix * block_size: (1 +block_ix) * block_size]
             e_theta = e.theta.numpy()
@@ -480,7 +524,23 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
 
                 N_wd_padded = tf.math.maximum(N_wd_padded, tf.ones(N_wd_padded.shape, dtype=N_wd_padded.dtype))
                 last_sample = None
-                for beta_sample in polyagamma_sampler_tf(beta_init, X_padded, None, kappa=kappa_padded, sigma_prior=sigma_prior, N=N_wd_padded, iterations=polyagamma_iter, multivariate_method=multivariate_method):
+                #print("Sigma prior shape", sigma_prior.shape)
+                mu_prior_wd = None
+                if edgecounts is not None:
+                    sigma_prior_wd = get_sigma_wd(e, len(wd), tf.float64, edgecounts=edgecounts[block_ix])
+                    mu_prior_wd = get_mu_wd(e, edges=edges[block_ix], edgecounts=edgecounts[block_ix])
+                    #print("mu prior", mu_prior_wd)
+                else:
+                    sigma_prior_wd = get_sigma_wd(e, len(wd), tf.float64)
+
+                #print("Sigma prior wd shape", sigma_prior_wd.shape)
+                #print("Sigma prior wd ", sigma_prior_wd)
+
+                betagen = polyagamma_sampler_tf(beta_init, X_padded,
+                            None, kappa=kappa_padded, sigma_prior=sigma_prior_wd,
+                            mu_prior=mu_prior_wd, N=N_wd_padded, iterations=polyagamma_iter,
+                            multivariate_method=multivariate_method)
+                for beta_sample in betagen:
                     last_sample = beta_sample
 
                 wds_nonfreeze = [wd_i for wd_i in wd if wd_i not in freeze_params]
