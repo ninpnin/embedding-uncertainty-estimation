@@ -313,16 +313,24 @@ def split_into_independent_sets(e=None, g=None, wordcounts=None, max_size=100, v
     max_size determines the maximum size of each independent set
 
     """
-    if g is None:
+    if g is None and not hasattr(e, 'graph'):
         words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
         no_of_blocks = len(words) // max_size
         if len(words) % max_size != 0:
             no_of_blocks += 1
-        words_prime = sorted(words, key=lambda wd_i: wordcounts[wd_i])
+        if wordcounts is not None:
+            words = sorted(words, key=lambda wd_i: wordcounts[wd_i])
         blocks = []
         for block_ix in range(no_of_blocks):
-            wd = words_prime[block_ix * max_size: (1 + block_ix) * max_size]
+            wd = words[block_ix * max_size: (1 + block_ix) * max_size]
             blocks.append(wd)
+
+        return blocks
+    elif g is None:
+        g = e.graph
+        for wd in e.vocabulary:
+            if "_c" not in wd:
+                g.add_node(wd)
 
     connected_components = list(nx.connected_components(g))
     ind_sets_comps = []
@@ -439,15 +447,16 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             plt.show()
 
         # Do sampling
-        block_size = 100
-        blocks = len(words) // block_size
-        if len(words) % block_size != 0:
-            blocks += 1
+        #block_size = 100
+        #blocks = len(words) // block_size
+        #if len(words) % block_size != 0:
+        #    blocks += 1
 
-        words_prime = sorted(words, key=lambda wd_i: N_wd_cache[wd_i])
-        for block_ix in progressbar.progressbar(range(blocks)):
+        #words_prime = sorted(words, key=lambda wd_i: N_wd_cache[wd_i])
+        blocks = split_into_independent_sets(e=e, wordcounts=N_wd_cache)
+        for wd in progressbar.progressbar(blocks):
 
-            wd = words_prime[block_ix * block_size: (1 +block_ix) * block_size]
+            #wd = words_prime[block_ix * block_size: (1 +block_ix) * block_size]
             e_theta = e.theta.numpy()
             if turn == "context":
                 wd = [f"{wd_i}_c" for wd_i in wd]
