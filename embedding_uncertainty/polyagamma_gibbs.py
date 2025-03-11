@@ -499,7 +499,7 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
 
                 N_wd_padded = tf.math.maximum(N_wd_padded, tf.ones(N_wd_padded.shape, dtype=N_wd_padded.dtype))
                 last_sample, mu_prior_wd = None, None
-                if edgecounts is not None:
+                if edgecounts is not None and turn != "context":
                     sigma_prior_wd = get_laplacian_sigma(e, len(wd), tf.float64, edgecounts=edgecounts[block_ix])
                     mu_prior_wd = get_laplacian_mu(e, edges=edges[block_ix], edgecounts=edgecounts[block_ix])
                 else:
