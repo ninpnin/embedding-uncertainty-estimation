@@ -111,7 +111,7 @@ class Test(unittest.TestCase):
             p = get_p_matrix(e_sample)
             laplacian_ps.append(p)
 
-        self.assertLessEqual(MAE, 0.1, f"MAE should be less than 0.025, was {MAE}")
+        self.assertLessEqual(dist, 0.1, f"MAE should be less than 0.025, was {dist}")
 
         laplacian_ps = np.array(laplacian_ps)
 
