@@ -33,3 +33,4 @@ stan_simulation/uncertainty_word_embedd.code-workspace
 real_data/movielens/ml-100k/
 real_data/movielens/*.json
 logs/*.log
+logs/*.txt
