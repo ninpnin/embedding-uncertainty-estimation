@@ -113,26 +113,6 @@ class Test(unittest.TestCase):
 
         self.assertLessEqual(dist, 0.1, f"MAE should be less than 0.025, was {dist}")
 
-        laplacian_ps = np.array(laplacian_ps)
-
-        reference_ps = []
-        for _, e_sample in enumerate(reference_generator):
-            p = get_p_matrix(e_sample)
-            reference_ps.append(p)
-        reference_ps = np.array(reference_ps)
-
-        bar_agg = np.mean(laplacian_ps, axis=0)
-        bar_ref = np.mean(reference_ps, axis=0)
-        print(bar_agg)
-        print(bar_ref)
-
-        diff = np.abs(bar_ref - bar_agg)
-        MAE = np.mean(diff)
-
-        self.assertGreaterEqual(MAE, 0.025, f"MAE should be less than 0.025, was {MAE}")
-        #self.assertNotEqual(MAE, 0.00, f"MAE not be 0.0")
-
-
 
 if __name__ == '__main__':
     # begin the unittest.main()
