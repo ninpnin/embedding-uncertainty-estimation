@@ -30,7 +30,7 @@ def get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior):
     parenthesis2 = tf.linalg.matmul(tf.linalg.inv(sigma_prior), mu_prior, transpose_a=True)
     return parenthesis + parenthesis2
 
-def polyagamma_sampler_tf(beta_init, X, y, iterations=2, kappa=None, N=None, mu_prior=None, sigma_prior=None, multivariate_method="svd"):
+def polyagamma_sampler_tf(beta_init, X, y, iterations=2, kappa=None, N=None, mu_prior=None, sigma_prior=None, multivariate_method="cholesky"):
     """
 
     """
@@ -420,7 +420,7 @@ def get_laplacian_sigma(e, M, dtype, edgecounts=None):
         return tf.stack([tf.eye(K, dtype=dtype) / lambdas[ix] for ix in range(M)])
 
 
-def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="svd", plot=True):
+def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="cholesky", plot=True):
     if multivariate_method not in ["svd", "cholesky", "eigh"]:
         raise ValueError("'multivariate_method' should be either 'svd', 'cholesky' or 'eigh'")
     else:
@@ -435,13 +435,16 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
         LOGGER.info(f"Use lambda0 from the embedding object: {lambda0}")
 
     logprobs = []
+    LOGGER.info(f"Aggregate data...")
     X_cache, N_wd_cache, kappa_cache = aggregate_data(data, words, e)
 
+    LOGGER.info(f"Split into independent sets...")
     blocks = split_into_independent_sets(e=e, wordcounts=N_wd_cache)
 
     # Pre-calculate quantities for the Laplacian prior
     edges, edgecounts = None, None
     if hasattr(e, "graph"):
+        LOGGER.info(f"Calculate quantities for the Laplacian prior...")
         edges, edgecounts = [], []
         for wd in blocks:
             edges_wd = [list(e.graph.neighbors(wd_i)) for wd_i in wd]
