@@ -424,7 +424,7 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
     if multivariate_method not in ["svd", "cholesky", "eigh"]:
         raise ValueError("'multivariate_method' should be either 'svd', 'cholesky' or 'eigh'")
     else:
-        print("Use method", multivariate_method)
+        LOGGER.info(f"Use method {multivariate_method}")
 
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
@@ -483,14 +483,29 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             if turn == "context":
                 wd = [f"{wd_i}_c" for wd_i in wd]
 
+            # Laplacian prior stuff
+            mu_prior_wd_all, sigma_prior_wd_all = None, None
+            if edgecounts is not None and turn != "context":
+                sigma_prior_wd_all = get_laplacian_sigma(e, len(wd), tf.float64, edgecounts=edgecounts[block_ix])
+                mu_prior_wd_all = get_laplacian_mu(e, edges=edges[block_ix], edgecounts=edgecounts[block_ix])
+            else:
+                sigma_prior_wd_all = get_laplacian_sigma(e, len(wd), tf.float64)
+
+            # Some indices are skipped due to no data
+            wd_nonskipped_indices = tf.squeeze(tf.where([sum(N_wd_cache[wd_i]) >= 1 for wd_i in wd]))
+            wd_skipped_indices = tf.squeeze(tf.where([sum(N_wd_cache[wd_i]) < 1 for wd_i in wd]))
             wd_skipped = [wd_i for wd_i in wd if sum(N_wd_cache[wd_i]) < 1]
             wd = [wd_i for wd_i in wd if sum(N_wd_cache[wd_i]) >= 1]
+
             if len(wd) >= 1:
+                # tf.squeeze flattens lists of length 1 to a scalar; revert that
+                if len(wd) == 1:
+                    wd_nonskipped_indices = tf.constant([wd_nonskipped_indices.numpy()])
+
                 X_wd = [X_cache[wd_i] for wd_i in wd]
                 X_wd = tf.ragged.constant(X_wd)
                 X_padded = e[X_wd].to_tensor()
 
-                #beta_init = e[wd]
                 K = e.dimensionality
                 beta_init = tf.random.normal([len(wd), K], dtype=tf.float64) / K
                 kappa_wd = tf.ragged.constant([kappa_cache.get(wd_i) for wd_i in wd])
@@ -499,14 +514,12 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
 
                 N_wd_ragged = tf.ragged.constant([N_wd_cache[wd_i] for wd_i in wd])
                 N_wd_padded = N_wd_ragged.to_tensor()
-
                 N_wd_padded = tf.math.maximum(N_wd_padded, tf.ones(N_wd_padded.shape, dtype=N_wd_padded.dtype))
+                
                 last_sample, mu_prior_wd = None, None
-                if edgecounts is not None and turn != "context":
-                    sigma_prior_wd = get_laplacian_sigma(e, len(wd), tf.float64, edgecounts=edgecounts[block_ix])
-                    mu_prior_wd = get_laplacian_mu(e, edges=edges[block_ix], edgecounts=edgecounts[block_ix])
-                else:
-                    sigma_prior_wd = get_laplacian_sigma(e, len(wd), tf.float64)
+                sigma_prior_wd = tf.gather(sigma_prior_wd_all, wd_nonskipped_indices)
+                if mu_prior_wd_all is not None:
+                    mu_prior_wd = tf.gather(mu_prior_wd_all, wd_nonskipped_indices)
 
                 betagen = polyagamma_sampler_tf(beta_init, X_padded,
                             None, kappa=kappa_padded, sigma_prior=sigma_prior_wd,
@@ -520,10 +533,26 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
                 e[wds_nonfreeze] = tf.gather(beta_sample, ids_nonfreeze)
 
             # Sample from the prior
-            for wd_i in wd_skipped:
-                if wd_i not in freeze_params:
-                    e[wd_i] = prior_sampler(e[wd_i].numpy(), sigma_prior=sigma_prior)
-                    prior_count += 1
+            if len(wd_skipped) > 0:
+                # tf.squeeze flattens lists of length 1 to a scalar; revert that
+                if len(wd_skipped) == 1:
+                    wd_skipped_indices = tf.constant([wd_skipped_indices.numpy()])
+
+                mu_skipped, sigma_skipped = None, tf.gather(sigma_prior_wd_all, wd_skipped_indices)
+                if mu_prior_wd_all is not None:
+                    mu_skipped = tf.gather(mu_prior_wd_all, wd_skipped_indices)
+
+                for ix, wd_i in enumerate(wd_skipped):
+                    if wd_i not in freeze_params:
+                        mu_i, sigma_i = None, sigma_skipped[ix]
+                        if mu_skipped is not None:
+                            mu_i = mu_skipped[ix]
+                        if turn == "context":
+                            e[wd_i] = prior_sampler(e[wd_i], mu_prior=mu_i, sigma_prior=sigma_i)
+                            prior_count += 1
+                        else:
+                            e[wd_i] = prior_sampler(e[wd_i], mu_prior=mu_i, sigma_prior=sigma_i)
+                            prior_count += 1
 
         if prior_count >= len(words) * 0.2:
             LOGGER.warning(f"sampled from prior: {prior_count} out of {len(words)}")
