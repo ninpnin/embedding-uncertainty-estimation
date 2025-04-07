@@ -260,7 +260,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
         prior_count = 0
 
         # Calculate log_posterior and yield sample
-        if ix % (yield_every * 2) == 0:
+        if ix % (yield_every * ll_every * 2) == 0:
             e_sample = copy.deepcopy(e)
             data_i = tf.constant([i for (i, j, x) in data])
             data_j = tf.constant([j for (i, j, x) in data])
@@ -271,6 +271,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
             posterior = ll + e.log_prob(len(data_i), len(data_i))
             logprobs.append(posterior)
             LOGGER.train(f"Log posterior for the sample: {posterior}")
+            LOGGER.train(f"Avg log likelihood for the sample: {ll / len(data_x)}")
             yield e_sample
 
         # Plot log_posterior graph
@@ -420,7 +421,9 @@ def get_laplacian_sigma(e, M, dtype, edgecounts=None):
         return tf.stack([tf.eye(K, dtype=dtype) / lambdas[ix] for ix in range(M)])
 
 
-def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, multivariate_method="cholesky", plot=True):
+def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None,
+                        freeze_params=[], aggregate=True, multivariate_method="cholesky", plot=True,
+                        ll_every=1):
     if multivariate_method not in ["svd", "cholesky", "eigh"]:
         raise ValueError("'multivariate_method' should be either 'svd', 'cholesky' or 'eigh'")
     else:
@@ -459,7 +462,7 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
         prior_count = 0
 
         # Calculate log_posterior and yield sample
-        if ix % (yield_every * 2) == 0:
+        if ix % (yield_every * ll_every * 2) == 0:
             e_sample = copy.deepcopy(e)
             data_i = tf.constant([i for (i, j, x) in data])
             data_j = tf.constant([j for (i, j, x) in data])
@@ -470,12 +473,15 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             posterior = ll + e.log_prob(len(data_i), len(data_i))
             logprobs.append(posterior)
             LOGGER.train(f"Log posterior for the sample: {posterior}")
+            LOGGER.train(f"Avg log likelihood for the sample: {ll / len(data_x)}")
             yield e_sample
 
         # Plot log_posterior graph
         if ix % (yield_every * 100) == 0 and ix > 0 and plot:
             from matplotlib import pyplot as plt
-            plt.plot(range(len(logprobs)), logprobs)
+            plot_x_range = np.array(range(len(logprobs)))
+            plot_x_range = plot_x_range * ll_every
+            plt.plot(plot_x_range, logprobs)
             plt.show()
 
         for block_ix, wd in progressbar.progressbar(enumerate(blocks)):
