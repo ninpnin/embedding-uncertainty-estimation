@@ -9,6 +9,7 @@ from sklearn.linear_model import LogisticRegression
 import tensorflow as tf
 from probabilistic_word_embeddings.models import sgns_likelihood
 import networkx as nx
+import tqdm
 
 LOGGER.info("Done!")
 from time import perf_counter as pc
@@ -196,14 +197,14 @@ def aggregate_data(data, words, e, turns=["word", "context"]):
 
     positive_samples = {}
     total_samples = {}
-    for i, j, x in data:
+    for i, j, x in tqdm.tqdm(data):
         positive_samples[(i,j)] = positive_samples.get((i,j), 0) + x
         total_samples[(i,j)] = total_samples.get((i,j), 0) + 1
 
         positive_samples[(j,i)] = positive_samples.get((j,i), 0) + x
         total_samples[(j,i)] = total_samples.get((j,i), 0) + 1
 
-    for wd in words:
+    for wd in tqdm.tqdm(words):
         for turn in turns:
             if turn == "context":
                 wd = wd + "_c"
