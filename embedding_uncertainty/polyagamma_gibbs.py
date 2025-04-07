@@ -470,7 +470,17 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             data_x = tf.constant([x for (i, j, x) in data], dtype=tf.float64)
 
             LOGGER.info(f"Calculate log posterior for the sample...")
-            ll = tf.reduce_sum(sgns_likelihood(e, data_i, data_j, x=data_x))
+            ll, batch_size = 0.0, 10000
+            if len(data_i) <= batch_size:
+                LOGGER.info(f"Calculate log posterior for the whole data...")
+                ll = tf.reduce_sum(sgns_likelihood(e, data_i, data_j, x=data_x))
+            else:
+                valid_batches = len(data_i) // batch_size
+                LOGGER.info(f"Calculate log posterior for the sample in {valid_batches} batches...")
+                for batch_ix in tqdm.tqdm(list(range(valid_batches))):
+                    s_ix, e_ix = batch_ix * batch_size, (batch_ix +1) * batch_size
+                    ll += tf.reduce_sum(sgns_likelihood(e, data_i[s_ix:e_ix], data_j[s_ix:e_ix], x=data_x[s_ix:e_ix]))
+
             posterior = ll + e.log_prob(len(data_i), len(data_i))
             logprobs.append(posterior)
             LOGGER.train(f"Log posterior for the sample: {posterior}")
