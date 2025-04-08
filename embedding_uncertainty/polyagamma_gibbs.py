@@ -193,16 +193,24 @@ def get_wd_data(data, wd, turn, cache={}):
             return data_wd
 
 def aggregate_data(data, words, e, turns=["word", "context"]):
+    assert len(data[0]) <= 4 and len(data[0]) >= 3, "The data should consist of tuples of length 3 or 4"
+    counts_included = len(data[0]) == 4
+
     X_cache, N_wd_cache, kappa_cache = {}, {}, {}
 
     positive_samples = {}
     total_samples = {}
-    for i, j, x in tqdm.tqdm(data):
-        positive_samples[(i,j)] = positive_samples.get((i,j), 0) + x
-        total_samples[(i,j)] = total_samples.get((i,j), 0) + 1
+    for data_tuple in tqdm.tqdm(data):
+        i, j, x = data_tuple[:3]
+        count = 1
+        if counts_included:
+            data_tuple[-1]
 
-        positive_samples[(j,i)] = positive_samples.get((j,i), 0) + x
-        total_samples[(j,i)] = total_samples.get((j,i), 0) + 1
+        positive_samples[(i,j)] = positive_samples.get((i,j), 0) + x * count
+        total_samples[(i,j)] = total_samples.get((i,j), 0) + count
+
+        positive_samples[(j,i)] = positive_samples.get((j,i), 0) + x * count
+        total_samples[(j,i)] = total_samples.get((j,i), 0) + count
 
     for wd in tqdm.tqdm(words):
         for turn in turns:
@@ -225,7 +233,7 @@ def aggregate_data(data, words, e, turns=["word", "context"]):
             N_wd_cache[wd] = N_cache_wd
     return X_cache, N_wd_cache, kappa_cache
 
-def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, plot=True):
+def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, plot=True, ll_every=1):
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     sigma_prior = np.identity(e.dimensionality) * 1.0
