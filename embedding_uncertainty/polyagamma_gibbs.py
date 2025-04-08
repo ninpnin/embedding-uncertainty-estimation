@@ -231,6 +231,10 @@ def aggregate_data(data, words, e, turns=["word", "context"]):
             X_cache[wd] = X_cache_wd
             kappa_cache[wd] = kappa_cache_wd
             N_wd_cache[wd] = N_cache_wd
+
+    del positive_samples
+    del total_samples
+    
     return X_cache, N_wd_cache, kappa_cache
 
 def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None, freeze_params=[], aggregate=True, plot=True, ll_every=1):
@@ -473,9 +477,9 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
         # Calculate log_posterior and yield sample
         if ix % (yield_every * ll_every * 2) == 0:
             e_sample = copy.deepcopy(e)
-            data_i = tf.constant([i for (i, j, x) in data])
-            data_j = tf.constant([j for (i, j, x) in data])
-            data_x = tf.constant([x for (i, j, x) in data], dtype=tf.float64)
+            data_i = tf.constant([elem[0] for elem in data])
+            data_j = tf.constant([elem[1] for elem in data])
+            data_x = tf.constant([elem[2] for elem in data], dtype=tf.float64)
 
             LOGGER.info(f"Calculate log posterior for the sample...")
             ll, batch_size = 0.0, 10000
