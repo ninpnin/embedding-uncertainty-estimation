@@ -54,6 +54,10 @@ if __name__ == '__main__':
             data.append((w,v,x))
 
     if args.data_len is not None:
+        if args.data_len > len(data):
+            LOGGER.warning(f"Provided data length ({args.data_len}) longer than whole data ({len(data)})")
+        else:
+            LOGGER.train(f"Use N={args.data_len} observations of the data ({len(data)} observations)")
         data = data[:args.data_len]
 
     x, y = [], []
