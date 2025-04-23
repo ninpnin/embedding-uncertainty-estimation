@@ -10,7 +10,7 @@ VOCAB_SIZE = 5000
 WS = 2
 NS = 1
 
-with open("wc-stemmed.json") as f:
+with open("data/wc-stemmed.json") as f:
     wordcounts = json.load(f)
  
 wordcounts = pl.DataFrame(wordcounts, orient="col").transpose(include_header=True, header_name="word", column_names=["count"])

@@ -2,7 +2,7 @@
 
 This repository implements the methods presented in _Posterior Sampling of Probabilistic Word Embeddings_, along with the baseline methods of mean-field variational inference and Hamiltonian Monte Carlo.
 
-The required packages are included in ```pyproject.toml```. The most straightforward way is to install the module in ```embedding_uncertainty``` with ```pip install .```.
+The required packages are included in ```pyproject.toml```. The most straightforward way is to install the module in ```embedding_uncertainty``` with ```pip install .```. On some systems ```pystan``` needs to be installed in a separate environment, which is why it is not included in ```pyproject.toml```.
 
 All algorithms use the same preprocessed data format. An example is provided in ```data/sim-format.json```.
 
@@ -105,3 +105,19 @@ options:
 ## Preprocessing
 
 A simulated dataset can be created using ```simulate_data/simulate.py```. Based on such a dataset, a Zipf distributed dataset can be generated using ```scripts/zipf_simulation.py```.
+
+The MovieLens data was preprocessed using ```real_data/movielens/analyze_data.ipynb```.
+
+The US congress data was preprocessed using ```scripts/us-congress-convert-and-lemmatize.py``` and ```scripts/us-congress-create-sgns-data.py```.
+
+## Jobs
+
+The ```jobs/``` folder contains scripts and slurm job files that run the experiments in the article.
+
+## Logs
+
+Logs and aggregated results of the experiments are saved in the ```logs/``` folder.
+
+## Tests
+
+The Polya-Gamma sampler and Laplace approximation are tested via the ```unittest``` Python module in the ```tests``` folder.
