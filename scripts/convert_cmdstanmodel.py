@@ -1,6 +1,7 @@
 import numpy as np
 import cmdstanpy
 import pickle, json
+import bidict
 from trainerlog import get_logger
 LOGGER = get_logger("conversion")
 
@@ -8,8 +9,8 @@ def load_pickle_emb(path):
     with open(path, "rb") as f:
         d = pickle.load(f)
 
-    LOGGER.debug(f"{type(d)}")
-    LOGGER.debug(f"{d.__dir__()}")
+    LOGGER.debug(f"Type: {type(d)}")
+    LOGGER.debug(f"Attributes: {d.__dir__()}")
     return d
 
 def main(args):
@@ -18,10 +19,24 @@ def main(args):
     dimensionality = fit.word_vectors.shape[1]
 
     LOGGER.info(f"V: {vocab_size}, K: {dimensionality}")
-    vocab = sorted([f"word{ix}" for ix in range(vocab_size)])
-    print(" ".join(vocab))
+    vocab = None
+    if args.vocabulary is None:
+        LOGGER.info(f"Create simulation vocabulary: (word0, word1, ..., wordV)")
+        vocab = sorted([f"word{ix}" for ix in range(vocab_size)])
+        print(" ".join(vocab))
+    else:
+        LOGGER.info(f"Load vocabulary from file {args.vocabulary}")
+        with open(args.vocabulary, "r") as f:
+            datafile = json.load(f)
+
+        vocab_dict = bidict.bidict(datafile["vocabulary"])
+        vocab = sorted([(a,b) for a,b in vocab_dict.items()], key=lambda x: x[1])
+        vocab = [a for a,b in vocab]
+
     vocab_c = [f"{wd}_c" for wd in vocab]
     LOGGER.debug(f"Vocabulary: {vocab}")
+
+    assert len(vocab) == vocab_size, f"Incorrect vocab length (found {len(vocab)}, should be {vocab_size})"
 
     if args.format == "json":
         LOGGER.info(f"Convert to JSON...")
@@ -67,6 +82,7 @@ if __name__ == "__main__":
     import argparse
     argparser = argparse.ArgumentParser(description=__doc__)
     argparser.add_argument("--path", type=str, required=True)
+    argparser.add_argument("--vocabulary", type=str, default=None)
     argparser.add_argument("--outpath", type=str, default=None)
     argparser.add_argument("--format", type=str, default="json", choices=['json', 'embedding'])
     args = argparser.parse_args()
