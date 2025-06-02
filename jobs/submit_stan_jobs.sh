@@ -8,7 +8,7 @@
 #  squeue -u isacbo --Format=jobid,name,partition,state,timeused
 # to see ful job name
 
-
+# ensure fit_models2.py has the correct lambda0
 
 
 
@@ -40,11 +40,6 @@ DATASET_DIR="../../movielens_train/"
 DATALENS=(85000 170000 425000 850000) # remember to set lambda0 = 1.0 in this case!!
 ESTIMATORS=("vi") 
 
-MODEL_PATH="../stan_simulation/models/sgns_normalpriors_aggregated.stan"
-BASE_OUTPUT_PATH="../../results_ten_V200_K10/nofix"  #base path
-DATASET_DIR="../../new_sims_jan25/ten_V200_K10/"
-DATALENS=(1000 2000 5000 10000 20000 50000 100000 500000 1000000 2000000 4000000)
-ESTIMATORS=("hmc") 
 
 MODEL_PATH="../stan_simulation/models/sgns_normalpriors_aggregated.stan"
 BASE_OUTPUT_PATH="../../results-congress5k/nofix"  #base path
@@ -67,15 +62,52 @@ DATALENS=(100000) # remember to set lambda0 = 1.0 in this case!!
 ESTIMATORS=("vi") 
 
 
+
+
+
 MODEL_PATH="../stan_simulation/models/sgns_normalpriors_aggregated.stan"
-BASE_OUTPUT_PATH="../../results_ten_V200_K10/nofix"  #base path
-DATASET_DIR="../../new_sims_jan25/ten_V200_K10/"
-DATALENS=( 500000 2000000 4000000)
+BASE_OUTPUT_PATH="../../results_ten_V100K5/nofix/"  #base path
+DATASET_DIR="../../data/ten_V100K5/"
+DATALENS=(500000 1000000)
+ESTIMATORS=("map") 
+
+
+MODEL_PATH="../stan_simulation/models/sgns_normalpriors_aggregated.stan"
+BASE_OUTPUT_PATH="../../results_FULLHMC_V200_K20/nofix"  #base path
+DATASET_DIR="../../new_sims_jan25/ten_V200_K20/"
+DATALENS=(500000)
 ESTIMATORS=("hmc") 
 
 
+MODEL_PATH="../stan_simulation/models/sgns_normalpriors_aggregated.stan"
+BASE_OUTPUT_PATH="../../results_ten_V200_K5/nofix"  #base path
+DATASET_DIR="../../new_sims_jan25/ten_V200_K5/"
+DATALENS=(1000 2000 5000 10000 20000 50000 100000 500000 1000000)
+ESTIMATORS=("hmc") 
 
-DIMENSION=10 ### IMPORTANT
+MODEL_PATH="../stan_simulation/models/sgns_normalpriors_aggregated.stan"
+BASE_OUTPUT_PATH="../../results_ten_V100K5_zipf/nofix/"  #base path
+DATASET_DIR="../../data/ten_V100K5-zipf/"
+DATALENS=(500000 1000000)
+ESTIMATORS=("map") 
+
+
+
+MODEL_PATH="../stan_simulation/models/sgns_normalpriors_aggregated.stan"
+BASE_OUTPUT_PATH="../../test_cmd_hmc/"  #base path
+DATASET_DIR="../../new_sims_jan25/test/"
+DATALENS=(100)
+ESTIMATORS=("cmd_hmc") 
+
+
+MODEL_PATH="../stan_simulation/models/sgns_normalpriors_aggregated.stan"
+BASE_OUTPUT_PATH="../../results-congress5k/nofix"  #base path
+DATASET_DIR="../../us-congress5k/"
+DATALENS=(50000 100000 500000) # remember to set lambda0 = 1.0 in this case!!
+ESTIMATORS=("map") 
+
+
+DIMENSION=50 ### IMPORTANT
 
 for DATALEN in "${DATALENS[@]}"; do
     for DATAFILE in "$DATASET_DIR"*.json; do
