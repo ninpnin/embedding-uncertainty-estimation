@@ -59,8 +59,6 @@ else:
     LOGGER.info('Default lambda0 = sqrt(1.0 / D)')
     lambda0 = np.sqrt(1.0 / D)
 
-lambda0 = 1.0
-
 LOGGER.info(f'Using lambda0 = {lambda0}')
 sizes = args.data_lengths
 LOGGER.info(f"data_lengths = {sizes}")

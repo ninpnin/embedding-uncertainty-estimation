@@ -18,7 +18,8 @@ MODEL_PATH="$model_path"
 OUTPUT_PATH="$output_path"
 DIMENSION="$dimension"
 MAP_DIR="$map_dir"        # <-- Fix dir
-LAMBDA0="$lambda0"           
+#LAMBDA0="$lambda0"           
+LAMBDA0=1.0
 
 echo "Running $DATAFILE with N = $DATALEN, Estimator: $ESTIMATOR, lambda0: $LAMBDA0"
 srun -n 1 -c "$SLURM_CPUS_PER_TASK" \

@@ -16,6 +16,7 @@ ESTIMATOR="$estimator"
 MODEL_PATH="$model_path"
 OUTPUT_PATH="$output_path"
 DIMENSION="$dimension"
+LAMBDA0=1.0
 
 export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
 echo $SLURM_CPUS_PER_TASK
@@ -29,4 +30,5 @@ srun -n 1 -c "$SLURM_CPUS_PER_TASK" \
         --output_dir "$OUTPUT_PATH" \
         --data_lengths "$DATALEN" \
         --estimator "$ESTIMATOR" \
-        --dim "$DIMENSION"
+        --dim "$DIMENSION"\
+        --lambda0 "$LAMBDA0"

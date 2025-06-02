@@ -59,7 +59,7 @@ if args.lambda0 is not None:
 else:
     LOGGER.info('Default lambda0')
     lambda0 = np.sqrt(1.0 / D)  # Default value
-lambda0 = 1.0
+
 LOGGER.info(f'Using lambda0 = {lambda0}')
 
 
