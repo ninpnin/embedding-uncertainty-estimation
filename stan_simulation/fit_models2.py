@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import pandas as pd
 import pickle
 import os
 import sys
@@ -58,7 +59,7 @@ if args.lambda0 is not None:
 else:
     LOGGER.info('Default lambda0')
     lambda0 = np.sqrt(1.0 / D)  # Default value
-#lambda0 = 1.0
+lambda0 = 1.0
 LOGGER.info(f'Using lambda0 = {lambda0}')
 
 
@@ -145,6 +146,12 @@ def create_aggregated_stan_data(data_entries, size, vocabulary, D, lambda0=1.0):
     return stan_data
 
 def save_fit(fit, size, dim, dataset_name, estimator):
+    try:
+        reduced_size = sys.getsizeof(fit)
+        LOGGER.info(f"fit object size (approx): {reduced_size / (1024 ** 2):.2f} MB")
+    except:
+        print('Couldnt log fit size')
+
     filename = os.path.join(output_dir, f'stan_fit_{estimator}_K{dim}_{dataset_name}_{size}.pkl')
     with open(filename, 'wb') as f:
         pickle.dump(fit, f)
@@ -205,12 +212,30 @@ for size in sizes:
     if inference_type=='hmc':
         LOGGER.train(f"Run HMC for {num_samples} samples and {num_chains} chains")
         model = stan.build(stan_code, data=stan_data)
-        fit = model.sample(num_samples=num_samples, num_chains=num_chains)
+        fit = model.sample(num_samples=num_samples, num_chains=num_chains, save_warmup=False)
         if not SAVE_FULL_HMC:
+            LOGGER.info('Reduced.')
             fit = {'word_vectors':fit['word_vectors'], 'context_vectors':fit['context_vectors']} ## To reduce disk storage only store nessecary.
-           
+
         #LOGGER.debug(f"Model summary:\n{model.summary()}")
         # LOGGER.debug(f"{fit.to_frame().columns}")
+    elif inference_type=='cmd_hmc':
+        LOGGER.train(f"Run CMD HMC for {num_samples} samples and {num_chains} chains")
+        model = CmdStanModel(stan_file=stan_model_path)
+        
+        fit = model.sample(
+            data=stan_data,
+            chains=num_chains,
+            parallel_chains=num_chains,
+            iter_sampling=num_samples,
+            iter_warmup=1000,
+            save_warmup=False,
+            #output_dir=output_dir
+        )
+        
+        LOGGER.info("Fit ok.")
+        
+
     elif inference_type=='vi':
         vi_iter = 5000 #?
         algorithm = 'meanfield'
