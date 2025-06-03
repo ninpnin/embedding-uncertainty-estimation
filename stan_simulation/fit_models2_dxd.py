@@ -30,7 +30,7 @@ parser.add_argument("--data_lengths", type=int, nargs="+", default=[100])
 
 args = parser.parse_args()
 
-SAVE_FULL_HMC = True
+SAVE_FULL_HMC = False
 
 LOGGER.train(f"Run on args: {args}")
 data_path = args.data_path
@@ -217,6 +217,19 @@ for size in sizes:
                 'context_vectors': fit['context_vectors']
             }
         LOGGER.train('Time elapse hmc: %.3f'%(time.time()-t1))
+
+    elif inference_type == 'cmd_hmc':
+        model = CmdStanModel(stan_file=stan_model_path)
+        
+        fit = model.sample(
+            data=stan_data,
+            chains=num_chains,
+            parallel_chains=num_chains,
+            iter_sampling=num_samples,
+            iter_warmup=1000,
+            save_warmup=False,
+            #output_dir=output_dir
+        )
 
     elif inference_type == 'vi':
         vi_iter = 5000
