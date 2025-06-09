@@ -85,6 +85,7 @@ def load_fit_by_size(size, save_dir):
             parts = f.split('.')[-2].split('_')
             if parts[-1] == str(size):
                 file_path = os.path.join(save_dir, f)
+                LOGGER.info(f"Load MAP from '{f}'")
                 with open(file_path, 'rb') as fn:
                     fit = pickle.load(fn)
                 return fit
@@ -228,7 +229,7 @@ for size in sizes:
             iter_sampling=num_samples,
             iter_warmup=1000,
             save_warmup=False,
-            #output_dir=output_dir
+            output_dir=output_dir
         )
 
     elif inference_type == 'vi':

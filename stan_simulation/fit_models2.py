@@ -229,8 +229,8 @@ for size in sizes:
             parallel_chains=num_chains,
             iter_sampling=num_samples,
             iter_warmup=1000,
-            save_warmup=False,
-            #output_dir=output_dir
+            #save_warmup=False,
+            output_dir=output_dir
         )
         
         LOGGER.info("Fit ok.")
