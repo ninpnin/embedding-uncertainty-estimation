@@ -15,19 +15,22 @@ from hashlib import md5
 def string_hash(string):
     return md5(string.encode()).hexdigest()
 
-def remove_raw_vectors(df):
-    cols = [col for col in df.columns if "_raw" not in col]
+def remove_raw_vectors(df, cols=None):
+    if cols is None:
+        cols = [col for col in df.columns if "_raw" not in col]
     return df[cols]
 
 def main(args):
     df = None
+    cols = pd.read_csv(args.path, comment="#", nrows=2).columns
+
     if args.chunks is not None:
         LOGGER.info("Split into chunks...")
         df = pd.read_csv(args.path, comment="#", header=None, nrows=args.chunks)
-        df = remove_raw_vectors(df)
+        df = remove_raw_vectors(df, cols=cols)
     else:
         df = pd.read_csv(args.path, comment="#", header=None)
-        df = remove_raw_vectors(df)
+        df = remove_raw_vectors(df, cols=cols)
     print(df)
 
     x = df.loc[0].to_numpy()
@@ -94,7 +97,7 @@ def main(args):
     while not done and args.chunks is not None:        
         if args.chunks is not None:
             df = pd.read_csv(args.path, comment="#", header=None, skiprows=r * args.chunks, nrows=args.chunks)
-            df = remove_raw_vectors(df)
+            df = remove_raw_vectors(df, cols=cols)
 
         samples = len(df) - 1
         LOGGER.info(f"V: {V}, K: {K}, samples: {samples}, r: {r}")
