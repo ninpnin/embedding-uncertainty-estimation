@@ -11,6 +11,7 @@ from pathlib import Path
 import pandas as pd
 import tqdm
 from hashlib import md5
+import bidict
 
 def string_hash(string):
     return md5(string.encode()).hexdigest()
