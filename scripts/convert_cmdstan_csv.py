@@ -32,7 +32,7 @@ def main(args):
 
     if args.chunks is not None:
         LOGGER.info("Split into chunks...")
-        df = pd.read_csv(args.path, comment="#", header=None, nrows=args.chunks)
+        df = pd.read_csv(args.path, comment="#", header=None, nrows=1, dtype=str)
         df = remove_raw_vectors(df, cols=cols)
     else:
         df = pd.read_csv(args.path, comment="#", header=None)
@@ -83,7 +83,7 @@ def main(args):
     if args.vocabulary is None:
         LOGGER.info(f"Create simulation vocabulary: (word0, word1, ..., wordV)")
         vocab = sorted([f"word{ix}" for ix in range(V)])
-        print(" ".join(vocab))
+        print(" ".join(vocab[:10]))
     else:
         LOGGER.info(f"Load vocabulary from file {args.vocabulary}")
         with open(args.vocabulary, "r") as f:
@@ -100,38 +100,36 @@ def main(args):
     LOGGER.info(f"V: {V}, K: {K}, samples: {samples}")
     done, r = False, 0
 
-    while not done and args.chunks is not None:        
-        if args.chunks is not None:
-            df = pd.read_csv(args.path, comment="#", header=None, skiprows=r * args.chunks, nrows=args.chunks)
-            df = remove_raw_vectors(df, cols=cols)
 
-        samples = len(df) - 1
-        LOGGER.info(f"V: {V}, K: {K}, samples: {samples}, r: {r}")
+    with pd.read_csv(args.path, comment="#", chunksize=args.chunks) as reader:
+        for chunk in reader:
+            samples = len(chunk)
+            chunk = remove_raw_vectors(chunk, cols=cols)
 
-        for sample_ix in tqdm.tqdm(list(range(samples))):
-            x = df.loc[sample_ix + 1].to_numpy()
-            x = x[first_index:]
-            x = [float(elem) for elem in x]
-            rho = np.reshape(x[:K*V], (K, V))
-            print(rho[:, 0])
-            print(rho[:, -1])
-            alpha = np.reshape(x[K*V:], (K, V))
+            LOGGER.info(f"V: {V}, K: {K}, samples: {samples}, chunk: {r}")
 
-            e = Embedding(set(vocab), dimensionality=K)
-            print(rho.shape)
-            print(rho.dtype)
-            print(alpha.shape)
-            e[vocab] = rho.T
-            e[vocab_c] = alpha.T
+            print("chunk length", len(chunk))
+            for sample_ix in tqdm.tqdm(list(chunk.index)):
+                x = chunk.loc[sample_ix].to_numpy()
+                x = x[first_index:]
+                x = [float(elem) for elem in x]
+                rho = np.reshape(x[:K*V], (K, V))
+                #print(rho[:, 0])
+                #print(rho[:, -1])
+                alpha = np.reshape(x[K*V:], (K, V))
 
-            LOGGER.info(f"K: {e.dimensionality}")
-            outpath = outfolder / f"sample-{sample_ix}.pkl"
-            outfolder.mkdir(exist_ok=True)
-            LOGGER.info(f"Save to {outpath}...")
-            e.save(str(outpath.absolute()))
+                e = Embedding(set(vocab), dimensionality=K)
+                e[vocab] = rho.T
+                e[vocab_c] = alpha.T
 
-        done = args.chunks is None
-        r += 1
+                LOGGER.info(f"K: {e.dimensionality}")
+                outpath = outfolder / f"sample-{sample_ix}.pkl"
+                outfolder.mkdir(exist_ok=True)
+                LOGGER.info(f"Save to {outpath}...")
+                e.save(str(outpath.absolute()))
+
+            done = args.chunks is None
+            r += 1
 
 if __name__ == "__main__":
     import argparse
