@@ -16,7 +16,12 @@ def string_hash(string):
     return md5(string.encode()).hexdigest()
 
 def main(args):
-    df = pd.read_csv(args.path, comment="#", header=None)
+    df = None
+    if args.chunks is not None:
+        LOGGER.info("Split into chunks...")
+        df = pd.read_csv(args.path, comment="#", header=None, nrows=args.chunks)
+    else:
+        df = pd.read_csv(args.path, comment="#", header=None)
     print(df)
 
     x = df.loc[0].to_numpy()
@@ -43,9 +48,6 @@ def main(args):
     alpha = np.reshape(x[K*V:], (K, V))
     print(alpha[:, 0])
     print(alpha[:, -1])
-
-    samples = len(df) - 1
-    LOGGER.info(f"V: {V}, K: {K}, samples: {samples}")
 
     #exit()
     LOGGER.info(f"Convert to pwe.Embedding...")
@@ -79,27 +81,41 @@ def main(args):
     vocab_c = [f"{wd}_c" for wd in vocab]
     LOGGER.debug(f"Vocabulary: {vocab}")
 
-    for sample_ix in tqdm.tqdm(list(range(samples))):
-        x = df.loc[sample_ix + 1].to_numpy()
-        x = x[first_index:]
-        x = [float(elem) for elem in x]
-        rho = np.reshape(x[:K*V], (K, V))
-        print(rho[:, 0])
-        print(rho[:, -1])
-        alpha = np.reshape(x[K*V:], (K, V))
+    samples = len(df) - 1
+    LOGGER.info(f"V: {V}, K: {K}, samples: {samples}")
+    done, r = False, 0
 
-        e = Embedding(set(vocab), dimensionality=K)
-        print(rho.shape)
-        print(rho.dtype)
-        print(alpha.shape)
-        e[vocab] = rho.T
-        e[vocab_c] = alpha.T
+    while not done and args.chunks is not None:        
+        if args.chunks is not None:
+            df = pd.read_csv(args.path, comment="#", header=None, skiprows=r * args.chunks, nrows=args.chunks)
 
-        LOGGER.info(f"K: {e.dimensionality}")
-        outpath = outfolder / f"sample-{sample_ix}.pkl"
-        outfolder.mkdir(exist_ok=True)
-        LOGGER.info(f"Save to {outpath}...")
-        e.save(str(outpath.absolute()))
+        samples = len(df) - 1
+        LOGGER.info(f"V: {V}, K: {K}, samples: {samples}, r: {r}")
+
+        for sample_ix in tqdm.tqdm(list(range(samples))):
+            x = df.loc[sample_ix + 1].to_numpy()
+            x = x[first_index:]
+            x = [float(elem) for elem in x]
+            rho = np.reshape(x[:K*V], (K, V))
+            print(rho[:, 0])
+            print(rho[:, -1])
+            alpha = np.reshape(x[K*V:], (K, V))
+
+            e = Embedding(set(vocab), dimensionality=K)
+            print(rho.shape)
+            print(rho.dtype)
+            print(alpha.shape)
+            e[vocab] = rho.T
+            e[vocab_c] = alpha.T
+
+            LOGGER.info(f"K: {e.dimensionality}")
+            outpath = outfolder / f"sample-{sample_ix}.pkl"
+            outfolder.mkdir(exist_ok=True)
+            LOGGER.info(f"Save to {outpath}...")
+            e.save(str(outpath.absolute()))
+
+        done = args.chunks is None
+        r += 1
 
 if __name__ == "__main__":
     import argparse
@@ -107,6 +123,7 @@ if __name__ == "__main__":
     argparser.add_argument("--path", type=str, required=True, help="Path to the stan fit file")
     argparser.add_argument("--vocabulary", type=str, default=None)
     argparser.add_argument("--outpath", type=str, default=None, help="Path to the output folder; optional")
+    argparser.add_argument("--chunks", type=int, default=None, help="Split CSV for chunks of this size to limit memory footprint")
     args = argparser.parse_args()
     print(args)
     main(args)
