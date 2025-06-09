@@ -18,6 +18,12 @@ def string_hash(string):
 def remove_raw_vectors(df, cols=None):
     if cols is None:
         cols = [col for col in df.columns if "_raw" not in col]
+    else:
+        assert len(cols) == len(df.columns)
+        print("COLUMNS: (TRUE; REF)")
+        print(cols[:25])
+        print(df.columns[:25])
+        cols = [col for (col, ref) in zip(df.columns, cols) if "_raw" not in ref]
     return df[cols]
 
 def main(args):
