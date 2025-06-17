@@ -41,6 +41,16 @@ def r_hat(df, reference="HMC"):
     hmc = np.array(df[df["Method"] == reference]["similarity"])
     print(hmc)
     
+    n = len(hmc) // 2
+    x_start = hmc[:n]
+    x_end = hmc[-n:]
+    X = np.array([x_start, x_end])
+    R = az.rhat(X)
+    ESS = az.ess(hmc)
+    print("Chain ESS:", ESS)
+    
+    print(f"Within chain R hat ({reference}):", R)
+        
     other_methods = [m for m in methods if m != reference]
     for om in other_methods:
         print("Compare", reference, "to", om)
@@ -50,17 +60,28 @@ def r_hat(df, reference="HMC"):
         print("Truncate both chains to that")
         x = x[:minlen]
         y = hmc[:minlen]
+        ESS = az.ess(x)
+        print("Chain ESS:", ESS)
         
         X = np.array([x, y])
         assert X.shape[0] < X.shape[1], "Chains go first in the ndarray"
         R = az.rhat(X)
-        print("R hat:", R)
+        print("Between chain R hat:", R)
+        
+        n = len(x) // 2
+        x_start = x[:n]
+        x_end = x[-n:]
+        
+        X = np.array([x_start, x_end])
+        R = az.rhat(X)
+        print("Within chain R hat:", R)
+        
     
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--sample_folder", type=str, default=None, nargs="+")
-    parser.add_argument("--warmup", type=int, default=None)
+    parser.add_argument("--warmup", type=int, default=None, nargs="+")
     parser.add_argument("--cossim_words", type=str, default=[], nargs="+")
     parser.add_argument("--do_wordsim", type=bool, default=False)
     parser.add_argument("--full_xaxis", type=bool, default=False, help="Force the x axis to range from -1 to 1")
@@ -68,15 +89,23 @@ if __name__ == '__main__':
     LOGGER.train(f"Args: {args}")
     
     # Discard warmup samples
+    if args.warmup is None:
+        args.warmup = [None] * len(args.sample_folder)
+    elif len(args.warmup) == 1:
+        args.warmup = [args.warmup] * len(args.sample_folder)
+    else:
+        assert len(args.warmup) == len(args.sample_folder)
+        
+    print("warmup", args.warmup)
     chains = []
-    for sample_folder in args.sample_folder:
+    for sample_folder, warmup in zip(args.sample_folder, args.warmup):
         sample_folder = Path(sample_folder)
         samples = sorted(sample_folder.glob("*.pkl"), key=lambda p: int(p.stem.split("-")[-1]))
         # By default the first half
-        if args.warmup is None:
+        if warmup is None:
             samples = samples[len(samples) // 2:]
         else:
-            samples = samples[args.warmup:]
+            samples = samples[warmup:]
         chains.append(samples)
         
     #e_post_mean = posterior_mean([str(s.absolute()) for s in samples])
