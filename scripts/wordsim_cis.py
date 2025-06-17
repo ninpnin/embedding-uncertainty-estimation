@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 import re
 
-COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c'}
+COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c', "Laplace": "#df647a"}
 def increment_number_in_string(s):
     # Extract the number from the string
     number = re.search(r'\d+', s)
@@ -33,6 +33,29 @@ def increment_number_in_string(s):
 def cossim(a,b):
     return np.dot(a, b) /(np.linalg.norm(a) * np.linalg.norm(b))
 
+def r_hat(df, reference="HMC"):
+    import arviz as az
+    methods = list(set(df["Method"]))
+    print(methods)
+    
+    hmc = np.array(df[df["Method"] == reference]["similarity"])
+    print(hmc)
+    
+    other_methods = [m for m in methods if m != reference]
+    for om in other_methods:
+        print("Compare", reference, "to", om)
+        x = np.array(df[df["Method"] == om]["similarity"])
+        minlen = min(len(x), len(hmc))
+        print("Shorter chain length:", minlen)
+        print("Truncate both chains to that")
+        x = x[:minlen]
+        y = hmc[:minlen]
+        
+        X = np.array([x, y])
+        assert X.shape[0] < X.shape[1], "Chains go first in the ndarray"
+        R = az.rhat(X)
+        print("R hat:", R)
+    
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
@@ -121,6 +144,8 @@ if __name__ == '__main__':
 
         plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity.pdf")
         plt.show()
+        
+        r_hat(cossim_results, reference="Gibbs")
 
     results = pd.concat(rows)
     print(results)
