@@ -24,6 +24,7 @@ if __name__ == '__main__':
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--map_estimate", type=str, default=None)
+    parser.add_argument("--freeze_params", type=str, nargs="+", default=None)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
     parser.add_argument("--example_word", type=str, default="word0")
     parser.add_argument("--use_tf", type=bool, default=False)
@@ -69,7 +70,17 @@ if __name__ == '__main__':
         #freeze_params = [f"word{i}_c" for i in range(e.dimensionality)]
         freeze_params = [wd for wd in sorted(list(e.vocabulary)) if "_c" in wd]
         freeze_params = freeze_params[:e.dimensionality]
-        LOGGER.train(f"Copy from MAP and freeze following params {freeze_params}")
+
+        if args.freeze_params is not None:
+            if len(args.freeze_params) != e.dimensionality:
+                LOGGER.error(f"Number of parameters to be frozen {len(args.freeze_params)} does not match dimensionality {e.dimensionality}")
+
+            freeze_params = args.freeze_params
+            if freeze_params[0][-3:] != "_c":
+                LOGGER.error(f"Parameters to be frozen provided as words without _c; adding it...")
+                freeze_params = [wd.split("_")[0] + "_c" for wd in freeze_params]
+
+        LOGGER.train(f"Copy from MAP and freeze following params: {freeze_params}")
         e_map = Embedding(saved_model_path=args.map_estimate)
         LOGGER.train(f"e {e[freeze_params].shape} emap { e_map[freeze_params].shape}")
         LOGGER.train(f"e {e[freeze_params].dtype} emap { e_map[freeze_params].dtype}")
