@@ -77,8 +77,13 @@ if __name__ == '__main__':
 
             freeze_params = args.freeze_params
             if freeze_params[0][-3:] != "_c":
-                LOGGER.error(f"Parameters to be frozen provided as words without _c; adding it...")
+                LOGGER.warning(f"Parameters to be frozen provided as words without _c; adding it...")
                 freeze_params = [wd.split("_")[0] + "_c" for wd in freeze_params]
+
+                for wd in freeze_params:
+                    if wd not in e:
+                        LOGGER.critical(f"Frozen parameter '{wd}' not in vocabulary!")
+                        exit()
 
         LOGGER.train(f"Copy from MAP and freeze following params: {freeze_params}")
         e_map = Embedding(saved_model_path=args.map_estimate)
