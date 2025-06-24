@@ -19,6 +19,10 @@ import seaborn as sns
 import re
 
 COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c', "Laplace": "#df647a"}
+for method in colors:
+    for ix in range(10):
+        COLORS[f"{method}-{ix}"] = COLORS[method]
+
 def increment_number_in_string(s):
     # Extract the number from the string
     number = re.search(r'\d+', s)
@@ -155,7 +159,7 @@ if __name__ == '__main__':
         custom_palette = sns.color_palette([COLORS[method] for method in method_order])
         sns.set_palette(custom_palette)
 
-        g = sns.kdeplot(cossim_results, x="similarity", hue="Method", common_norm=False, linewidth=2.0, legend=False)
+        g = sns.kdeplot(cossim_results, x="similarity", hue="Method", style="method", common_norm=False, linewidth=2.0, legend=False)
         sns.despine()
         plt.ylabel(None, fontsize=24)
         w1, w2 = [increment_number_in_string(s) for s in args.cossim_words]
