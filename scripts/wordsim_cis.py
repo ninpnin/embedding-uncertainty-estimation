@@ -159,7 +159,7 @@ if __name__ == '__main__':
         custom_palette = sns.color_palette([COLORS[method] for method in method_order])
         sns.set_palette(custom_palette)
 
-        g = sns.kdeplot(cossim_results, x="similarity", hue="Method", style="Method", common_norm=False, linewidth=2.0, legend=False)
+        g = sns.kdeplot(cossim_results, x="similarity", hue="Method", common_norm=False, linewidth=2.0, legend=False)
         sns.despine()
         plt.ylabel(None, fontsize=24)
         w1, w2 = [increment_number_in_string(s) for s in args.cossim_words]
