@@ -180,6 +180,11 @@ if __name__ == '__main__':
         
         r_hat(cossim_results, reference="Gibbs")
 
+        plt.clf()
+        #print(cossim_results[cossim_results["Method"] == "Gibbs"], )
+        sns.lineplot(cossim_results[cossim_results["Method"] == "Gibbs"], x="ix", y="similarity")
+        plt.savefig("img/cossim-evolution.pdf")
+
     results = pd.concat(rows)
     print(results)
 
