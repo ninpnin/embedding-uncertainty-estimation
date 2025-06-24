@@ -85,6 +85,7 @@ if __name__ == '__main__':
     parser.add_argument("--cossim_words", type=str, default=[], nargs="+")
     parser.add_argument("--do_wordsim", type=bool, default=False)
     parser.add_argument("--full_xaxis", type=bool, default=False, help="Force the x axis to range from -1 to 1")
+    parser.add_argument("--enumerate_chains", type=bool, default=False, help="Plot different chains separately even if they use same method")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     
@@ -143,6 +144,9 @@ if __name__ == '__main__':
         cossim_results = pd.DataFrame(cossim_rows, columns=["chain", "ix", "similarity"])
         print(cossim_results)
         methods = [estimator_name(folder) for folder in args.sample_folder]
+        if args.enumerate_chains:
+            methods = [f"{estimator_name(folder)}-{ix+1}" for ix, folder in enumerate(args.sample_folder)]
+
         chain_info = list(cossim_results["chain"])
         cossim_results["Method"] = [methods[chain_ix] for chain_ix in chain_info]
         
