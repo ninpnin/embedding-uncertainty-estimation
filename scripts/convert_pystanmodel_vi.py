@@ -29,10 +29,14 @@ def main(args):
 
     vocab = bidict.bidict({ix: f"word{ix}" for ix in range(V)})
     if args.vocab is not None:
-        vocab = bidict.bidict({ix: wd for ix, wd in enumerate(args.vocab)})
+        with open(args.vocab) as f:
+            vocabdict = json.load(f)
+        vocab = bidict.bidict(vocabdict["vocabulary"])
+        print(list(vocab.items())[:10])
+        #vocab = bidict.bidict({ix: wd for ix, wd in enumerate(args.vocab)})
 
-    words = [vocab[ix] for ix in range(V)]
-    contexts = [vocab[ix] + "_c" for ix in range(V)]
+    words = [vocab.inv[ix] for ix in range(V)]
+    contexts = [vocab.inv[ix] + "_c" for ix in range(V)]
 
     theta_mean = fit._variational_mean[3:]
     #theta_mean = fit._variational_mean[3:]
@@ -61,13 +65,14 @@ def main(args):
     for n in tqdm.tqdm(list(range(N))):
         e_sample = Embedding(set(words), dimensionality=K)
         theta_n = fit.variational_sample[n, 3:]
+        LOGGER.debug(f"theta_n shape {theta_n.shape} for round {n}")
         theta_n = np.reshape(theta_n, (K, 2 * V))
         #print(theta_n.shape)
         #print(e_sample[words + contexts].shape)
         e_sample[words + contexts] = theta_n.T
         #print(fit.variational_sample[n][:5])
         #print(e_sample[vocab[1]][0])
-        error = np.abs(fit.variational_sample[n][4] - e_sample[vocab[1]][0])
+        error = np.abs(fit.variational_sample[n][4] - e_sample[vocab.inv[1]][0])
         assert error < tol, f"{fit.variational_sample[n][4]} {e_sample[vocab[1]][0]}"
 
         e_sample.save(str((folder / f"sample-{n}.pkl").absolute()))
