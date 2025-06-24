@@ -19,7 +19,7 @@ import seaborn as sns
 import re
 
 COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c', "Laplace": "#df647a"}
-for method in colors:
+for method in COLORS:
     for ix in range(10):
         COLORS[f"{method}-{ix}"] = COLORS[method]
 
