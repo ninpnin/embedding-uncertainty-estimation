@@ -114,6 +114,7 @@ if __name__ == '__main__':
     cossim_rows = []
     for chain_ix, samples in enumerate(chains):
         for ix, sample in tqdm.tqdm(list(enumerate(samples))):
+            LOGGER.debug(f"Load data from {str(sample.absolute())}...")
             e_sample = Embedding(saved_model_path=str(sample.absolute()))
             results = None
             if args.do_wordsim:
