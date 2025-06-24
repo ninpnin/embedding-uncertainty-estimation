@@ -35,7 +35,9 @@ if __name__ == '__main__':
     ref_emb = Embedding(saved_model_path=str(list(sample_folders[0].glob("*.pkl"))[-1].absolute()))
     dimensionality = ref_emb.dimensionality
     
-    e_map = Embedding(saved_model_path=args.map_path)
+    e_map = None
+    if args.map_path is not None:
+        e_map = Embedding(saved_model_path=args.map_path)
     
     # Discard warmup samples
     chains = []
@@ -65,8 +67,9 @@ if __name__ == '__main__':
     print(df)
     print(df.mean())
 
-    print("rho", e_map[args.words][0, :2])
-    print("alpha", e_map["word0_c"][ :2])
+    if e_map is not None:
+        print("rho", e_map[args.words][0, :2])
+        print("alpha", e_map["word0_c"][ :2])
 
     CHAINS = len(chains)
     for chain in range(CHAINS):
@@ -82,10 +85,12 @@ if __name__ == '__main__':
 
     if args.plot_type == "cossim":
         sns.kdeplot(data=df, x="cossim", hue="chain", common_norm=False)
-        print("Cossim MAP", cossim(e_map["word0"], e_map["word1"]))
+        #if e_map is not None:
+        #    print("Cossim MAP", cossim(e_map["word0"], e_map["word1"]))
     elif args.plot_type == "norm":
         sns.kdeplot(data=df, x="norm", hue="chain", common_norm=False)
-        print("Cossim MAP", np.linalg.norm(e_map["word0"]) )
+        if e_map is not None:
+            print("Cossim MAP", np.linalg.norm(e_map["word0"]) )
     elif args.plot_type == "kde":
         #print(e_post_mean[args.words][0, :2])
         #sns.scatterplot(df, x="rho11", y="rho12")
