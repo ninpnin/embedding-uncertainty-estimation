@@ -3,6 +3,7 @@ import numpy as np
 from embedding_uncertainty.laplace_approx import subhessian, subhessian_analytic
 from embedding_uncertainty.laplace_approx import full_hessian, fixed_inverse_hessian, laplace_approx
 from embedding_uncertainty.laplace_approx import gradient_tf, gradient, hessian_tf
+from embedding_uncertainty.laplace_approx import perword_laplace_approx
 from probabilistic_word_embeddings.embeddings import Embedding
 from probabilistic_word_embeddings.estimation import map_estimate
 import unittest
@@ -131,3 +132,34 @@ class Test(unittest.TestCase):
         for sample in laplace_approx(e_map, data, samples=5, rotational_fix=True):
             print(sample["word0"])
             print(sample["word2"])
+
+    def test_perword_laplace(self):
+
+        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'data/1.json')
+        MAP_FILENAME = os.path.join(os.path.dirname(__file__), 'data/map_estimate.json')
+
+
+        for N in [1000, 10000, 100000]:
+            THRESHOLD = 0.00000001
+            e_map = Embedding(saved_model_path=MAP_FILENAME)
+            K = e_map.dimensionality
+            V = len([wd for wd in e_map.vocabulary if "_c" not in wd])
+            e_map.lambda0 = e_map.dimensionality
+            with open(TESTDATA_FILENAME) as f:
+                d = json.load(f)
+
+            data = []
+            for elem in d["data"][:N]:
+                w, v, x = elem["v"], elem["w"] + "_c", float(elem["x"])
+                data.append((w,v,x))
+
+            assert len(data) == N
+
+            wd = data[0][0]
+            wd_c = data[0][1]
+            #print("wd", wd)
+            samples = perword_laplace_approx(wd, e_map, data, sample_n=100)
+            assert samples.shape == (100, K), f"Samples should be of shape (100, {K}); found : {samples.shape}"
+
+            samples = perword_laplace_approx(wd_c, e_map, data, sample_n=100)
+            assert samples.shape == (100, K), f"Samples should be of shape (100, {K}); found : {samples.shape}"

@@ -307,6 +307,47 @@ def laplace_approx_sigma(e, data, samples=None, rotational_fix=True):
   LOGGER.info("Done!")
   return Sigma
 
+def perword_laplace_approx(wd, e, data, sample_n=None):
+  LOGGER.info("Calculate Hessian")
+  #H = full_hessian(e, data)
+  K = e.dimensionality
+  
+  aggregated_data = {}
+  for item in data:
+    i, j, x = item
+    #pair = (i,j)
+    if i == wd and "_c" not in wd:
+      aggregated_data[j] = aggregated_data.get(j, 0) + 1
+    elif j == wd and "_c" in wd:
+      aggregated_data[i] = aggregated_data.get(i, 0) + 1
+
+  aggregated_data = [(wd, n) for wd, n in aggregated_data.items()]
+  indices = tf.constant([wd for wd, n in aggregated_data])
+  n_plus_minus = tf.constant([n for wd, n in aggregated_data], dtype=tf.float64)
+
+  R = e[indices]
+
+  Sigma = tf.eye(K, dtype=tf.float64) * e.lambda0
+
+  
+  n_R_T = tf.transpose(n_plus_minus * tf.transpose(R))
+
+  #print(R.shape, n_R_T.shape)
+  Sigma = Sigma + tf.linalg.matmul(R, n_R_T, transpose_a=True)
+  assert Sigma.shape == (K, K)
+
+  Sigma = tf.linalg.inv(Sigma)
+
+  mu = e[wd]
+
+  #print("mu", mu)
+  #print("Sigma")
+  #print(np.round(Sigma, 4))
+  if sample_n is not None:
+    return np.random.multivariate_normal(mu, Sigma, size=sample_n)
+  else:
+    return mu, Sigma
+
 
 def _sample_rotation_tangent(e):
   def _sample_S(dim):
