@@ -308,10 +308,7 @@ def laplace_approx_sigma(e, data, samples=None, rotational_fix=True):
   return Sigma
 
 def perword_laplace_approx(wd, e, data, sample_n=None):
-  LOGGER.info("Calculate Hessian")
-  #H = full_hessian(e, data)
   K = e.dimensionality
-  
   aggregated_data = {}
   for item in data:
     i, j, x = item
