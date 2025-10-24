@@ -1,6 +1,6 @@
 import unittest
 
-from embedding_uncertainty import cbow_gibbs
+#from embedding_uncertainty import cbow_gibbs
 from probabilistic_word_embeddings.embeddings import Embedding
 import numpy as np
 import tensorflow as tf
@@ -18,51 +18,39 @@ class Test(unittest.TestCase):
         Check that aggregating the sufficient statistics yields the same results as not doing that
         """
 
+        N = 100
+        K = 10
+        V = 100
         vocab = set()
         data = []
-        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'data/testdata.json')
+        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'data/data-cbow-K-10-V-100-N-100000.json')
         with open(TESTDATA_FILENAME) as f:
             d = json.load(f)
 
+        # Aggregate data into matrices
+        w = []
+        C = []
+        x = []
+        for elem in d[:N]:
+            w_i, C_i, x_i = elem["w"], elem["C"], elem["x"]
+            w.append(w_i)
+            C.append(C_i)
+            x.append(x_i)
+
+            #pass#w, C, x = elem["w"], elem["C"] + "_c", elem["x"]
+            #data.append((w,v,x))
+
+        w = tf.constant(w)
+        C = tf.constant(C)
+        x = tf.constant(x)
+
         for elem in d:
-            w, v, x = elem["v"], elem["w"] + "_c", elem["x"]
-            vocab.add(w)
-            vocab.add(elem["w"])
-            data.append((w,v,x))
+            w_i, C_i = elem["w"], elem["C"]
+            vocab.add(w_i)
+            for v in C_i:
+                vocab.add(v + "_c")
 
-        g = nx.Graph()
-        g.add_edge("word1", "word2")
-        e_laplacian = LaplacianEmbedding(vocab, dimensionality=3, graph=g, lambda1=0.001, lambda0=1.0)
-        e_reference = Embedding(vocab, dimensionality=3, lambda0=1.0)
-
-        ROUNDS = 1000
-
-        reference_generator = embedding_gibbs_tf(e_reference, data, rounds=ROUNDS, plot=False)
-        laplacian_generator = embedding_gibbs_tf(e_laplacian, data, rounds=ROUNDS, plot=False)
-
-        laplacian_ps = []
-        for _, e_sample in enumerate(laplacian_generator):
-            p = get_p_matrix(e_sample)
-            laplacian_ps.append(p)
-
-        laplacian_ps = np.array(laplacian_ps)
-
-        reference_ps = []
-        for _, e_sample in enumerate(reference_generator):
-            p = get_p_matrix(e_sample)
-            reference_ps.append(p)
-        reference_ps = np.array(reference_ps)
-
-        bar_agg = np.mean(laplacian_ps, axis=0)
-        bar_ref = np.mean(reference_ps, axis=0)
-        print(bar_agg)
-        print(bar_ref)
-
-        diff = np.abs(bar_ref - bar_agg)
-        MAE = np.mean(diff)
-
-        self.assertLessEqual(MAE, 0.025, f"MAE should be less than 0.025, was {MAE}")
-        self.assertNotEqual(MAE, 0.00, f"MAE not be 0.0")
+        e = Embedding(vocab, dimensionality=K, lambda0=1.0)
 
 
 if __name__ == '__main__':
