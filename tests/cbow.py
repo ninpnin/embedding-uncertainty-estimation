@@ -13,17 +13,16 @@ import os
 
 class Test(unittest.TestCase):
 
-    def test_laplacian(self):
+    def test_cbow(self):
         """
-        Check that aggregating the sufficient statistics yields the same results as not doing that
+        Test CBOW sampling with per-word alpha sampling
         """
 
-        N = 100
-        K = 10
-        V = 100
+        N, V, K = 1000, 100, 10
         vocab = set()
         data = []
-        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'data/data-cbow-K-10-V-100-N-100000.json')
+        datafile = f'data/data-cbow-K-{K}-V-{V}-N-100000.json'
+        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), datafile)
         with open(TESTDATA_FILENAME) as f:
             d = json.load(f)
 
@@ -37,8 +36,39 @@ class Test(unittest.TestCase):
             C.append(C_i)
             x.append(x_i)
 
-            #pass#w, C, x = elem["w"], elem["C"] + "_c", elem["x"]
-            #data.append((w,v,x))
+        w = tf.constant(w)
+        C = tf.constant(C)
+        x = tf.constant(x)
+
+        for elem in d:
+            w_i, C_i = elem["w"], elem["C"]
+            vocab.add(w_i)
+            for v in C_i:
+                vocab.add(v + "_c")
+
+        e = Embedding(vocab, dimensionality=K, lambda0=1.0)
+
+    def test_cbow_parallel(self):
+        """
+        Test CBOW sampling with parallellized alpha sampling
+        """
+        N, V, K = 1000, 100, 10
+        vocab = set()
+        data = []
+        datafile = f'data/data-cbow-K-{K}-V-{V}-N-100000.json'
+        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), datafile)
+        with open(TESTDATA_FILENAME) as f:
+            d = json.load(f)
+
+        # Aggregate data into matrices
+        w = []
+        C = []
+        x = []
+        for elem in d[:N]:
+            w_i, C_i, x_i = elem["w"], elem["C"], elem["x"]
+            w.append(w_i)
+            C.append(C_i)
+            x.append(x_i)
 
         w = tf.constant(w)
         C = tf.constant(C)
