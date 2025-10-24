@@ -588,3 +588,172 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
         else:
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
+
+def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=10):
+    turns = ["word", "context"]
+    words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
+
+    lambda0 = e.lambda0
+    LOGGER.info(f"Use lambda0 from the embedding object: {lambda0}")
+
+
+    w = []
+    C = []
+    x = []
+
+    words = [wd for wd in e.vocabulary if "_c" not in wd]
+    V = len(words)
+
+    # For filtering out rho's that don't appear in the data
+    rhos_in_data = set()
+    alphas_in_data = set()
+
+    # Save the data indices of occurences of each rho and
+    # alpha in the data
+    rho_data_indices = [[] for _ in range(V)]
+    alpha_data_indices = [[] for _ in range(V)]
+
+    for i, elem in tqdm.tqdm(enumerate(data)):
+        w_i, C_i, x_i = elem["w"], elem["C"], elem["x"]
+        w.append(w_i)
+
+        rhos_in_data.add(w_i)
+
+        w_i_e_index = e.vocabulary[w_i]
+        rho_data_indices[w_i_e_index] = rho_data_indices[w_i_e_index] + [i]
+
+        # TODO: update alpha indices
+
+        for v in C_i:
+            alphas_in_data.add(v)
+            v_e_index = e.vocabulary[v]
+            alpha_data_indices[v_e_index] = alpha_data_indices[v_e_index] + [i]
+
+        C.append(C_i)
+        x.append(x_i)
+
+    w = tf.constant(w)
+    C = tf.constant(C) + "_c"
+    x = tf.constant(x)
+
+    rho_data_indices = tf.ragged.constant(rho_data_indices)
+    print(rho_data_indices)
+    alpha_data_indices = tf.ragged.constant(alpha_data_indices)
+
+    LOGGER.debug(f"w shape {w.shape}")
+    LOGGER.debug(f"C shape {C.shape}")
+    LOGGER.debug(f"x shape {x.shape}")
+
+    LOGGER.debug(f"w shape {w}")
+    LOGGER.debug(f"C shape {C}")
+    LOGGER.debug(f"x shape {x}")
+
+
+    for ix in range(rounds):
+        LOGGER.train(f"Flip turn {ix}")
+        prior_count = 0
+
+        # Sample omega from the Polya-Gamma distribution
+        rhos = e[w]
+        alphas = tf.reduce_sum(e[C], axis=1)
+        LOGGER.debug(f"rhos {rhos.shape}")
+        LOGGER.debug(f"alphas {alphas.shape}")
+
+        etas = tf.reduce_sum(alphas * rhos, axis=-1)
+
+        # For the CBOW model, the b parameter is always 1
+        # since we cannot do data aggregation
+        omega = tf.constant(random_polyagamma(1, np.array(etas)))
+        LOGGER.debug(f"omega {omega}")
+
+        # Sample rho's given omega and alpha, a batch of batch_size at a time
+        for j in range(V // batch_size):
+            j0, j1 = batch_size * j, batch_size * (j+1)
+            words_batch = words[j0:j1]
+
+            # Only calculate A for the parameters that appear in the data
+            words_with_data = [wd for wd in words_batch if wd in rhos_in_data]
+
+            # Words without data are sampled directly from the prior
+            words_without_data = [wd for wd in words_batch if wd not in rhos_in_data]
+
+            if len(words_with_data) >= 1:
+                LOGGER.debug(f"sample rhos: {words_with_data}")
+
+                # Gather data
+                indices_batch = e.tf_vocabulary[tf.constant(words_with_data)]
+                occurences_batch = tf.gather(rho_data_indices, indices_batch)
+                C_U = tf.gather(C, occurences_batch)
+
+                # For sampling rhos, we can just sum the context vectors alpha
+                # To get alpha^U
+                alpha_U = e[C_U]
+                alpha_U = tf.reduce_sum(alpha_U, axis=-2)
+
+                # Fetch omegas for the correct indices
+                omega_U = tf.gather(omega, occurences_batch)
+
+                # expand last dim to make broadcasting possible
+                omega_scaled_alpha_U = tf.expand_dims(omega_U, axis=-1) * alpha_U
+
+                # calculate the precision matrices
+                alpha_T_Omega_alpha =  tf.linalg.matmul(omega_scaled_alpha_U, alpha_U, transpose_a=True)
+
+                # TODO: calculate means via delta and kappa
+
+
+            # TODO: organize precision submatrices to a full precision matrix
+
+            # TODO: sample via Cholesky decomposing the precision and solving L^T x = y
+            # where y is a standard Gaussian
+
+
+        # TODO: sample alphas
+        for j in range(V // batch_size):
+            j0, j1 = batch_size * j, batch_size * (j+1)
+            words_batch = words[j0:j1]
+
+            # Only calculate R for the parameters that appear in the data
+            words_with_data = [wd for wd in words_batch if wd in alphas_in_data]
+
+            # Words without data are sampled directly from the prior
+            words_without_data = [wd for wd in words_batch if wd not in alphas_in_data]
+
+            if len(words_with_data) >= 1:
+                LOGGER.debug(f"sample rhos: {words_with_data}")
+
+                indices_batch = e.tf_vocabulary[tf.constant(words_with_data)]
+                #print(indices_batch)
+                #print(alpha_data_indices.shape)
+                occurences_batch = tf.gather(alpha_data_indices, indices_batch)
+                #print(occurences_batch)
+                w_U = tf.gather(w, occurences_batch)
+                #print(w_U)
+
+                R_U = e[w_U]
+
+                # Fetch omegas for the correct indices
+                omega_U = tf.gather(omega, occurences_batch)
+
+                # expand last dim to make broadcasting possible
+                R_U_omega_U = tf.expand_dims(omega_U, axis=-1) * R_U
+
+                # calculate the precision matrices
+                R_T_Omega_R =  tf.linalg.matmul(R_U_omega_U, R_U, transpose_a=True)
+
+                print(R_T_Omega_R.shape)
+
+                # TODO: deal with the off-diagonal
+
+
+        # Calculate log_posterior and yield sample
+        if ix % (yield_every * ll_every * 2) == 0:
+            e_sample = copy.deepcopy(e)
+            exit()
+
+            #yield e_sample
+
+
+
+
+
