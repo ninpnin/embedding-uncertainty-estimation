@@ -14,6 +14,9 @@ import tqdm
 LOGGER.info("Done!")
 from time import perf_counter as pc
 
+def print_tf_tensor(arr, precision=2):
+    print(np.array2string(arr.numpy(), precision=precision, suppress_small=True))
+
 def get_v_omega_tf(X, omega, sigma_prior_inv):
     XT2 = tf.transpose(X, perm=[2,1,0])
     XTomega = (XT2 * omega)
@@ -589,19 +592,17 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
 
-def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=10):
-    turns = ["word", "context"]
+def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=3):
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
 
     lambda0 = e.lambda0
     LOGGER.info(f"Use lambda0 from the embedding object: {lambda0}")
 
-
     w = []
     C = []
     x = []
 
-    words = [wd for wd in e.vocabulary if "_c" not in wd]
+    K = e.dimensionality
     V = len(words)
 
     # For filtering out rho's that don't appear in the data
@@ -622,8 +623,6 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
         w_i_e_index = e.vocabulary[w_i]
         rho_data_indices[w_i_e_index] = rho_data_indices[w_i_e_index] + [i]
 
-        # TODO: update alpha indices
-
         for v in C_i:
             alphas_in_data.add(v)
             v_e_index = e.vocabulary[v]
@@ -635,6 +634,10 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
     w = tf.constant(w)
     C = tf.constant(C) + "_c"
     x = tf.constant(x)
+
+    # Kappa is defined as a - b / 2; for the CBOW model
+    # we always have a \in {0, 1}, and b = 1
+    kappa = tf.cast(x, tf.float64) - 0.5
 
     rho_data_indices = tf.ragged.constant(rho_data_indices)
     print(rho_data_indices)
@@ -648,6 +651,8 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
     LOGGER.debug(f"C shape {C}")
     LOGGER.debug(f"x shape {x}")
 
+    B_inv_rho = tf.eye(K, dtype=tf.float64)
+    B_inv_alpha = tf.eye(K, dtype=tf.float64)
 
     for ix in range(rounds):
         LOGGER.train(f"Flip turn {ix}")
@@ -687,20 +692,42 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
 
                 # For sampling rhos, we can just sum the context vectors alpha
                 # To get alpha^U
-                alpha_U = e[C_U]
-                alpha_U = tf.reduce_sum(alpha_U, axis=-2)
+                A_U = e[C_U]
+                A_U = tf.reduce_sum(A_U, axis=-2)
 
                 # Fetch omegas for the correct indices
                 omega_U = tf.gather(omega, occurences_batch)
 
                 # expand last dim to make broadcasting possible
-                omega_scaled_alpha_U = tf.expand_dims(omega_U, axis=-1) * alpha_U
+                omega_scaled_A_U = tf.expand_dims(omega_U, axis=-1) * A_U
 
                 # calculate the precision matrices
-                alpha_T_Omega_alpha =  tf.linalg.matmul(omega_scaled_alpha_U, alpha_U, transpose_a=True)
+                A_T_Omega_A =  tf.linalg.matmul(omega_scaled_A_U, A_U, transpose_a=True)
+                A_T_Omega_A = A_T_Omega_A.to_tensor() # always of size (batch_size, K, K)
 
-                # TODO: calculate means via delta and kappa
+                # Add prior to get V_omega
+                print(A_T_Omega_A)
+                V_omega_rho_inv = A_T_Omega_A + B_inv_rho
+                print(V_omega_rho_inv)
 
+                # Mean 
+                kappa_U = tf.gather(kappa, occurences_batch)
+                LOGGER.debug(f"kappa_U (rho) shape: {kappa_U.shape}, A_T_Omega_A: {A_T_Omega_A.shape}")
+                LOGGER.debug(f"kappa_U: {type(kappa_U)}; A_T_Omega_A: {type(A_T_Omega_A)}")
+
+                # TODO: do an efficient solve
+
+                chol_A_T_Omega_A = tf.linalg.cholesky(V_omega_rho_inv)
+                LOGGER.debug(f"A_U.shape: {A_U.shape}; kappa_U: {kappa_U.shape}")
+
+                # Calculate the mean mu_omega
+                A_T_Kappa_U =  tf.linalg.matvec(A_U, kappa_U, transpose_a=True)
+                # A_T_Kappa_U is always of size (batch_size, K)
+                A_T_Kappa_U = A_T_Kappa_U.to_tensor()
+                # TODO: solve via Cholesky and double triag solve
+                mu_omega = tf.linalg.solve(V_omega_rho_inv, tf.expand_dims(A_T_Kappa_U,axis=-1))
+
+                # TODO: sample
 
             # TODO: organize precision submatrices to a full precision matrix
 
@@ -720,16 +747,14 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
             words_without_data = [wd for wd in words_batch if wd not in alphas_in_data]
 
             if len(words_with_data) >= 1:
+                wwd_len = len(words_with_data)
+                V_omega_inv = tf.zeros((K * wwd_len, K * wwd_len), dtype=tf.float64)
                 LOGGER.debug(f"sample rhos: {words_with_data}")
 
                 indices_batch = e.tf_vocabulary[tf.constant(words_with_data)]
-                #print(indices_batch)
-                #print(alpha_data_indices.shape)
                 occurences_batch = tf.gather(alpha_data_indices, indices_batch)
-                #print(occurences_batch)
-                w_U = tf.gather(w, occurences_batch)
-                #print(w_U)
 
+                w_U = tf.gather(w, occurences_batch)
                 R_U = e[w_U]
 
                 # Fetch omegas for the correct indices
@@ -740,10 +765,29 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
 
                 # calculate the precision matrices
                 R_T_Omega_R =  tf.linalg.matmul(R_U_omega_U, R_U, transpose_a=True)
+                # R_T_Omega_R is always of size (batch_size, K, K)
+                R_T_Omega_R = R_T_Omega_R.to_tensor()
 
                 print(R_T_Omega_R.shape)
 
+                # Initialize V_omega as a block matrix consisting of the prior
+                V_Omega = tf.experimental.numpy.kron(tf.eye(wwd_len), B_inv_alpha)
+
+                # Add R_T_Omega_R as block diagonals
+                for j in range(wwd_len):
+                    # Create tensor with one nonzero element at [j,j]
+                    E_diag = tf.sparse.to_dense(tf.sparse.SparseTensor([[j,j]], [1.0], [wwd_len, wwd_len]))
+                    V_Omega += tf.experimental.numpy.kron(E_diag, R_T_Omega_R[j])
+
+                print_tf_tensor(V_Omega, 3)
+
                 # TODO: deal with the off-diagonal
+                for ix, indices in enumerate([]):
+                    j, k = indices
+                    # Create tensor with two nonzero elements at [j,k] and [k, j]
+                    E_diag = tf.sparse.to_dense(tf.sparse.SparseTensor([[j,k], [k,j]], [1.0, 1.0], [wwd_len, wwd_len]))
+                    V_Omega += tf.experimental.numpy.kron(E_diag, R_T_Omega_R_offdiag[ix])
+
 
 
         # Calculate log_posterior and yield sample
