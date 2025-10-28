@@ -609,6 +609,8 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
     rhos_in_data = set()
     alphas_in_data = set()
 
+    alpha_co_occurences = nx.Graph()
+
     # Save the data indices of occurences of each rho and
     # alpha in the data
     rho_data_indices = [[] for _ in range(V)]
@@ -627,6 +629,11 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
             alphas_in_data.add(v)
             v_e_index = e.vocabulary[v]
             alpha_data_indices[v_e_index] = alpha_data_indices[v_e_index] + [i]
+
+        for v1 in C_i:
+            for v2 in C_i:
+                if v1 != v2:
+                    alpha_co_occurences.add_edge(v1, v2)
 
         C.append(C_i)
         x.append(x_i)
@@ -683,6 +690,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
             words_without_data = [wd for wd in words_batch if wd not in rhos_in_data]
 
             if len(words_with_data) >= 1:
+                wwd_len = len(words_with_data)
                 LOGGER.debug(f"sample rhos: {words_with_data}")
 
                 # Gather data
@@ -706,9 +714,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 A_T_Omega_A = A_T_Omega_A.to_tensor() # always of size (batch_size, K, K)
 
                 # Add prior to get V_omega
-                print(A_T_Omega_A)
                 V_omega_rho_inv = A_T_Omega_A + B_inv_rho
-                print(V_omega_rho_inv)
 
                 # Mean 
                 kappa_U = tf.gather(kappa, occurences_batch)
@@ -717,23 +723,32 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
 
                 # TODO: do an efficient solve
 
-                chol_A_T_Omega_A = tf.linalg.cholesky(V_omega_rho_inv)
                 LOGGER.debug(f"A_U.shape: {A_U.shape}; kappa_U: {kappa_U.shape}")
 
                 # Calculate the mean mu_omega
                 A_T_Kappa_U =  tf.linalg.matvec(A_U, kappa_U, transpose_a=True)
                 # A_T_Kappa_U is always of size (batch_size, K)
                 A_T_Kappa_U = A_T_Kappa_U.to_tensor()
-                # TODO: solve via Cholesky and double triag solve
-                mu_omega = tf.linalg.solve(V_omega_rho_inv, tf.expand_dims(A_T_Kappa_U,axis=-1))
 
-                # TODO: sample
+                # Cholesky decompose the precision matrix
+                L_omega_rho_inv = tf.linalg.cholesky(V_omega_rho_inv)
 
-            # TODO: organize precision submatrices to a full precision matrix
+                # Dual Cholesky solve for mu_omega: 
+                # LL^T mu = y
+                # First: L b = y
+                # Then: L^T mu = b
+                mu_omega_b = tf.linalg.triangular_solve(L_omega_rho_inv, tf.expand_dims(A_T_Kappa_U, axis=-1))
+                mu_omega = tf.linalg.triangular_solve(tf.transpose(L_omega_rho_inv, perm=[0,2,1]), mu_omega_b, lower=False)
 
-            # TODO: sample via Cholesky decomposing the precision and solving L^T x = y
-            # where y is a standard Gaussian
+                # Single Cholesky solve for the offset
+                y_delta = tf.random.normal((wwd_len, K, 1), dtype=tf.float64)
+                x_delta = tf.linalg.triangular_solve(tf.transpose(L_omega_rho_inv, perm=[0,2,1]), y_delta, lower=False)
 
+                new_vals = mu_omega + x_delta
+                new_vals = tf.reduce_sum(new_vals, axis=-1)
+                LOGGER.debug(f"{new_vals} {new_vals.shape}")
+
+                e[words_with_data] = new_vals
 
         # TODO: sample alphas
         for j in range(V // batch_size):
@@ -748,8 +763,12 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
 
             if len(words_with_data) >= 1:
                 wwd_len = len(words_with_data)
+                co_occurences_U = alpha_co_occurences.subgraph(words_with_data)
+                print(co_occurences_U)
+                print(co_occurences_U.edges)
+
                 V_omega_inv = tf.zeros((K * wwd_len, K * wwd_len), dtype=tf.float64)
-                LOGGER.debug(f"sample rhos: {words_with_data}")
+                LOGGER.debug(f"sample alphas: {words_with_data}")
 
                 indices_batch = e.tf_vocabulary[tf.constant(words_with_data)]
                 occurences_batch = tf.gather(alpha_data_indices, indices_batch)
@@ -782,13 +801,51 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 print_tf_tensor(V_Omega, 3)
 
                 # TODO: deal with the off-diagonal
-                for ix, indices in enumerate([]):
-                    j, k = indices
+                for ix, wds in enumerate(co_occurences_U.edges):
+                    j, k = wds
+                    print(j, k)
+                    indices_j = e.tf_vocabulary[tf.constant([j])]
+                    indices_k = e.tf_vocabulary[tf.constant([k])]
+
+                    occurences_j = tf.gather(alpha_data_indices, indices_j).to_tensor()
+                    occurences_k = tf.gather(alpha_data_indices, indices_k).to_tensor()
+                    print(occurences_j)
+                    print(occurences_k)
+
+                    occurences_jk = tf.sparse.to_dense(tf.sets.intersection(occurences_j, occurences_k))
+
+                    w_jk = tf.gather(w, occurences_jk)
+                    omega_jk = tf.gather(omega, occurences_jk)
+                    R_jk = e[w_jk]
+
+                    # R_T_Omega_R is always of size (batch_size, K, K)
+
+                    print("occurences", occurences_jk.shape)
+
+                    R_jk_omega_jk = tf.expand_dims(omega_jk, axis=-1) * R_jk
+                    print(R_jk_omega_jk.shape)
+                    print(R_jk.shape)
+                    R_jk_omega_jk_R_jk =  tf.linalg.matmul(R_jk_omega_jk, R_jk, transpose_a=True)
+
+                    print(R_jk_omega_jk_R_jk.shape)
+
+                    assert R_jk_omega_jk_R_jk.shape[0] == 1
+
+                    R_jk_omega_jk_R_jk = tf.reduce_sum(R_jk_omega_jk_R_jk, axis=0)
+                    #exit()
+
                     # Create tensor with two nonzero elements at [j,k] and [k, j]
-                    E_diag = tf.sparse.to_dense(tf.sparse.SparseTensor([[j,k], [k,j]], [1.0, 1.0], [wwd_len, wwd_len]))
-                    V_Omega += tf.experimental.numpy.kron(E_diag, R_T_Omega_R_offdiag[ix])
 
+                    j = words_with_data.index(j)
+                    k = words_with_data.index(k)
+                    E_sparsetensor = tf.sparse.SparseTensor([[j,k], [k,j]], [1.0, 1.0], [wwd_len, wwd_len])
+                    E_diag = tf.sparse.to_dense(tf.sparse.reorder(E_sparsetensor))
+                    print(E_diag.shape, R_jk_omega_jk_R_jk.shape)
+                    V_Omega += tf.experimental.numpy.kron(E_diag, R_jk_omega_jk_R_jk)
 
+                print_tf_tensor(V_Omega, 3)
+                if len(co_occurences_U.edges) >= 1:
+                    exit()
 
         # Calculate log_posterior and yield sample
         if ix % (yield_every * ll_every * 2) == 0:
