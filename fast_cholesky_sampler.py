@@ -26,14 +26,22 @@ def sample_directly_tf(V_inv):
     return tf.linalg.matvec(L, tf.random.normal([K], dtype=tf.float64))
 
 @tf.function
-def sample_via_solve(V_inv):
-    L_inv_T = tf.transpose(tf.linalg.cholesky(V_inv))
+def sample_via_solve(V_inv, COPIES=1):
+    V_inv = tf.tile(tf.expand_dims(V_inv, axis=0), [COPIES,1,1])
+    L_inv_T = tf.transpose(tf.linalg.cholesky(V_inv), perm=[0,2,1])
+    y = tf.random.normal([COPIES, K, 1], dtype=tf.float64)
+    #y = tf.linalg.matvec(V_inv, y)
+    #print(V_inv.shape, y.shape)
+    #V_inv = tf.tile(tf.expand_dims(V_inv, axis=0), [COPIES,1,1])
+
+
     #L_inv_T = tf.linalg.cholesky(V_inv)
-    y = tf.random.normal([K, 1], dtype=tf.float64)
+    #y = tf.random.normal([K, 1], dtype=tf.float64)
     return tf.linalg.triangular_solve(L_inv_T, y, lower=False)
 
-@tf.function
+#@tf.function
 def conjugate_gradient(A, b, tol=1e-10, max_iter=15):
+    print(A.shape, b.shape)
     x = tf.zeros_like(b)
     r = b - tf.linalg.matvec(A, x)
     p = r
@@ -49,14 +57,15 @@ def conjugate_gradient(A, b, tol=1e-10, max_iter=15):
         #    return x
         p = r + (rsnew / rsold) * p
         rsold = rsnew
-    return x    
+    return x
 
 @tf.function
-def sample_via_indirect_solve(V_inv):
+def sample_via_indirect_solve(V_inv, COPIES = 50):
     #operator = tf.linalg.LinearOperatorFullMatrix(V_inv, is_self_adjoint=True, is_positive_definite=True)
-    y = tf.random.normal([1, K], dtype=tf.float64)
+    y = tf.random.normal([COPIES, K], dtype=tf.float64)
     #y = tf.linalg.matvec(V_inv, y)
     #print(V_inv.shape, y.shape)
+    V_inv = tf.tile(tf.expand_dims(V_inv, axis=0), [COPIES,1,1])
     x = conjugate_gradient(V_inv, y)
     #print(result)
     #y = tf.random.normal([K, 1], dtype=tf.float64)
@@ -95,23 +104,26 @@ if __name__ == '__main__':
         #print("time:", duration_direct_tf)
 
         V_inv = tf.constant(V_inv)
+        COPIES = 50
         t0 = pc()
-        x3 = sample_via_solve(V_inv)
+        x3 = sample_via_solve(V_inv, COPIES=COPIES)[0]
         t1 = pc()
         data["x1"] += [x3[0]]
         data["x2"] += [x3[1]]
         data["method"] += ["solve"]
-        duration_via_solve += t1 - t0
+        duration_via_solve += (t1 - t0)/COPIES
 
         V_inv = tf.constant(V_inv)
+        COPIES = 200
         t0 = pc()
-        x3 = sample_via_indirect_solve(V_inv)[0]
+        x3 = sample_via_indirect_solve(V_inv, COPIES=COPIES)
         t1 = pc()
-        #rint(x3)
+        #print(x3)
+        x3 = x3[0]
         data["x1"] += [x3[0]]
         data["x2"] += [x3[1]]
         data["method"] += ["id-solve"]
-        duration_via_id_solve += t1 - t0
+        duration_via_id_solve += (t1 - t0) / COPIES
         #print("time:", duration_via_solve)
 
     df = pl.DataFrame(data)
