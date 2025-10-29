@@ -767,8 +767,6 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
             if len(words_with_data) >= 1:
                 wwd_len = len(words_with_data)
                 co_occurences_U = alpha_co_occurences.subgraph(words_with_data)
-                print(co_occurences_U)
-                print(co_occurences_U.edges)
 
                 V_omega_inv = tf.zeros((K * wwd_len, K * wwd_len), dtype=tf.float64)
                 LOGGER.debug(f"sample alphas: {words_with_data}")
@@ -789,8 +787,6 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 R_T_Omega_R =  tf.linalg.matmul(R_U_omega_U, R_U, transpose_a=True)
                 # R_T_Omega_R is always of size (batch_size, K, K)
                 R_T_Omega_R = R_T_Omega_R.to_tensor()
-
-                print(R_T_Omega_R.shape)
 
                 # Initialize V_omega as a block matrix consisting of the prior
                 V_Omega = tf.experimental.numpy.kron(tf.eye(wwd_len), B_inv_alpha)
@@ -857,16 +853,64 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 # 6. Gather delta_U as a ragged tensor
                 # 7. (pre)-calculate next eta
 
+                alpha_U = e[words_with_data]
+                alpha_U = tf.expand_dims(alpha_U, axis=1)
+                delta_U = R_U * alpha_U
+                delta_U = tf.reduce_sum(delta_U, axis=-1)
 
-                print_tf_tensor(V_Omega, 3)
-                print_tf_tensor(L_Omega, 3)
-                #if len(co_occurences_U.edges) >= 1:
-                #    exit()
+                # Flatten arrays for nd_scatter
+                delta_U_flat = delta_U.flat_values
+                occurences_U_flat = occurences_batch.flat_values
+                
+                # Re-calculate etas
+                rhos = e[w]
+                alphas = tf.reduce_sum(e[C], axis=1)
+                etas = tf.reduce_sum(alphas * rhos, axis=-1)
+
+                # Addition to eta contributes by U
+                addition = tf.scatter_nd(tf.expand_dims(occurences_U_flat, axis=-1), delta_U_flat, etas.shape)
+                deltas = etas - addition
+
+                delta_U = tf.gather(deltas, occurences_batch)
+                delta_U_omega_U = delta_U * omega_U
+
+                kappa_minus_delta_omega = tf.gather(kappa, occurences_batch) - delta_U_omega_U
+                print(kappa_minus_delta_omega)
+
+                mu_omega_inv = tf.linalg.matvec(R_U, kappa_minus_delta_omega, transpose_a=True)
+                mu_omega_inv = mu_omega_inv.flat_values
+                print(mu_omega_inv)
+                #print(addition)
+
+                #y = tf.random.normal((wwd_len, K), dtype=tf.float64)
+                #y = tf.stack([mu_omega_inv, y])
+
+                print(L_Omega.shape)
+                mu_omega_inv1 = tf.linalg.triangular_solve(
+                    tf.transpose(L_Omega), tf.expand_dims(mu_omega_inv, axis=-1),
+                    lower=False
+                )
+                mu_omega = tf.linalg.triangular_solve(L_Omega, mu_omega_inv1)
+
+                x = tf.linalg.triangular_solve(
+                    tf.transpose(L_Omega), tf.random.normal((wwd_len * K, 1), dtype=tf.float64),
+                    lower=False
+                )
+
+                new_vals = mu_omega + x
+                print(new_vals)
+                new_vals = tf.reshape(new_vals, [K, wwd_len])
+                print(new_vals)
+
+                e[words_with_data] = tf.transpose(new_vals)
+                #exit()
+                #print_tf_tensor(V_Omega, 3)
+                #print_tf_tensor(L_Omega, 3)
 
         # Calculate log_posterior and yield sample
-        if ix % (yield_every * ll_every * 2) == 0:
-            e_sample = copy.deepcopy(e)
-            exit()
+        #if ix % (yield_every * ll_every * 2) == 0:
+        #    e_sample = copy.deepcopy(e)
+        #    exit()
 
             #yield e_sample
 
