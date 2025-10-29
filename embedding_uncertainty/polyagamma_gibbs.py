@@ -749,6 +749,18 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
 
                 e[words_with_data] = new_vals
 
+            # Sample params without data from prior
+            if len(words_without_data) >= 1:
+                wwo_len = len(words_without_data)
+                L_inv = tf.linalg.cholesky(B_inv_rho)
+                
+                x_omega = tf.linalg.triangular_solve(
+                    tf.transpose(L_inv), tf.random.normal((K, wwo_len), dtype=tf.float64),
+                    lower=False
+                )
+
+                e[words_without_data] = tf.transpose(x_omega)
+
         etas = tf.reduce_sum(alphas * rhos, axis=-1)
         deltas = etas
 
@@ -900,7 +912,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
             # Sample params without data from prior
             if len(words_without_data) >= 1:
                 wwo_len = len(words_without_data)
-                L_inv = tf.linalg.cholesky(B_inv_rho)
+                L_inv = tf.linalg.cholesky(B_inv_alpha)
                 
                 x_omega = tf.linalg.triangular_solve(
                     tf.transpose(L_inv), tf.random.normal((K, wwo_len), dtype=tf.float64),
@@ -918,15 +930,9 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
 
         print("log_ll", log_ll.numpy(), "log_posterior", log_posterior.numpy())
 
+        yield copy.deepcopy(e)
 
-        #   x * sigm + (1-x) * (1-sigm)
-        # = x * sigm + 1- x -sigm)
-        # Calculate log_posterior and yield sample
-        #if ix % (yield_every * ll_every * 2) == 0:
-        #    e_sample = copy.deepcopy(e)
-        #    exit()
 
-            #yield e_sample
 
 
 
