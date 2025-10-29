@@ -592,7 +592,7 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
 
-def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=3):
+def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=10):
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
 
     lambda0 = e.lambda0
@@ -647,7 +647,6 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
     kappa = tf.cast(x, tf.float64) - 0.5
 
     rho_data_indices = tf.ragged.constant(rho_data_indices)
-    print(rho_data_indices)
     alpha_data_indices = tf.ragged.constant(alpha_data_indices)
 
     LOGGER.debug(f"w shape {w.shape}")
@@ -764,6 +763,9 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
             # Words without data are sampled directly from the prior
             words_without_data = [wd for wd in words_batch if wd not in alphas_in_data]
 
+            words_with_data_c = [f"{wd}_c" for wd in words_with_data]
+            words_without_data_c = [f"{wd}_c" for wd in words_without_data]
+
             # Sample params with data from posterior 
             if len(words_with_data) >= 1:
                 wwd_len = len(words_with_data)
@@ -798,7 +800,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                     E_diag = tf.sparse.to_dense(tf.sparse.SparseTensor([[j,j]], [1.0], [wwd_len, wwd_len]))
                     V_Omega += tf.experimental.numpy.kron(E_diag, R_T_Omega_R[j])
 
-                print_tf_tensor(V_Omega, 3)
+                #print_tf_tensor(V_Omega, 3)
 
                 # TODO: deal with the off-diagonal
                 for ix, wds in enumerate(co_occurences_U.edges):
@@ -816,16 +818,8 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                     R_jk = e[w_jk]
 
                     # R_T_Omega_R is always of size (batch_size, K, K)
-
-                    print("occurences", occurences_jk.shape)
-
                     R_jk_omega_jk = tf.expand_dims(omega_jk, axis=-1) * R_jk
-                    print(R_jk_omega_jk.shape)
-                    print(R_jk.shape)
                     R_jk_omega_jk_R_jk =  tf.linalg.matmul(R_jk_omega_jk, R_jk, transpose_a=True)
-
-                    print(R_jk_omega_jk_R_jk.shape)
-
                     assert R_jk_omega_jk_R_jk.shape[0] == 1
 
                     R_jk_omega_jk_R_jk = tf.reduce_sum(R_jk_omega_jk_R_jk, axis=0)
@@ -836,7 +830,6 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                     k = words_with_data.index(k)
                     E_sparsetensor = tf.sparse.SparseTensor([[j,k], [k,j]], [1.0, 1.0], [wwd_len, wwd_len])
                     E_diag = tf.sparse.to_dense(tf.sparse.reorder(E_sparsetensor))
-                    print(E_diag.shape, R_jk_omega_jk_R_jk.shape)
                     V_Omega += tf.experimental.numpy.kron(E_diag, R_jk_omega_jk_R_jk)
 
                 L_Omega = tf.linalg.cholesky(V_Omega)
@@ -876,7 +869,6 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 delta_U_omega_U = delta_U * omega_U
 
                 kappa_minus_delta_omega = tf.gather(kappa, occurences_batch) - delta_U_omega_U
-                print(kappa_minus_delta_omega)
 
                 # Find mu_omega via Cholesky: double tridiagonal solve
                 mu_omega_inv = tf.linalg.matvec(R_U, kappa_minus_delta_omega, transpose_a=True)
@@ -888,12 +880,11 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 mu_omega = tf.linalg.triangular_solve(L_Omega, mu_omega_inv1)
 
                 # Add covariance noise via Cholesky: single tridiagonal solve
-                x = tf.linalg.triangular_solve(
+                x_omega = tf.linalg.triangular_solve(
                     tf.transpose(L_Omega), tf.random.normal((wwd_len * K, 1), dtype=tf.float64),
                     lower=False
                 )
-
-                new_vals = mu_omega + x
+                new_vals = mu_omega + x_omega
 
                 first_vec = new_vals[:K, 0]
                 new_vals = tf.reshape(new_vals, [wwd_len, K])
@@ -904,24 +895,32 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 assert first_vec_prime.shape == first_vec.shape, f"Vector shapes should match {first_vec_prime.shape} vs {first_vec.shape}"
                 assert np.max(np.abs(first_vec_prime - first_vec)) < 0.00001, assert_msg
 
-                e[words_with_data] = new_vals
-                #exit()
-                #exit()
-                #print_tf_tensor(V_Omega, 3)
-                #print_tf_tensor(L_Omega, 3)
+                e[words_with_data_c] = new_vals
 
             # Sample params without data from prior
             if len(words_without_data) >= 1:
                 wwo_len = len(words_without_data)
                 L_inv = tf.linalg.cholesky(B_inv_rho)
                 
-                x = tf.linalg.triangular_solve(
+                x_omega = tf.linalg.triangular_solve(
                     tf.transpose(L_inv), tf.random.normal((K, wwo_len), dtype=tf.float64),
                     lower=False
                 )
 
-                e[words_without_data] = tf.transpose(x)
+                e[words_without_data_c] = tf.transpose(x_omega)
 
+        sigm = tf.math.sigmoid(etas)
+        x64 = tf.cast(x, dtype=tf.float64)
+        p = sigm * x64  + (1-x64) * (1-sigm)
+        log_p = tf.math.log(p)
+        log_ll = tf.reduce_mean(log_p)
+        log_posterior = log_ll + e.log_prob(batch_size=1, data_size=len(x))
+
+        print("log_ll", log_ll.numpy(), "log_posterior", log_posterior.numpy())
+
+
+        #   x * sigm + (1-x) * (1-sigm)
+        # = x * sigm + 1- x -sigm)
         # Calculate log_posterior and yield sample
         #if ix % (yield_every * ll_every * 2) == 0:
         #    e_sample = copy.deepcopy(e)
