@@ -877,32 +877,34 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 kappa_minus_delta_omega = tf.gather(kappa, occurences_batch) - delta_U_omega_U
                 print(kappa_minus_delta_omega)
 
+                # Find mu_omega via Cholesky: double tridiagonal solve
                 mu_omega_inv = tf.linalg.matvec(R_U, kappa_minus_delta_omega, transpose_a=True)
                 mu_omega_inv = mu_omega_inv.flat_values
-                print(mu_omega_inv)
-                #print(addition)
-
-                #y = tf.random.normal((wwd_len, K), dtype=tf.float64)
-                #y = tf.stack([mu_omega_inv, y])
-
-                print(L_Omega.shape)
                 mu_omega_inv1 = tf.linalg.triangular_solve(
                     tf.transpose(L_Omega), tf.expand_dims(mu_omega_inv, axis=-1),
                     lower=False
                 )
                 mu_omega = tf.linalg.triangular_solve(L_Omega, mu_omega_inv1)
 
+                # Add covariance noise via Cholesky: single tridiagonal solve
                 x = tf.linalg.triangular_solve(
                     tf.transpose(L_Omega), tf.random.normal((wwd_len * K, 1), dtype=tf.float64),
                     lower=False
                 )
 
                 new_vals = mu_omega + x
-                print(new_vals)
-                new_vals = tf.reshape(new_vals, [K, wwd_len])
-                print(new_vals)
 
-                e[words_with_data] = tf.transpose(new_vals)
+                first_vec = new_vals[:K, 0]
+                new_vals = tf.reshape(new_vals, [wwd_len, K])
+                first_vec_prime = new_vals[0]
+
+                #print(first_vec, first_vec_prime)
+                assert_msg = f"First element of reshaped array {first_vec_prime} should be same as the K first entries {first_vec}"
+                assert first_vec_prime.shape == first_vec.shape, f"Vector shapes should match {first_vec_prime.shape} vs {first_vec.shape}"
+                assert np.max(np.abs(first_vec_prime - first_vec)) < 0.00001, assert_msg
+
+                e[words_with_data] = new_vals
+                #exit()
                 #exit()
                 #print_tf_tensor(V_Omega, 3)
                 #print_tf_tensor(L_Omega, 3)
