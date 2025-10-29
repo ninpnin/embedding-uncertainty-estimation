@@ -764,6 +764,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
             # Words without data are sampled directly from the prior
             words_without_data = [wd for wd in words_batch if wd not in alphas_in_data]
 
+            # Sample params with data from posterior 
             if len(words_with_data) >= 1:
                 wwd_len = len(words_with_data)
                 co_occurences_U = alpha_co_occurences.subgraph(words_with_data)
@@ -908,6 +909,18 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 #exit()
                 #print_tf_tensor(V_Omega, 3)
                 #print_tf_tensor(L_Omega, 3)
+
+            # Sample params without data from prior
+            if len(words_without_data) >= 1:
+                wwo_len = len(words_without_data)
+                L_inv = tf.linalg.cholesky(B_inv_rho)
+                
+                x = tf.linalg.triangular_solve(
+                    tf.transpose(L_inv), tf.random.normal((K, wwo_len), dtype=tf.float64),
+                    lower=False
+                )
+
+                e[words_without_data] = tf.transpose(x)
 
         # Calculate log_posterior and yield sample
         #if ix % (yield_every * ll_every * 2) == 0:
