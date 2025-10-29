@@ -658,8 +658,8 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
     LOGGER.debug(f"C shape {C}")
     LOGGER.debug(f"x shape {x}")
 
-    B_inv_rho = tf.eye(K, dtype=tf.float64)
-    B_inv_alpha = tf.eye(K, dtype=tf.float64)
+    B_inv_rho = tf.eye(K, dtype=tf.float64) * e.lambda0
+    B_inv_alpha = tf.eye(K, dtype=tf.float64) * e.lambda0
 
     for ix in range(rounds):
         LOGGER.train(f"Flip turn {ix}")
@@ -750,6 +750,9 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
 
                 e[words_with_data] = new_vals
 
+        etas = tf.reduce_sum(alphas * rhos, axis=-1)
+        deltas = etas
+
         # TODO: sample alphas
         for j in range(V // batch_size):
             j0, j1 = batch_size * j, batch_size * (j+1)
@@ -803,14 +806,11 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 # TODO: deal with the off-diagonal
                 for ix, wds in enumerate(co_occurences_U.edges):
                     j, k = wds
-                    print(j, k)
                     indices_j = e.tf_vocabulary[tf.constant([j])]
                     indices_k = e.tf_vocabulary[tf.constant([k])]
 
                     occurences_j = tf.gather(alpha_data_indices, indices_j).to_tensor()
                     occurences_k = tf.gather(alpha_data_indices, indices_k).to_tensor()
-                    print(occurences_j)
-                    print(occurences_k)
 
                     occurences_jk = tf.sparse.to_dense(tf.sets.intersection(occurences_j, occurences_k))
 
@@ -835,7 +835,6 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                     #exit()
 
                     # Create tensor with two nonzero elements at [j,k] and [k, j]
-
                     j = words_with_data.index(j)
                     k = words_with_data.index(k)
                     E_sparsetensor = tf.sparse.SparseTensor([[j,k], [k,j]], [1.0, 1.0], [wwd_len, wwd_len])
@@ -843,9 +842,26 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                     print(E_diag.shape, R_jk_omega_jk_R_jk.shape)
                     V_Omega += tf.experimental.numpy.kron(E_diag, R_jk_omega_jk_R_jk)
 
+                L_Omega = tf.linalg.cholesky(V_Omega)
+
+                # TODO: deal with delta etc.
+
+                # Steps
+                # 0. precalculated previous eta
+                # 1a. Gather the indices to be modified (U) as a ragged tensor
+                # 1b. Gather rhos for the indices
+                # 2. Calculate alpha^T rho for each of the indices to be modified
+                # 3. Flatten ragged tensors via rt.flat_values
+                # 4. Use tf.scatter_nd to get the contribution of U
+                # 5. Calculate delta := eta - scattered_update
+                # 6. Gather delta_U as a ragged tensor
+                # 7. (pre)-calculate next eta
+
+
                 print_tf_tensor(V_Omega, 3)
-                if len(co_occurences_U.edges) >= 1:
-                    exit()
+                print_tf_tensor(L_Omega, 3)
+                #if len(co_occurences_U.edges) >= 1:
+                #    exit()
 
         # Calculate log_posterior and yield sample
         if ix % (yield_every * ll_every * 2) == 0:
