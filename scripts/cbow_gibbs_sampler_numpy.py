@@ -26,18 +26,18 @@ def cbow_gibbs_sampler(w_idx, C_idx, x_vec,
                 continue # if in vocab but not in data.
             
             #C_idx_i = C_idx[idx_i,:]
-            X = np.stack([alphas[C_idx[i]].sum(axis=0) for i in idx_i])
-            kappa = x_vec[idx_i] - 1
+            A = np.stack([alphas[C_idx[i]].sum(axis=0) for i in idx_i])
+            kappa = x_vec[idx_i] - 0.5
 
             for _ in range(S):
-                eta = X @ rhos[wi]
+                eta = A @ rhos[wi]
                 omega = random_polyagamma(1, eta)
-                XOX = X.T @ np.diag(omega) @ X # X.T Omega X
-                Vw = np.linalg.inv(XOX + lam*np.eye(K))
-                m = Vw @ (X.T @ kappa)
+                AOA = A.T @ (A * omega[:, None])#A.T @ np.diag(omega) @ A
+                Vw = np.linalg.inv(AOA + lam*np.eye(K))
+                mw = Vw @ (A.T @ kappa)
 
                 L = np.linalg.cholesky(Vw)
-                rhos[wi] = m + L @ np.random.randn(K)
+                rhos[wi] = mw + L @ np.random.randn(K)
 
         # --- alpha updates ---
         # one at a time
@@ -58,9 +58,9 @@ def cbow_gibbs_sampler(w_idx, C_idx, x_vec,
             for _ in range(S):
                 eta = R @ alphas[vi] + delta
                 omega = random_polyagamma(1, eta)
-                ROR = R.T @ np.diag(omega) @ R
+                ROR = R.T @ (R * omega[:, None])
                 
-                Vv = np.linalg.inv(1/lam * np.eye(K) + ROR)
+                Vv = np.linalg.inv(lam * np.eye(K) + ROR)
                 mv = (R.T @ (kappa - omega*delta)) @ Vv # b=0
 
                 L = np.linalg.cholesky(Vv)
