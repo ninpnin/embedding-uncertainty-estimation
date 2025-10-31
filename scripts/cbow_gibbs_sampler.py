@@ -22,6 +22,7 @@ if __name__ == '__main__':
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
+    parser.add_argument("--example_word", type=str, default="word0")
     parser.add_argument("--prefix", type=str, default="")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
@@ -64,9 +65,8 @@ if __name__ == '__main__':
     local = None
     for sample_ix, e_sample in enumerate(gibbs_generator):
         LOGGER.info(f"Make folder {samples_folder} ...")
-        Path(samples_folder).mkdir(exist_ok=True)
+        #Path(samples_folder).mkdir(exist_ok=True)
         word0sample = e_sample[args.example_word].numpy()
         LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
 
-        local = e_sample
         
