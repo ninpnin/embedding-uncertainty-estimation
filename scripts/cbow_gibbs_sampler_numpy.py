@@ -4,6 +4,8 @@ from polyagamma import random_polyagamma
 import json
 #import tensorflow as tf
 import tqdm
+from probabilistic_word_embeddings.embeddings import Embedding
+import bidict
 
 def cbow_gibbs_sampler(w_idx, C_idx, x_vec,
                     *, n_samples, S, V, K):
@@ -96,14 +98,13 @@ if __name__ == '__main__':
         CC.append(C_i)
         xx.append(x_i)
 
-    vocab = ww + ([f'{w_i}_c' for w_i in ww])
-    vocab = set(vocab) # using set naturally orders the vocab
+    vocab = set(ww)
     V = len(vocab)
 
-    word2id = {w: i for i, w in enumerate(vocab)}
+    word2id = bidict.bidict({wd: ix for ix, wd in enumerate(vocab)})
 
     w_idx = np.array([word2id[w] for w in ww], dtype=int)
-    C_idx = np.array([[word2id[v + "_c"] for v in C_i] for C_i in CC])
+    C_idx = np.array([[word2id[v] for v in C_i] for C_i in CC])
     x_vec = np.array(xx, dtype=float)
 
     # --- SAMPLER SETUP ----
@@ -115,3 +116,13 @@ if __name__ == '__main__':
 
     rho_samples, alpha_samples = cbow_gibbs_sampler(w_idx, C_idx, x_vec,
                                     n_samples=n_samples, S=S, V=V, K=K)
+
+    words = [word2id.inv[ix] for ix in range(V)]
+    contexts = [wd + "_c" for wd in words]
+    for rho, alpha in zip(rho_samples, alpha_samples):
+        e_sample = Embedding(set(vocab), dimensionality=K)
+        e_sample[words] = rho
+        e_sample[contexts] = alpha
+
+        #print(e_sample[word2id.inv[0]], rho[0])
+        #print(e_sample[word2id.inv[10]], rho[10])
