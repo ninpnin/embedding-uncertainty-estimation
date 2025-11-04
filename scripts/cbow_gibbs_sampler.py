@@ -69,4 +69,4 @@ if __name__ == '__main__':
         word0sample = e_sample[args.example_word].numpy()
         LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
 
-        e_sample.save(samples_folder / f"sample-{sample_ix}.json")
+        e_sample.save(f"{samples_folder}/sample-{sample_ix}.json")
