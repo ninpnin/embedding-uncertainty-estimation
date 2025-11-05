@@ -3,10 +3,20 @@ from cmdstanpy import CmdStanModel
 from bidict import bidict
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--datapath", type=str, default="../tests/data/data-cbow-K-10-V-100-N-100000.json")
+    parser.add_argument("--K", type=int, default=10, help="Dimensionality of the embeddings")
+    parser.add_argument("--S", type=int, default=2, help="S hyperparameter for the PG-Gibbs algorithm")
+    parser.add_argument("--data_len", type=int, default=1000)
+    parser.add_argument("--n_samples", type=int, default=10)
+    parser.add_argument("--chains", type=int, default=2)
+    parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K [TODO]")
+    args = parser.parse_args()
 
 
-    N, V, K = 1000, 100, 10
-    datafile = f'../tests/data/data-cbow-K-{K}-V-{V}-N-100000.json'
+    N, K = args.data_len, args.K
+    datafile = args.datapath #f'../tests/data/data-cbow-K-{K}-V-{V}-N-100000.json'
     #TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), datafile)
     with open(datafile) as f:
         docs = json.load(f)
@@ -45,7 +55,7 @@ if __name__ == '__main__':
 
 
     stan_data = {
-        "s": 1.0,  # 1/sqrt(lambda)
+        "s": 1.0,  # TODO: 1/sqrt(lambda)
         "V": V,
         "K": K,
         "N": N,
@@ -58,14 +68,16 @@ if __name__ == '__main__':
     # --- Model ---
     stan_file = "cbow.stan"
 
-    model = CmdStanModel(stan_file=stan_file)
+    model = CmdStanModel(stan_file=f"models/{stan_file}")
     fit = model.sample(
         data=stan_data,
-        chains=1,
-        iter_warmup=20,
-        iter_sampling=20,
+        chains=args.chains,
+        iter_warmup=args.n_samples,
+        iter_sampling=args.n_samples,
         seed=1,
         show_console=True
     )
 
     print(fit.summary())
+
+    #print("")
