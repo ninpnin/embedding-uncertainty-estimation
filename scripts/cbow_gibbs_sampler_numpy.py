@@ -6,6 +6,10 @@ import json
 import tqdm
 from probabilistic_word_embeddings.embeddings import Embedding
 import bidict
+import random, string
+from trainerlog import get_logger
+LOGGER = get_logger("cbow-numpy-gibbs")
+from pathlib import Path
 
 def cbow_gibbs_sampler(w_idx, C_idx, x_vec,
                     *, n_samples, S, V, K):
@@ -78,14 +82,26 @@ def cbow_gibbs_sampler(w_idx, C_idx, x_vec,
     return rho_samples, alpha_samples
 
 if __name__ == '__main__':
-    N, V, K = 1000, 100, 10
-    datafile = f'tests/data/data-cbow-K-{K}-V-{V}-N-100000.json'
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--datapath", type=str, default="tests/data/data-cbow-K-10-V-100-N-100000.json")
+    parser.add_argument("--K", type=int, default=10, help="Dimensionality of the embeddings")
+    parser.add_argument("--S", type=int, default=2, help="S hyperparameter for the PG-Gibbs algorithm")
+    parser.add_argument("--data_len", type=int, default=1000)
+    parser.add_argument("--n_samples", type=int, default=10)
+    parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
+    args = parser.parse_args()
+    LOGGER.train(f"Args: {args}")
+
+
+    N, K = args.data_len, args.K
+    #N, V, K = 1000, 100, 10
+    #datafile = f'tests/data/data-cbow-K-{K}-V-{V}-N-100000.json'
     #TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), datafile)
-    with open(datafile) as f:
+    with open(args.datapath) as f:
         docs = json.load(f)
 
     # --- Data setup ---
-    N = 1000
 
     vocab = set()
     # Aggregate data into matrices
@@ -108,21 +124,30 @@ if __name__ == '__main__':
     x_vec = np.array(xx, dtype=float)
 
     # --- SAMPLER SETUP ----
-    K = 10
     lam = 1/np.sqrt(K)
+    if args.lambda0 is not None:
+        lam = args.lambda0
+        LOGGER.info(f"Set lambda0 from argparse parameters {lam}")
+    else:
+        LOGGER.info(f"Set lambda0 to default 1/sqrt(K) = {lam}")
+
     
-    n_samples = 10
-    S = 2
+    n_samples = args.n_samples
 
     rho_samples, alpha_samples = cbow_gibbs_sampler(w_idx, C_idx, x_vec,
-                                    n_samples=n_samples, S=S, V=V, K=K)
+                                    n_samples=n_samples, S=args.S, V=V, K=K)
+
+    pathstem = Path(args.datapath).stem.replace("_", "-")
+    randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
+    samples_folder = f"{pathstem}-cbow-gibbs-numpy-N-{N}-K-{K}-V-{V}-{randomchars}"
 
     words = [word2id.inv[ix] for ix in range(V)]
     contexts = [wd + "_c" for wd in words]
-    for rho, alpha in zip(rho_samples, alpha_samples):
-        e_sample = Embedding(set(vocab), dimensionality=K)
+    for sample_ix, emb in tqdm.tqdm(enumerate(zip(rho_samples, alpha_samples))):
+        rho, alpha = emb
+        e_sample = Embedding(set(vocab), dimensionality=K, lambda0=lam)
         e_sample[words] = rho
         e_sample[contexts] = alpha
 
-        #print(e_sample[word2id.inv[0]], rho[0])
-        #print(e_sample[word2id.inv[10]], rho[10])
+        Path(samples_folder).mkdir(exist_ok=True)
+        e_sample.save(f"{samples_folder}/sample-{sample_ix}.json")
