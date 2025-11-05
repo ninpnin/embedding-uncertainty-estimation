@@ -1,6 +1,9 @@
 import os, json, numpy as np
 from cmdstanpy import CmdStanModel
 from bidict import bidict
+import tqdm
+import random, string
+from pathlib import Path
 
 if __name__ == '__main__':
     import argparse
@@ -12,6 +15,7 @@ if __name__ == '__main__':
     parser.add_argument("--n_samples", type=int, default=10)
     parser.add_argument("--chains", type=int, default=2)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K [TODO]")
+    parser.add_argument("--results_folder", type=str, default="../results", help="Where the samples folder should be placed")
     args = parser.parse_args()
 
 
@@ -35,16 +39,16 @@ if __name__ == '__main__':
         CC.append(C_i)
         xx.append(x_i)
 
-    vocab = ww + ([f'{w_i}_c' for w_i in ww])
-    vocab = set(vocab) 
+    vocab = set(ww)
     V = len(vocab)
 
-    word2id = bidict({w: i+1 for i, w in enumerate(vocab)})#   +1 <<<------
+    word2id = bidict({wd: ix + 1 for ix, wd in enumerate(vocab)}) #   +1 <<<------
 
     w_idx = np.array([word2id[w] for w in ww], dtype=int)
-    C_idx = np.array([[word2id[v + "_c"] for v in C_i] for C_i in CC])
+    C_idx = np.array([[word2id[v] for v in C_i] for C_i in CC])
     x_vec = np.array(xx, dtype=int)
 
+    word2id_numpy = bidict({wd: word2id[wd] - 1 for wd in word2id})
 
     # --- Stan Setup ---
 
@@ -80,4 +84,27 @@ if __name__ == '__main__':
 
     print(fit.summary())
 
-    #print("")
+    rho_samples = fit.stan_variable("rho")
+    alpha_samples = fit.stan_variable("alpha")
+
+    words = [word2id_numpy.inv[ix] for ix in range(V)]
+    contexts = [wd + "_c" for wd in words]
+
+    pathstem = Path(args.datapath).stem.replace("_", "-")
+    randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
+    samples_folder = f"{pathstem}-cbow-stan-N-{N}-K-{K}-V-{V}-{randomchars}"
+    samples_folder = (Path(args.results_folder) / samples_folder)
+    samples_folder.mkdir(exist_ok=True)
+
+    # Do the pwe import at this point so that the script can be run without tensorflow
+    from probabilistic_word_embeddings.embeddings import Embedding
+    for sample_ix, emb in tqdm.tqdm(enumerate(zip(rho_samples, alpha_samples))):
+
+        rho, alpha = emb
+        e_sample = Embedding(set(vocab), dimensionality=K)
+        e_sample[words] = rho
+        e_sample[contexts] = alpha
+
+        sample_path = samples_folder / f"sample-{sample_ix}.json"
+        sample_path_str = str(sample_path.resolve())
+        e_sample.save(sample_path_str)
