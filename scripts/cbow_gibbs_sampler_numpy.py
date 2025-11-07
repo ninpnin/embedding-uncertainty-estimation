@@ -142,6 +142,7 @@ if __name__ == '__main__':
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
     samples_folder = f"{pathstem}-cbow-gibbs-numpy-N-{N}-K-{K}-V-{V}-{randomchars}"
     samples_folder = (Path(args.results_folder) / samples_folder)
+    LOGGER.info(f"Mkdir {samples_folder} ...")
     samples_folder.mkdir(exist_ok=True)
 
     words = [word2id.inv[ix] for ix in range(V)]
