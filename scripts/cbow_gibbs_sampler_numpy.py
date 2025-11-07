@@ -90,6 +90,7 @@ if __name__ == '__main__':
     parser.add_argument("--data_len", type=int, default=1000)
     parser.add_argument("--n_samples", type=int, default=10)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
+    parser.add_argument("--results_folder", type=str, default="results", help="Where the samples folder should be placed")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
 
@@ -140,6 +141,8 @@ if __name__ == '__main__':
     pathstem = Path(args.datapath).stem.replace("_", "-")
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
     samples_folder = f"{pathstem}-cbow-gibbs-numpy-N-{N}-K-{K}-V-{V}-{randomchars}"
+    samples_folder = (Path(args.results_folder) / samples_folder)
+    samples_folder.mkdir(exist_ok=True)
 
     words = [word2id.inv[ix] for ix in range(V)]
     contexts = [wd + "_c" for wd in words]
@@ -149,5 +152,6 @@ if __name__ == '__main__':
         e_sample[words] = rho
         e_sample[contexts] = alpha
 
-        Path(samples_folder).mkdir(exist_ok=True)
-        e_sample.save(f"{samples_folder}/sample-{sample_ix}.json")
+        sample_path = samples_folder / f"sample-{sample_ix}.json"
+        sample_path_str = str(sample_path.resolve())
+        e_sample.save(sample_path_str)

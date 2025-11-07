@@ -59,14 +59,16 @@ if __name__ == '__main__':
     # Generate a random string to make runs pseudo unique
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
     samples_folder = f"{pathstem}-cbow-gibbs-N-{args.data_len}-K-{args.dim}-V-{V}-{args.prefix}-{randomchars}"
-
+    samples_folder = (Path(args.results_folder) / samples_folder)
+    samples_folder.mkdir(exist_ok=True)
 
     gibbs_generator = cbow_gibbs_parallellized(e, data, rounds=args.samples)
     local = None
     for sample_ix, e_sample in enumerate(gibbs_generator):
-        LOGGER.info(f"Make folder {samples_folder} ...")
         Path(samples_folder).mkdir(exist_ok=True)
         word0sample = e_sample[args.example_word].numpy()
         LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
 
-        e_sample.save(f"{samples_folder}/sample-{sample_ix}.json")
+        sample_path = samples_folder / f"sample-{sample_ix}.json"
+        sample_path_str = str(sample_path.resolve())
+        e_sample.save(sample_path_str)
