@@ -59,7 +59,9 @@ if __name__ == '__main__':
     # Generate a random string to make runs pseudo unique
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
     samples_folder = f"{pathstem}-cbow-gibbs-N-{args.data_len}-K-{args.dim}-V-{V}-{args.prefix}-{randomchars}"
-    samples_folder = (Path(args.results_folder) / samples_folder)
+    results_folder = Path(args.results_folder)
+    results_folder.mkdir(exist_ok=True)
+    samples_folder = (results_folder / samples_folder)
     LOGGER.info(f"Mkdir {samples_folder} ...")
     samples_folder.mkdir(exist_ok=True)
 
