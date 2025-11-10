@@ -26,7 +26,7 @@ if __name__ == '__main__':
         docs = json.load(f)
 
     # --- Data setup ---  NOTE! indexing starts on 1 with stan, so the vocab will be different from numpy Gibbs sampler.
-    N = 1000
+    N = args.data_len
 
     vocab = set()
     # Aggregate data into matrices
