@@ -57,9 +57,19 @@ if __name__ == '__main__':
 
     WS = len(CC[0]) 
 
+    # --- SAMPLER SETUP ----
+    lam = K
+    if args.lambda0 is not None:
+        lam = args.lambda0
+        LOGGER.info(f"Set lambda0 from argparse parameters {lam}")
+    else:
+        LOGGER.info(f"Set lambda0 to default sqrt(K) = {lam}")
+
+    s = 1/np.sqrt(lam)
+    LOGGER.info(f"This implies a prior N(0, s^2) = N(0, {s ** 2}")
 
     stan_data = {
-        "s": 1.0,  # TODO: 1/sqrt(lambda)
+        "s": s,  # TODO: 1/sqrt(lambda)
         "V": V,
         "K": K,
         "N": N,
