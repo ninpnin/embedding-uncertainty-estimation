@@ -44,10 +44,13 @@ if __name__ == '__main__':
     if args.data_len is not None:
         data = data[:args.data_len]
 
-
-    lambda0 = args.lambda0
-    if lambda0 is None:
-        lambda0 = float(args.dim)
+    K = args.dim
+    lam = K
+    if args.lambda0 is not None:
+        lam = args.lambda0
+        LOGGER.info(f"Set lambda0 from argparse parameters {lam}")
+    else:
+        LOGGER.info(f"Set lambda0 to default sqrt(K) = {lam}")
 
     e = Embedding(vocab, dimensionality=args.dim, lambda0=lambda0)
     freeze_params = []
@@ -58,7 +61,7 @@ if __name__ == '__main__':
     V = len(vocab)
     # Generate a random string to make runs pseudo unique
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
-    samples_folder = f"{pathstem}-cbow-gibbs-N-{args.data_len}-K-{args.dim}-V-{V}-{args.prefix}-{randomchars}"
+    samples_folder = f"{pathstem}-cbow-gibbs-N-{args.data_len}-K-{K}-V-{V}-{args.prefix}-{randomchars}"
     results_folder = Path(args.results_folder)
     results_folder.mkdir(exist_ok=True)
     samples_folder = (results_folder / samples_folder)
