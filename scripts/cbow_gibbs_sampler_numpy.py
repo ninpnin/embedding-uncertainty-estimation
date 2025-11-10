@@ -41,7 +41,7 @@ def cbow_gibbs_sampler(w_idx, C_idx, x_vec,
                     eta = A @ rhos[wi]
                     omega = random_polyagamma(1, eta)
                     AOA = A.T @ (A * omega[:, None])#A.T @ np.diag(omega) @ A
-                    Vw = np.linalg.inv(AOA + lam*np.eye(K))
+                    Vw = np.linalg.inv(AOA + lam * np.eye(K))
                     mw = Vw @ (A.T @ kappa)
 
                     L = np.linalg.cholesky(Vw)
@@ -125,12 +125,12 @@ if __name__ == '__main__':
     x_vec = np.array(xx, dtype=float)
 
     # --- SAMPLER SETUP ----
-    lam = 1/np.sqrt(K)
+    lam = K
     if args.lambda0 is not None:
         lam = args.lambda0
         LOGGER.info(f"Set lambda0 from argparse parameters {lam}")
     else:
-        LOGGER.info(f"Set lambda0 to default 1/sqrt(K) = {lam}")
+        LOGGER.info(f"Set lambda0 to default sqrt(K) = {lam}")
 
     
     n_samples = args.n_samples
