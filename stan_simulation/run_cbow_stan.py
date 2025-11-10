@@ -4,6 +4,9 @@ from bidict import bidict
 import tqdm
 import random, string
 from pathlib import Path
+from trainerlog import get_logger
+LOGGER = get_logger("gibbs")
+LOGGER.info("Load modules..")
 
 if __name__ == '__main__':
     import argparse
