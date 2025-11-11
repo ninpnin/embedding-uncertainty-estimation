@@ -592,7 +592,7 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
 
-def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=10):
+def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=1):
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
 
     lambda0 = e.lambda0
@@ -725,23 +725,32 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 LOGGER.debug(f"A_U.shape: {A_U.shape}; kappa_U: {kappa_U.shape}")
 
                 # Calculate the mean mu_omega
+                #print(A_U.shape, kappa_U.shape)
                 A_T_Kappa_U =  tf.linalg.matvec(A_U, kappa_U, transpose_a=True)
                 # A_T_Kappa_U is always of size (batch_size, K)
                 A_T_Kappa_U = A_T_Kappa_U.to_tensor()
 
                 # Cholesky decompose the precision matrix
-                L_omega_rho_inv = tf.linalg.cholesky(V_omega_rho_inv)
+                #L_omega_rho_inv = tf.linalg.cholesky(V_omega_rho_inv)
+                
+                V_omega_rho = tf.linalg.inv(V_omega_rho_inv)
+                L_omega_rho = tf.linalg.cholesky(V_omega_rho)
 
                 # Dual Cholesky solve for mu_omega: 
                 # LL^T mu = y
                 # First: L b = y
                 # Then: L^T mu = b
-                mu_omega_b = tf.linalg.triangular_solve(L_omega_rho_inv, tf.expand_dims(A_T_Kappa_U, axis=-1))
-                mu_omega = tf.linalg.triangular_solve(tf.transpose(L_omega_rho_inv, perm=[0,2,1]), mu_omega_b, lower=False)
+                #mu_omega_b = tf.linalg.triangular_solve(L_omega_rho_inv, tf.expand_dims(A_T_Kappa_U, axis=-1))
+                #mu_omega = tf.linalg.triangular_solve(tf.transpose(L_omega_rho_inv, perm=[0,2,1]), mu_omega_b, lower=False)
+                mu_omega = tf.linalg.matmul(V_omega_rho, tf.expand_dims(A_T_Kappa_U, axis=-1))
+
+                y_delta = tf.random.normal((wwd_len, K, 1), dtype=tf.float64)
+                x_delta = tf.linalg.matmul(V_omega_rho, y_delta)
+                #x_delta = tf.linalg.triangular_solve(tf.transpose(L_omega_rho_inv, perm=[0,2,1]), y_delta, lower=False)
 
                 # Single Cholesky solve for the offset
-                y_delta = tf.random.normal((wwd_len, K, 1), dtype=tf.float64)
-                x_delta = tf.linalg.triangular_solve(tf.transpose(L_omega_rho_inv, perm=[0,2,1]), y_delta, lower=False)
+                #y_delta = tf.random.normal((wwd_len, K, 1), dtype=tf.float64)
+                #x_delta = tf.linalg.triangular_solve(tf.transpose(L_omega_rho_inv, perm=[0,2,1]), y_delta, lower=False)
 
                 new_vals = mu_omega + x_delta
                 new_vals = tf.reduce_sum(new_vals, axis=-1)
@@ -844,7 +853,11 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                     E_diag = tf.sparse.to_dense(tf.sparse.reorder(E_sparsetensor))
                     V_Omega += tf.experimental.numpy.kron(E_diag, R_jk_omega_jk_R_jk)
 
-                L_Omega = tf.linalg.cholesky(V_Omega)
+                #L_Omega = tf.linalg.cholesky(V_Omega)
+
+                # TODO: properly calculate inverse
+                V_Omega_inv = tf.linalg.inv(V_Omega)
+                L_Omega_inv = tf.linalg.cholesky(V_Omega_inv)
 
                 # TODO: deal with delta etc.
 
@@ -883,22 +896,28 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 kappa_minus_delta_omega = tf.gather(kappa, occurences_batch) - delta_U_omega_U
 
                 # Find mu_omega via Cholesky: double tridiagonal solve
-                mu_omega_inv = tf.linalg.matvec(R_U, kappa_minus_delta_omega, transpose_a=True)
-                mu_omega_inv = mu_omega_inv.flat_values
-                mu_omega_inv1 = tf.linalg.triangular_solve(
-                    tf.transpose(L_Omega), tf.expand_dims(mu_omega_inv, axis=-1),
-                    lower=False
-                )
-                mu_omega = tf.linalg.triangular_solve(L_Omega, mu_omega_inv1)
+                R_U_kdo = tf.linalg.matvec(R_U, kappa_minus_delta_omega, transpose_a=True).flat_values
+                #mu_omega_inv = mu_omega_inv.flat_values
+                #mu_omega_inv1 = tf.linalg.triangular_solve(
+                #    tf.transpose(L_Omega), tf.expand_dims(mu_omega_inv, axis=-1),
+                #    lower=False
+                #)
+                #mu_omega = tf.linalg.triangular_solve(L_Omega, mu_omega_inv1)
+
+                #print(V_Omega_inv.shape, R_U_kdo.shape)
+                #print(R_U_kdo)
+                #print(V_Omega_inv)
+                mu_omega = tf.linalg.matvec(V_Omega_inv, R_U_kdo)
+                x_omega = tf.linalg.matvec(L_Omega_inv, tf.random.normal((wwd_len * K,), dtype=tf.float64))
 
                 # Add covariance noise via Cholesky: single tridiagonal solve
-                x_omega = tf.linalg.triangular_solve(
-                    tf.transpose(L_Omega), tf.random.normal((wwd_len * K, 1), dtype=tf.float64),
-                    lower=False
-                )
+                #x_omega = tf.linalg.triangular_solve(
+                #    tf.transpose(L_Omega), tf.random.normal((wwd_len * K, 1), dtype=tf.float64),
+                #    lower=False
+                #)
                 new_vals = mu_omega + x_omega
 
-                first_vec = new_vals[:K, 0]
+                first_vec = new_vals[:K]
                 new_vals = tf.reshape(new_vals, [wwd_len, K])
                 first_vec_prime = new_vals[0]
 
