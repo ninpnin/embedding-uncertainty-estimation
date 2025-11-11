@@ -592,7 +592,7 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
 
-def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=1):
+def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=10):
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
 
     lambda0 = e.lambda0
