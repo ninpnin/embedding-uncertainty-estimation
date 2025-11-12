@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 import re
 
-COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c', "Laplace": "#df647a"}
+COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c', "Laplace": "#df647a", "GibbsNumpy": "#fcb491"}
 for method in list(COLORS):
     for ix in range(10):
         COLORS[f"{method}-{ix}"] = COLORS[method]
@@ -90,6 +90,7 @@ if __name__ == '__main__':
     parser.add_argument("--do_wordsim", type=bool, default=False)
     parser.add_argument("--full_xaxis", type=bool, default=False, help="Force the x axis to range from -1 to 1")
     parser.add_argument("--enumerate_chains", type=bool, default=False, help="Plot different chains separately even if they use same method")
+    parser.add_argument("--format", type=str, default="pkl")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     
@@ -105,7 +106,7 @@ if __name__ == '__main__':
     chains = []
     for sample_folder, warmup in zip(args.sample_folder, args.warmup):
         sample_folder = Path(sample_folder)
-        samples = sorted(sample_folder.glob("*.pkl"), key=lambda p: int(p.stem.split("-")[-1]))
+        samples = sorted(sample_folder.glob(f"*.{args.format}"), key=lambda p: int(p.stem.split("-")[-1]))
         # By default the first half
         if warmup is None:
             samples = samples[len(samples) // 2:]
@@ -143,6 +144,8 @@ if __name__ == '__main__':
                 return "Laplace"
             elif "hmc" in foldername.lower():
                 return "HMC"
+            elif "numpy" in foldername.lower():
+                return "GibbsNumpy"
             else:
                 return "Gibbs"
         cossim_results = pd.DataFrame(cossim_rows, columns=["chain", "ix", "similarity"])
