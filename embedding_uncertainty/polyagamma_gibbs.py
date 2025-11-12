@@ -872,7 +872,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 # 6. Gather delta_U as a ragged tensor
                 # 7. (pre)-calculate next eta
 
-                alpha_U = e[words_with_data]
+                alpha_U = e[words_with_data_c]
                 alpha_U = tf.expand_dims(alpha_U, axis=1)
                 delta_U = R_U * alpha_U
                 delta_U = tf.reduce_sum(delta_U, axis=-1)
