@@ -24,6 +24,7 @@ if __name__ == '__main__':
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
     parser.add_argument("--example_word", type=str, default="word0")
     parser.add_argument("--prefix", type=str, default="")
+    parser.add_argument("--results_folder", type=str, default="results", help="Where the samples folder should be placed")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     else:
         LOGGER.info(f"Set lambda0 to default sqrt(K) = {lam}")
 
-    e = Embedding(vocab, dimensionality=args.dim, lambda0=lambda0)
+    e = Embedding(vocab, dimensionality=args.dim, lambda0=lam)
     freeze_params = []
 
     WARMUP = args.samples // 2
