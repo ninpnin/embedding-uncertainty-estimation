@@ -11,8 +11,11 @@ from trainerlog import get_logger
 LOGGER = get_logger("cbow-numpy-gibbs")
 from pathlib import Path
 
+def sigmoid(x):
+    return 1/(1.0 + np.exp(-x))
+
 def cbow_gibbs_sampler(w_idx, C_idx, x_vec,
-                    *, n_samples, S, V, K):
+                    *, n_samples, S, V, K, e_init=None, word_mapping=None):
     """
     S : number of inner samples
     """
@@ -22,7 +25,24 @@ def cbow_gibbs_sampler(w_idx, C_idx, x_vec,
 
     rhos = np.random.randn(V, K) / np.sqrt(K)
     alphas = np.random.randn(V, K) / np.sqrt(K)
+
+    if e_init is not None:
+        for wd in e_init.vocabulary:
+            #print(wd)
+            if "_c" not in wd:
+                ix_wd = word_mapping[wd]
+                rhos[ix_wd] = e_init[wd]
+                alphas[ix_wd] = e_init[wd + "_c"]
+        #exit()
     for it in tqdm.tqdm(range(n_samples)):
+        alphas_all = np.sum(alphas[C_idx], axis=1)
+        rhos_all = rhos[w_idx]
+        etas_all = np.sum(rhos_all * alphas_all, axis=1)
+        x_1_minus_1 = (x_vec * 2 - 1.0)
+        p = sigmoid(etas_all * x_1_minus_1)
+        log_ll = np.mean(np.log(p))
+        print("log_ll", log_ll)
+
         # --- rho updates ---
         # For each unique word rho_i we can consider all the occurances at the same time.
         for wi in np.unique(w_idx):
@@ -39,13 +59,18 @@ def cbow_gibbs_sampler(w_idx, C_idx, x_vec,
 
                 for _ in range(S):
                     eta = A @ rhos[wi]
-                    omega = random_polyagamma(1, eta)
+                    #omega = random_polyagamma(1, eta)
+                    omega = np.ones(eta.shape)
                     AOA = A.T @ (A * omega[:, None])#A.T @ np.diag(omega) @ A
                     Vw = np.linalg.inv(AOA + lam * np.eye(K))
                     mw = Vw @ (A.T @ kappa)
 
                     L = np.linalg.cholesky(Vw)
-                    rhos[wi] = mw + L @ np.random.randn(K)
+
+                    if word_mapping.inv[wi] == "word0":
+                        print("word", f"{wi}, {word_mapping.inv[wi]}\n V_omega\n", Vw, "\nmu_omega\n", mw )
+                        #exit()
+                    #rhos[wi] = mw + L @ np.random.randn(K)
 
         # --- alpha updates ---
         # one at a time
@@ -67,15 +92,26 @@ def cbow_gibbs_sampler(w_idx, C_idx, x_vec,
                 
                 for _ in range(S):
                     eta = R @ alphas[vi] + delta
-                    omega = random_polyagamma(1, eta)
+                    #omega = random_polyagamma(1, eta)
+                    omega = np.ones(eta.shape)
                     ROR = R.T @ (R * omega[:, None])
                     
                     Vv = np.linalg.inv(lam * np.eye(K) + ROR)
                     mv = (R.T @ (kappa - omega*delta)) @ Vv # b=0
 
                     L = np.linalg.cholesky(Vv)
-                    alphas[vi] = mv + L @ np.random.randn(K)
 
+                    if word_mapping.inv[vi] == "word0":
+                        print("word", f"{wi}, {word_mapping.inv[vi]}\n V_omega\n", Vv, "\nmu_omega\n", mv)
+                        print("R_U_kdo", (R.T @ (kappa - omega*delta)))
+                        print("delta", delta)
+                        print(len(delta))
+                        print("kappa", kappa)
+                        exit()
+
+                    #alphas[vi] = mv + L @ np.random.randn(K)
+
+        #exit()
         rho_samples[it] = rhos
         alpha_samples[it] = alphas
         
@@ -118,6 +154,8 @@ if __name__ == '__main__':
     vocab = set(ww)
     V = len(vocab)
 
+    LOGGER.info(f"Length of data {len(xx)} (param N={N})")
+
     word2id = bidict.bidict({wd: ix for ix, wd in enumerate(vocab)})
 
     w_idx = np.array([word2id[w] for w in ww], dtype=int)
@@ -132,11 +170,16 @@ if __name__ == '__main__':
     else:
         LOGGER.info(f"Set lambda0 to default sqrt(K) = {lam}")
 
+
+    e_init = Embedding(set(vocab), dimensionality=K, lambda0=lam)
+    #e_init = list(sorted())
+    e_init.save("e_init.pkl")
     
     n_samples = args.n_samples
 
     rho_samples, alpha_samples = cbow_gibbs_sampler(w_idx, C_idx, x_vec,
-                                    n_samples=n_samples, S=args.S, V=V, K=K)
+                                    n_samples=n_samples, S=args.S, V=V, K=K,
+                                    e_init=e_init, word_mapping=word2id)
 
     pathstem = Path(args.datapath).stem.replace("_", "-")
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))

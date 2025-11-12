@@ -592,10 +592,11 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
 
-def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=10):
+def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=1):
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
 
     lambda0 = e.lambda0
+    LOGGER.info(f"K: {e.dimensionality}")
     LOGGER.info(f"Use lambda0 from the embedding object: {lambda0}")
 
     w = []
@@ -675,9 +676,14 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
         # For the CBOW model, the b parameter is always 1
         # since we cannot do data aggregation
         omega = tf.constant(random_polyagamma(1, np.array(etas)))
-        LOGGER.debug(f"omega {omega}")
+        #print(omega.shape, omega.dtype)
+        #omega = tf.ones(etas.shape, dtype=tf.float64)
+        #print(omega.shape, omega.dtype)
+        #LOGGER.debug(f"omega {omega}")
 
         # Sample rho's given omega and alpha, a batch of batch_size at a time
+
+        # RHO
         for j in range(V // batch_size):
             j0, j1 = batch_size * j, batch_size * (j+1)
             words_batch = words[j0:j1]
@@ -742,10 +748,10 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 # Then: L^T mu = b
                 #mu_omega_b = tf.linalg.triangular_solve(L_omega_rho_inv, tf.expand_dims(A_T_Kappa_U, axis=-1))
                 #mu_omega = tf.linalg.triangular_solve(tf.transpose(L_omega_rho_inv, perm=[0,2,1]), mu_omega_b, lower=False)
-                mu_omega = tf.linalg.matmul(V_omega_rho, tf.expand_dims(A_T_Kappa_U, axis=-1))
+                mu_omega = tf.linalg.matvec(V_omega_rho, A_T_Kappa_U)
 
-                y_delta = tf.random.normal((wwd_len, K, 1), dtype=tf.float64)
-                x_delta = tf.linalg.matmul(V_omega_rho, y_delta)
+                y_delta = tf.random.normal((wwd_len, K), dtype=tf.float64)
+                x_delta = tf.linalg.matvec(V_omega_rho, y_delta)
                 #x_delta = tf.linalg.triangular_solve(tf.transpose(L_omega_rho_inv, perm=[0,2,1]), y_delta, lower=False)
 
                 # Single Cholesky solve for the offset
@@ -753,27 +759,39 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 #x_delta = tf.linalg.triangular_solve(tf.transpose(L_omega_rho_inv, perm=[0,2,1]), y_delta, lower=False)
 
                 new_vals = mu_omega + x_delta
-                new_vals = tf.reduce_sum(new_vals, axis=-1)
+                #new_vals = tf.reduce_sum(new_vals, axis=-1)
                 LOGGER.debug(f"{new_vals} {new_vals.shape}")
 
+                if words_with_data[0] == "word0":
+                    pass
+                    #print(words_with_data)
+                    #print("V_Omega_rho")
+                    #print(V_omega_rho)
+                    #print("mu_omega")
+                    #print(mu_omega)
+                    #print()
+                    #exit()
+                # TODO: revert
                 e[words_with_data] = new_vals
 
             # Sample params without data from prior
             if len(words_without_data) >= 1:
                 wwo_len = len(words_without_data)
-                L_inv = tf.linalg.cholesky(B_inv_rho)
+                V_inv = tf.linalg.inv(B_inv_rho)
+                L_inv = tf.linalg.cholesky(V_inv)
                 
-                x_omega = tf.linalg.triangular_solve(
-                    tf.transpose(L_inv), tf.random.normal((K, wwo_len), dtype=tf.float64),
-                    lower=False
-                )
+                #x_omega = tf.linalg.triangular_solve(
+                #    tf.transpose(L_inv), tf.random.normal((K, wwo_len), dtype=tf.float64),
+                #    lower=False
+                #)
 
-                e[words_without_data] = tf.transpose(x_omega)
+                x_noise = tf.random.normal((K, wwo_len), dtype=tf.float64)
+                e[words_without_data_c] = tf.matvec(L_inv, x_noise)
 
         etas = tf.reduce_sum(alphas * rhos, axis=-1)
         deltas = etas
 
-        # TODO: sample alphas
+        # ALPHA
         for j in range(V // batch_size):
             j0, j1 = batch_size * j, batch_size * (j+1)
             words_batch = words[j0:j1]
@@ -823,7 +841,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
 
                 #print_tf_tensor(V_Omega, 3)
 
-                # TODO: deal with the off-diagonal
+                # off-diagonal
                 for ix, wds in enumerate(co_occurences_U.edges):
                     j, k = wds
                     indices_j = e.tf_vocabulary[tf.constant([j])]
@@ -873,12 +891,30 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 # 7. (pre)-calculate next eta
 
                 alpha_U = e[words_with_data_c]
-                alpha_U = tf.expand_dims(alpha_U, axis=1)
-                delta_U = R_U * alpha_U
-                delta_U = tf.reduce_sum(delta_U, axis=-1)
+                #print(alpha_U)
+                #print("alpha_U", alpha_U)
+                #print("R_U", R_U)
+                #alpha_U = tf.expand_dims(alpha_U, axis=1)
+                #print("alpha_U", alpha_U)
+                #addition_U = R_U * tf.expand_dims(alpha_U, axis=1)
+                #delta_U = tf.reduce_sum(delta_U, axis=-1)
+
+                #print("R_U, alpha_U", R_U.shape, alpha_U.shape)
+                addition_U = tf.linalg.matvec(R_U, alpha_U)
+
+                #delta_U_prime2 = tf.linalg.matvec(R_U[0], alpha_U)
+                #delta_U = delta_U_prime
+                #print(delta_U_prime)
+                #print(delta_U_prime2)
+                #exit()
+                #print("w_U", w_U[0])
+                #print("w_U", w_U[0][0])
+                #C_U_00 = occurences_batch[0][0]
+                #print(C_U_00)
+                #delta_00 = C_U_00
 
                 # Flatten arrays for nd_scatter
-                delta_U_flat = delta_U.flat_values
+                addition_U_flat = addition_U.flat_values
                 occurences_U_flat = occurences_batch.flat_values
                 
                 # Re-calculate etas
@@ -887,16 +923,19 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 etas = tf.reduce_sum(alphas * rhos, axis=-1)
 
                 # Addition to eta contributes by U
-                addition = tf.scatter_nd(tf.expand_dims(occurences_U_flat, axis=-1), delta_U_flat, etas.shape)
+                addition = tf.scatter_nd(
+                    tf.expand_dims(occurences_batch.flat_values, axis=-1),
+                    addition_U.flat_values, etas.shape)
                 deltas = etas - addition
 
                 delta_U = tf.gather(deltas, occurences_batch)
                 delta_U_omega_U = delta_U * omega_U
 
-                kappa_minus_delta_omega = tf.gather(kappa, occurences_batch) - delta_U_omega_U
+                kappa_U = tf.gather(kappa, occurences_batch)
+                kappa_minus_delta_omega = kappa_U - delta_U_omega_U
 
-                # Find mu_omega via Cholesky: double tridiagonal solve
                 R_U_kdo = tf.linalg.matvec(R_U, kappa_minus_delta_omega, transpose_a=True).flat_values
+                # Find mu_omega via Cholesky: double tridiagonal solve
                 #mu_omega_inv = mu_omega_inv.flat_values
                 #mu_omega_inv1 = tf.linalg.triangular_solve(
                 #    tf.transpose(L_Omega), tf.expand_dims(mu_omega_inv, axis=-1),
@@ -915,6 +954,24 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 #    tf.transpose(L_Omega), tf.random.normal((wwd_len * K, 1), dtype=tf.float64),
                 #    lower=False
                 #)
+                if words_with_data[0] == "word0":
+                    pass
+                    #print(words_with_data)
+                    #print("V_Omega_alpha")
+                    #print(V_Omega_inv)
+                    #print("mu_omega")
+                    #print(mu_omega)
+                    #print("R_U_kdo")
+                    #print(R_U_kdo)
+                    #print("delta")
+                    #print(delta_U[0].numpy())
+                    #print("kappa_U")
+                    #print(kappa_U)
+                    #print("w_U")
+                    #print(len(w_U[0]))
+                    #print()
+                    #exit()
+
                 new_vals = mu_omega + x_omega
 
                 first_vec = new_vals[:K]
@@ -931,19 +988,26 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
             # Sample params without data from prior
             if len(words_without_data) >= 1:
                 wwo_len = len(words_without_data)
-                L_inv = tf.linalg.cholesky(B_inv_alpha)
+                V_inv = tf.linalg.inv(B_inv_alpha)
+                L_inv = tf.linalg.cholesky(V_inv)
                 
-                x_omega = tf.linalg.triangular_solve(
-                    tf.transpose(L_inv), tf.random.normal((K, wwo_len), dtype=tf.float64),
-                    lower=False
-                )
+                #x_omega = tf.linalg.triangular_solve(
+                #    tf.transpose(L_inv), tf.random.normal((K, wwo_len), dtype=tf.float64),
+                #    lower=False
+                #)
+                x_noise = tf.random.normal((K, wwo_len), dtype=tf.float64)
+                e[words_without_data_c] = tf.matvec(L_inv, x_noise)
+                #e[words_without_data_c] = tf.transpose(x_omega)
 
-                e[words_without_data_c] = tf.transpose(x_omega)
+        
+        rhos = e[w]
+        alphas = tf.reduce_sum(e[C], axis=1)
+        etas = tf.reduce_sum(alphas * rhos, axis=-1)
 
-        sigm = tf.math.sigmoid(etas)
         x64 = tf.cast(x, dtype=tf.float64)
-        p = sigm * x64  + (1-x64) * (1-sigm)
-        log_p = tf.math.log(p)
+        sigm = tf.math.sigmoid(etas * (2.0 * x64 - 1.0))
+        #p = sigm * x64  + (1-x64) * (1-sigm)
+        log_p = tf.math.log(sigm)
         log_ll = tf.reduce_mean(log_p)
         log_posterior = log_ll + e.log_prob(batch_size=1, data_size=len(x))
 
