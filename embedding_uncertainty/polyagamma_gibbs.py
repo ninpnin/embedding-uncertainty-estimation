@@ -752,7 +752,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 mu_omega = tf.linalg.matvec(V_omega_rho, A_T_Kappa_U)
 
                 y_delta = tf.random.normal((wwd_len, K), dtype=tf.float64)
-                x_delta = tf.linalg.matvec(V_omega_rho, y_delta)
+                x_delta = tf.linalg.matvec(L_omega_rho, y_delta)
 
                 # TODO: Single Cholesky solve for the offset
                 new_vals = mu_omega + x_delta
