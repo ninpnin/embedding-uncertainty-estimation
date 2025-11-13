@@ -591,6 +591,12 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
         else:
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
 
+def sample_cbow_omegas(e, w, C):
+    rhos = e[w]
+    alphas = tf.reduce_sum(e[C], axis=1)
+    etas = tf.reduce_sum(alphas * rhos, axis=-1)
+    omega = tf.constant(random_polyagamma(1, np.array(etas)))
+    return omega
 
 def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=1):
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
@@ -763,11 +769,11 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 x_noise = tf.random.normal((K, wwo_len), dtype=tf.float64)
                 e[words_without_data_c] = tf.matvec(L_inv, x_noise)
 
-        etas = tf.reduce_sum(alphas * rhos, axis=-1)
-        deltas = etas
+        omega = sample_cbow_omegas(e, w, C)
 
         # ALPHA
         for j in range(V // batch_size):
+
             j0, j1 = batch_size * j, batch_size * (j+1)
             words_batch = words[j0:j1]
 
@@ -785,7 +791,6 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 wwd_len = len(words_with_data)
                 co_occurences_U = alpha_co_occurences.subgraph(words_with_data)
 
-                V_omega_inv = tf.zeros((K * wwd_len, K * wwd_len), dtype=tf.float64)
                 LOGGER.debug(f"sample alphas: {words_with_data}")
 
                 indices_batch = e.tf_vocabulary[tf.constant(words_with_data)]
@@ -923,6 +928,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
         log_posterior = log_ll + e.log_prob(batch_size=1, data_size=len(x))
 
         print("log_ll", log_ll.numpy(), "log_posterior", log_posterior.numpy())
+        LOGGER.train(f"eta {etas.numpy()[:3]}")
 
         yield copy.deepcopy(e)
 
