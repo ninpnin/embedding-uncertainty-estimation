@@ -2,4 +2,4 @@ from embedding_uncertainty.polyagamma_gibbs import polyagamma_sampler
 from embedding_uncertainty.polyagamma_gibbs import polyagamma_sampler_tf
 from embedding_uncertainty.polyagamma_gibbs import embedding_gibbs
 from embedding_uncertainty.polyagamma_gibbs import embedding_gibbs_tf
-from embedding_uncertainty.polyagamma_gibbs import cbow_gibbs_parallellized
+from embedding_uncertainty.polyagamma_gibbs_cbow import cbow_gibbs_parallellized
