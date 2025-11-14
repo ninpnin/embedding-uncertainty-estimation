@@ -1,5 +1,5 @@
 data {
-  real<lower=0> s;     // N(0, s²) prior std. (make sure this is done correctly for sgns because usually s^2 = 1/λ)
+  real<lower=0> s;     // N(0, s²) prior std. (In simulation experiment : s^2 = 1/sqrt(λ))
   int<lower=1> V, K, N, WS;                        // vocab, dim, observations, context window size
 
   array[N] int<lower=1, upper=V> target_word;      
