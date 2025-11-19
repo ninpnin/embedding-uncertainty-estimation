@@ -20,6 +20,7 @@ if __name__ == '__main__':
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K [TODO]")
     parser.add_argument("--results_folder", type=str, default="../results", help="Where the samples folder should be placed")
     args = parser.parse_args()
+    LOGGER.train(f"Args: {args}")
 
 
     N, K = args.data_len, args.K
