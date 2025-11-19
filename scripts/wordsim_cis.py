@@ -91,6 +91,7 @@ if __name__ == '__main__':
     parser.add_argument("--full_xaxis", type=bool, default=False, help="Force the x axis to range from -1 to 1")
     parser.add_argument("--enumerate_chains", type=bool, default=False, help="Plot different chains separately even if they use same method")
     parser.add_argument("--format", type=str, default="pkl")
+    parser.add_argument("--ref_emb", type=str, default=None)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     
@@ -137,12 +138,20 @@ if __name__ == '__main__':
             rows.append(results)
 
     if len(args.cossim_words) == 2:
+        e_ref, ref_val = None, None
+        if args.ref_emb is not None:
+            e_ref = Embedding(saved_model_path=args.ref_emb)
+            w1, w2 = args.cossim_words
+            rho_1, rho_2 = e_ref[w1], e_ref[w2]
+            ref_val = cossim(rho_1, rho_2)
+            print("Ref val", ref_val, f"({w1}, {w2})")
+
         def estimator_name(foldername):
             if "vi" in foldername.lower():
                 return "MFVI"
             elif "laplace" in foldername.lower():
                 return "Laplace"
-            elif "hmc" in foldername.lower():
+            elif "hmc" in foldername.lower() or "stan" in foldername.lower():
                 return "HMC"
             elif "numpy" in foldername.lower():
                 return "GibbsNumpy"
@@ -166,6 +175,9 @@ if __name__ == '__main__':
         sns.despine()
         plt.ylabel(None, fontsize=24)
         w1, w2 = [increment_number_in_string(s) for s in args.cossim_words]
+
+        if ref_val is not None:
+            plt.axvline(x = ref_val, color = 'r', label = 'True cossim')
 
         plt.xlabel(f"cossim(ρ_{w1}, ρ_{w2})", fontsize=13)
         #plt.yticks(fontsize=0)
