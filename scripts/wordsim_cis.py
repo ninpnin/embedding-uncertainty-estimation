@@ -80,7 +80,12 @@ def r_hat(df, reference="HMC"):
         R = az.rhat(X)
         print("Within chain R hat:", R)
         
-    
+def modeltype(s):
+    if "cbow" in s.lower():
+        return "cbow"
+    else:
+        return "sgns"
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
@@ -95,11 +100,20 @@ if __name__ == '__main__':
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     
+    model = None
+    sample_folder_models = [modeltype(name) for name in args.sample_folder]
+    if len(set(sample_folder_models)) >= 2:
+        LOGGER.error(f"Multiple different models in the same plot: {sample_folder_models}")    
+        assert len(set(sample_folder_models)) <= 1
+    else:
+        model = sample_folder_models[0]
+        LOGGER.train(f"Model: {model}")
+
     # Discard warmup samples
     if args.warmup is None:
         args.warmup = [None] * len(args.sample_folder)
     elif len(args.warmup) == 1:
-        args.warmup = [args.warmup] * len(args.sample_folder)
+        args.warmup = args.warmup * len(args.sample_folder)
     else:
         assert len(args.warmup) == len(args.sample_folder)
         
@@ -194,7 +208,7 @@ if __name__ == '__main__':
             plt.xlim(-1.2, 1.2)
             plt.xticks([-1.0, -0.5, 0.0, 0.5, 1.0])
 
-        plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity.pdf")
+        plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf")
         plt.show()
         
         r_hat(cossim_results, reference="Gibbs")
@@ -203,6 +217,7 @@ if __name__ == '__main__':
         #print(cossim_results[cossim_results["Method"] == "Gibbs"], )
         sns.lineplot(cossim_results[cossim_results["Method"] == "Gibbs"], x="ix", y="similarity")
         plt.savefig("img/cossim-evolution.pdf")
+        plt.show()
 
     results = pd.concat(rows)
     print(results)
