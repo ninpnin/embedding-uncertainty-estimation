@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument("--chains", type=int, default=2)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K [TODO]")
     parser.add_argument("--results_folder", type=str, default="../results", help="Where the samples folder should be placed")
-    parser.add_argument("--method", type=str, default="hmc", help="inference method: hmc , mfvi/vi ")
+    parser.add_argument("--method", type=str, choices=['hmc', 'vi', 'mfvi'], default="hmc", help="inference method: hmc , mfvi/vi ")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
 
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         rho_samples = fit.stan_variable("rho")
         alpha_samples = fit.stan_variable("alpha")
         print(fit.summary())
-        
+
     elif args.method in ['vi', 'mfvi']: # note: no chains for vi
         fit = model.variational(
             data=stan_data,
