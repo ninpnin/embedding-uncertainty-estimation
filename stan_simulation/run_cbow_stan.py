@@ -137,6 +137,8 @@ if __name__ == '__main__':
     pathstem = Path(args.datapath).stem.replace("_", "-")
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
     samples_folder = f"{pathstem}-cbow-stan-N-{N}-K-{K}-V-{V}-{randomchars}"
+    if args.method != "hmc":
+        samples_folder = samples_folder.replace("cbow-stan", "cbow-mfvi")
     results_folder = Path(args.results_folder)
     results_folder.mkdir(exist_ok=True)
     samples_folder = (results_folder / samples_folder)
