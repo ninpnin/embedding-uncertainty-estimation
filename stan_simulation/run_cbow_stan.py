@@ -19,9 +19,9 @@ if __name__ == '__main__':
     parser.add_argument("--chains", type=int, default=2)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K [TODO]")
     parser.add_argument("--results_folder", type=str, default="../results", help="Where the samples folder should be placed")
+    parser.add_argument("--method", type=str, choices=['hmc', 'vi', 'mfvi'], default="hmc", help="inference method: hmc , mfvi/vi ")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
-
 
     N, K = args.data_len, args.K
     datafile = args.datapath #f'../tests/data/data-cbow-K-{K}-V-{V}-N-100000.json'
@@ -85,21 +85,51 @@ if __name__ == '__main__':
 
     # --- Model ---
     stan_file = "cbow.stan"
-
     model = CmdStanModel(stan_file=f"models/{stan_file}")
-    fit = model.sample(
-        data=stan_data,
-        chains=args.chains,
-        iter_warmup=args.n_samples,
-        iter_sampling=args.n_samples,
-        seed=1,
-        show_console=True
-    )
 
-    print(fit.summary())
+    if args.method in ['hmc']:
+        fit = model.sample(
+            data=stan_data,
+            chains=args.chains,
+            iter_warmup=args.n_samples,
+            iter_sampling=args.n_samples,
+            seed=1,
+            show_console=True
+        )
+        rho_samples = fit.stan_variable("rho")
+        alpha_samples = fit.stan_variable("alpha")
+        print(fit.summary())
 
-    rho_samples = fit.stan_variable("rho")
-    alpha_samples = fit.stan_variable("alpha")
+    elif args.method in ['vi', 'mfvi']: # note: no chains for vi
+        fit = model.variational(
+            data=stan_data,
+            algorithm="meanfield",
+            seed=1,
+            output_samples=args.n_samples,
+            show_console=True
+        )
+        all_samples = fit.variational_sample
+        colnames = fit.column_names
+        #print(colnames)
+        #'lp__', 'log_p__', 'log_g__', 'rho[1,1]', 'rho[2,1]'... we need to remove the first 3.
+
+        rho_samples = np.zeros((args.n_samples, V, K))
+        alpha_samples = np.zeros((args.n_samples, V, K))
+        for j, name in enumerate(colnames):
+            if name.startswith("rho["):
+                inside = name[4:-1]   # strip "rho[" and "]"
+                i_str, k_str = inside.split(",")
+                i = int(i_str) - 1
+                k = int(k_str) - 1
+                rho_samples[:, i, k] = all_samples[:, j]
+            elif name.startswith("alpha["):
+                inside = name[6:-1]   # strip "alpha[" and "]"
+                i_str, k_str = inside.split(",")
+                i = int(i_str) - 1
+                k = int(k_str) - 1
+                alpha_samples[:, i, k] = all_samples[:, j]
+    else:
+        raise ValueError(f"Unknown inference method '{args.method}'")
 
     words = [word2id_numpy.inv[ix] for ix in range(V)]
     contexts = [wd + "_c" for wd in words]
