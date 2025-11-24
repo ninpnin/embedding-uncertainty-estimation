@@ -32,6 +32,8 @@ def get_v_omega_tf(X, omega, sigma_prior_inv, invert=True):
 def get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior):
     kappa = tf.transpose(tf.expand_dims(kappa, [1]), perm=[0,2,1])
     parenthesis = tf.transpose(tf.linalg.matmul(kappa, X, transpose_a=True), perm=[0,2,1])
+    if mu_prior is None:
+        return parenthesis
     mu_prior = tf.expand_dims(mu_prior, axis=1)
     mu_prior = tf.transpose(mu_prior, perm=[0,2,1])
     parenthesis2 = tf.linalg.matmul(tf.linalg.inv(sigma_prior), mu_prior, transpose_a=True)
@@ -614,9 +616,9 @@ def polyagamma_sampler_tf_fast(beta_init, X, y, iterations=2, kappa=None, N=None
     K = X.shape[-1]
     CHAINS = X.shape[0]
     
-    if mu_prior is None:
-        #mu_prior = np.zeros(X.shape[-1])
-        mu_prior = tf.stack([tf.zeros(K, dtype=beta_init.dtype) for _ in range(M)])
+    #if mu_prior is None:
+    #    #mu_prior = np.zeros(X.shape[-1])
+    #    mu_prior = tf.stack([tf.zeros(K, dtype=beta_init.dtype) for _ in range(M)])
     if sigma_prior is None:
         sigma_prior = tf.stack([tf.eye(K, dtype=beta_init.dtype) for _ in range(M)])
     XT = tf.transpose(X, perm=[1,0,2])
@@ -626,7 +628,6 @@ def polyagamma_sampler_tf_fast(beta_init, X, y, iterations=2, kappa=None, N=None
     
     omega = tf.Variable(NT, dtype=dtype)
     parenthesis = get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior)
-    #sigma_prior_inv = tf.linalg.inv(sigma_prior)
 
     # ASSUMING A DIAGONAL PRIOR COVARIANCE MATRIX
     sigma_prior_inv = tf.math.reciprocal_no_nan(sigma_prior)
@@ -645,7 +646,6 @@ def polyagamma_sampler_tf_fast(beta_init, X, y, iterations=2, kappa=None, N=None
         LOGGER.debug(f"calculate V_omega_inv")
         V_omega_inv = get_v_omega_tf(X, omega, sigma_prior_inv, invert=False)
         LOGGER.debug(f"calculate V_omega by matrix inversion")
-        #V_omega = tf.linalg.inv(V_omega_inv)
         #LOGGER.debug(f"calculate V_omega by matrix inversion")
         #mu_omega = tf.reduce_sum(tf.linalg.matmul(V_omega, parenthesis, transpose_a=True), axis=-1)
 
