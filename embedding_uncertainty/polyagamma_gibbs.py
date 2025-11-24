@@ -473,6 +473,11 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
         edges = tf.ragged.constant(edges)
         edgecounts = tf.ragged.constant(edgecounts, dtype=tf.float64)
 
+    # Pre-calculate full data for log ll calculations
+    data_i = tf.constant([elem[0] for elem in data])
+    data_j = tf.constant([elem[1] for elem in data])
+    data_x = tf.constant([elem[2] for elem in data], dtype=tf.float64)
+    
     for ix, turn in enumerate(turns * rounds):
         LOGGER.train(f"Flip turn: {turn}, {ix}")
         prior_count = 0
@@ -480,9 +485,9 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
         # Calculate log_posterior and yield sample
         if ix % (yield_every * ll_every * 2) == 0:
             e_sample = copy.deepcopy(e)
-            data_i = tf.constant([elem[0] for elem in data])
-            data_j = tf.constant([elem[1] for elem in data])
-            data_x = tf.constant([elem[2] for elem in data], dtype=tf.float64)
+            #data_i = tf.constant([elem[0] for elem in data])
+            #data_j = tf.constant([elem[1] for elem in data])
+            #data_x = tf.constant([elem[2] for elem in data], dtype=tf.float64)
 
             LOGGER.info(f"Calculate log posterior for the sample...")
             ll, batch_size = 0.0, 10000
