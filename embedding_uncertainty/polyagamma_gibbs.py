@@ -753,6 +753,7 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, yield_every=1, lambda0=None, plo
         wd_ns_i_batch_cache = {}
         wd_batch_cache = {}
         X_batch_cache, kappa_batch_cache, N_batch_cache = {}, {}, {}
+        sigma_prior_batch_cache = {}
 
         for block_ix, wd in progressbar.progressbar(enumerate(blocks)):
             batch_ix = (block_ix, turn)
@@ -775,12 +776,15 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, yield_every=1, lambda0=None, plo
             # Laplacian prior stuff
             LOGGER.debug("Prior stuff")
             mu_prior_wd_all, sigma_prior_wd_all = None, None
-            if edgecounts is not None and turn != "context":
-                sigma_prior_wd_all = get_laplacian_sigma(e, len(wd), tf.float64, edgecounts=edgecounts[block_ix])
-                mu_prior_wd_all = get_laplacian_mu(e, edges=edges[block_ix], edgecounts=edgecounts[block_ix])
+            if batch_ix not in sigma_prior_batch_cache:
+                if edgecounts is not None and turn != "context":
+                    sigma_prior_wd_all = get_laplacian_sigma(e, len(wd), tf.float64, edgecounts=edgecounts[block_ix])
+                    mu_prior_wd_all = get_laplacian_mu(e, edges=edges[block_ix], edgecounts=edgecounts[block_ix])
+                else:
+                    sigma_prior_wd_all = get_laplacian_sigma(e, len(wd), tf.float64)
+                    sigma_prior_batch_cache[batch_ix] = sigma_prior_wd_all
             else:
-                sigma_prior_wd_all = get_laplacian_sigma(e, len(wd), tf.float64)
-
+                sigma_prior_wd_all = sigma_prior_batch_cache[batch_ix]
 
             if batch_ix not in X_batch_cache:
                 X_wd = [X_cache[wd_i] for wd_i in wd]
