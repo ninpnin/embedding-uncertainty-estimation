@@ -434,7 +434,12 @@ def get_laplacian_sigma(e, M, dtype, edgecounts=None):
     K = e.dimensionality
     if edgecounts is None:
         # Without the Laplacian, the variance is 1.0 / lambda0
-        return tf.stack([tf.eye(K, dtype=dtype) for _ in range(M)]) / e.lambda0
+        #LOGGER.debug("old init")
+        #eye1 = tf.stack([tf.eye(K, dtype=dtype) for _ in range(M)]) / e.lambda0
+        #LOGGER.debug("new init")
+        return tf.eye(K, batch_shape = [M], dtype=dtype) / e.lambda0
+        #LOGGER.debug(f"\n{eye1[0]} vs \n{eye2[0]}")
+        #exit()
     else:
         lambdas = [e.lambda0 + e.lambda1 * ec for ec in edgecounts]
         return tf.stack([tf.eye(K, dtype=dtype) / lambdas[ix] for ix in range(M)])
