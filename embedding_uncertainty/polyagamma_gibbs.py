@@ -712,6 +712,11 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, yield_every=1, lambda0=None, plo
     data_j = tf.constant([elem[1] for elem in data])
     data_x = tf.constant([elem[2] for elem in data], dtype=tf.float64)
     
+    wd_ns_i_batch_cache = {}
+    wd_batch_cache = {}
+    X_batch_cache, kappa_batch_cache, N_batch_cache = {}, {}, {}
+    sigma_prior_batch_cache = {}
+
     for ix, turn in enumerate(turns * rounds):
         LOGGER.train(f"Flip turn: {turn}, {ix}")
         prior_count = 0
@@ -749,11 +754,6 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, yield_every=1, lambda0=None, plo
             plt.plot(plot_x_range, logprobs)
             plt.show()
 
-
-        wd_ns_i_batch_cache = {}
-        wd_batch_cache = {}
-        X_batch_cache, kappa_batch_cache, N_batch_cache = {}, {}, {}
-        sigma_prior_batch_cache = {}
 
         for block_ix, wd in progressbar.progressbar(enumerate(blocks)):
             batch_ix = (block_ix, turn)
