@@ -689,7 +689,7 @@ def polyagamma_sampler_tf_fast(beta_init, X, y, iterations=2, kappa=None, N=None
         yield beta
     LOGGER.debug(f"Polya-Gamma sampling total: {np.sum(pg_tds)} (s)")
 
-def embedding_gibbs_tf_fast(e, data, rounds=10, yield_every=1, lambda0=None, plot=True, ll_every=1):
+def embedding_gibbs_tf_fast(e, data, rounds=10, polyagamma_iter=1, yield_every=1, lambda0=None, plot=True, ll_every=1):
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     if lambda0 is not None:

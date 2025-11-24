@@ -91,7 +91,7 @@ def sample_cbow_omegas(e, w, C):
     omega = tf.constant(random_polyagamma(1, np.array(etas)))
     return omega
 
-def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=1):
+def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=10):
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
 
     lambda0 = e.lambda0
@@ -153,10 +153,6 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
     LOGGER.debug(f"C shape {C.shape}")
     LOGGER.debug(f"x shape {x.shape}")
 
-    LOGGER.debug(f"w shape {w}")
-    LOGGER.debug(f"C shape {C}")
-    LOGGER.debug(f"x shape {x}")
-
     B_inv_rho = tf.eye(K, dtype=tf.float64) * e.lambda0
     B_inv_alpha = tf.eye(K, dtype=tf.float64) * e.lambda0
 
@@ -165,6 +161,8 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
         prior_count = 0
 
         # Sample omega from the Polya-Gamma distribution
+        LOGGER.debug(f"Calculate eta in order to sample omega")
+
         rhos = e[w]
         alphas = tf.reduce_sum(e[C], axis=1)
         LOGGER.debug(f"rhos {rhos.shape}")
@@ -207,10 +205,12 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 # Fetch omegas for the correct indices
                 omega_U = tf.gather(omega, occurences_batch)
 
+                LOGGER.debug(f"Calculate empirical precision matrix A_T_O_A: omega scaling")
                 # expand last dim to make broadcasting possible
                 omega_scaled_A_U = tf.expand_dims(omega_U, axis=-1) * A_U
 
                 # calculate the precision matrices
+                LOGGER.debug(f"Calculate empirical precision matrix A_T_O_A: matrix product")
                 A_T_Omega_A =  tf.linalg.matmul(omega_scaled_A_U, A_U, transpose_a=True)
                 A_T_Omega_A = A_T_Omega_A.to_tensor() # always of size (batch_size, K, K)
 
@@ -234,22 +234,27 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
 
                 # Cholesky decompose the precision matrix
                 #L_omega_rho_inv = tf.linalg.cholesky(V_omega_rho_inv)
-                
+
+                LOGGER.debug(f"Invert V_omega_rho_inv")
                 V_omega_rho = tf.linalg.inv(V_omega_rho_inv)
+
+                LOGGER.debug(f"Cholesky decompose V_omega_rho")
                 L_omega_rho = tf.linalg.cholesky(V_omega_rho)
 
                 # TODO: Dual Cholesky solve for mu_omega: 
                 # LL^T mu = y
                 # First: L b = y
                 # Then: L^T mu = b
+                LOGGER.debug(f"Calculate mean for rho_U")
                 mu_omega = tf.linalg.matvec(V_omega_rho, A_T_Kappa_U)
 
+                LOGGER.debug(f"Sample via the Cholesky factor")
                 y_delta = tf.random.normal((wwd_len, K), dtype=tf.float64)
                 x_delta = tf.linalg.matvec(L_omega_rho, y_delta)
 
                 # TODO: Single Cholesky solve for the offset
                 new_vals = mu_omega + x_delta
-                LOGGER.debug(f"{new_vals} {new_vals.shape}")
+                LOGGER.debug(f"New vals {new_vals.shape}")
 
                 e[words_with_data] = new_vals
 
@@ -257,14 +262,20 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
             if len(words_without_data) >= 1:
                 # TODO: pre-calculate prior Cholesky
                 wwo_len = len(words_without_data)
+
+                LOGGER.debug(f"Invert prior")
                 V_inv = tf.linalg.inv(B_inv_rho)
+
+                LOGGER.debug(f"Cholesky decompose prior")
                 L_inv = tf.linalg.cholesky(V_inv)
                 x_noise = tf.random.normal((K, wwo_len), dtype=tf.float64)
                 e[words_without_data] = tf.matvec(L_inv, x_noise)
 
+        LOGGER.debug(f"Sample omegas")
         omega = sample_cbow_omegas(e, w, C)
 
         # ALPHA
+        LOGGER.debug(f"Sample alphas")
         for j in range(V // batch_size):
 
             j0, j1 = batch_size * j, batch_size * (j+1)
@@ -284,7 +295,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 wwd_len = len(words_with_data)
                 co_occurences_U = alpha_co_occurences.subgraph(words_with_data)
 
-                LOGGER.debug(f"sample alphas: {words_with_data}")
+                LOGGER.debug(f"sample alphas for: {words_with_data}")
 
                 indices_batch = e.tf_vocabulary[tf.constant(words_with_data)]
                 occurences_batch = tf.gather(alpha_data_indices, indices_batch)
@@ -344,7 +355,9 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 #L_Omega = tf.linalg.cholesky(V_Omega)
 
                 # TODO: properly calculate inverse
+                LOGGER.debug(f"Invert V_Omega_inv")
                 V_Omega_inv = tf.linalg.inv(V_Omega)
+                LOGGER.debug(f"Cholesky factorize V_Omega")
                 L_Omega_inv = tf.linalg.cholesky(V_Omega_inv)
 
                 # TODO: deal with delta etc.
@@ -367,14 +380,17 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 
                 # Re-calculate etas
                 # TODO: only do for the batch
+                LOGGER.debug(f"Calculate eta")
                 rhos = e[w]
                 alphas = tf.reduce_sum(e[C], axis=1)
                 etas = tf.reduce_sum(alphas * rhos, axis=-1)
 
                 # Addition to eta contributes by U
+                LOGGER.debug(f"Calculate delta")
                 addition = tf.scatter_nd(tf.expand_dims(occurences_U_flat, axis=-1), addition_U_flat, etas.shape)
                 deltas = etas - addition
 
+                LOGGER.debug(f"Calculate mean for alpha_U")
                 delta_U = tf.gather(deltas, occurences_batch)
                 delta_U_omega_U = delta_U * omega_U
 
@@ -402,6 +418,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
 
             # Sample params without data from prior
             if len(words_without_data) >= 1:
+                LOGGER.debug(f"Sample prior for alpha_U without data")
                 wwo_len = len(words_without_data)
                 V_inv = tf.linalg.inv(B_inv_alpha)
                 L_inv = tf.linalg.cholesky(V_inv)
@@ -410,6 +427,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 e[words_without_data_c] = tf.matvec(L_inv, x_noise)
         
         # Calculate likelihood
+        LOGGER.debug(f"Calculate likelihood")
         rhos = e[w]
         alphas = tf.reduce_sum(e[C], axis=1)
         etas = tf.reduce_sum(alphas * rhos, axis=-1)
@@ -420,7 +438,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
         log_ll = tf.reduce_mean(log_p)
         log_posterior = log_ll + e.log_prob(batch_size=1, data_size=len(x))
 
-        print("log_ll", log_ll.numpy(), "log_posterior", log_posterior.numpy())
+        LOGGER.train(f"log_ll {log_ll.numpy()}, log_posterior {log_posterior.numpy()}")
         LOGGER.train(f"eta {etas.numpy()[:3]}")
 
         yield copy.deepcopy(e)
