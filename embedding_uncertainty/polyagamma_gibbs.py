@@ -7,6 +7,7 @@ import copy
 import progressbar
 from sklearn.linear_model import LogisticRegression
 import tensorflow as tf
+import tensorflow_probability as tfp
 from probabilistic_word_embeddings.models import sgns_likelihood
 import networkx as nx
 import tqdm
@@ -17,13 +18,15 @@ from time import perf_counter as pc
 def print_tf_tensor(arr, precision=2):
     print(np.array2string(arr.numpy(), precision=precision, suppress_small=True))
 
-def get_v_omega_tf(X, omega, sigma_prior_inv):
+def get_v_omega_tf(X, omega, sigma_prior_inv, invert=True):
     XT2 = tf.transpose(X, perm=[2,1,0])
     XTomega = (XT2 * omega)
     XTomega = tf.transpose(XTomega, perm=[2,1,0])
     V_inv = tf.linalg.matmul(X, XTomega, transpose_a=True)
     V_inv = tf.transpose(V_inv, perm=[0,2,1])
     V_inv += sigma_prior_inv
+    if not invert:
+        return V_inv
     return tf.linalg.inv(V_inv)
 
 def get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior):
@@ -590,6 +593,236 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
                         else:
                             e[wd_i] = prior_sampler(e[wd_i], mu_prior=mu_i, sigma_prior=sigma_i)
                             prior_count += 1
+
+        if prior_count >= len(words) * 0.2:
+            LOGGER.warning(f"sampled from prior: {prior_count} out of {len(words)}")
+        else:
+            LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
+
+def polyagamma_sampler_tf_fast(beta_init, X, y, iterations=2, kappa=None, N=None, mu_prior=None, sigma_prior=None):
+    """
+
+    """
+    dtype = beta_init.dtype
+    beta = beta_init
+    M = X.shape[0]
+    K = X.shape[-1]
+    CHAINS = X.shape[0]
+    
+    if mu_prior is None:
+        #mu_prior = np.zeros(X.shape[-1])
+        mu_prior = tf.stack([tf.zeros(K, dtype=beta_init.dtype) for _ in range(M)])
+    if sigma_prior is None:
+        sigma_prior = tf.stack([tf.eye(K, dtype=beta_init.dtype) for _ in range(M)])
+    XT = tf.transpose(X, perm=[1,0,2])
+    NT = N.numpy().T
+    if kappa is None:
+        kappa = y - N/2
+    
+    omega = tf.Variable(NT, dtype=dtype)
+    parenthesis = get_mu_omega_tf_parenthesis(X, kappa, mu_prior, sigma_prior)
+    #sigma_prior_inv = tf.linalg.inv(sigma_prior)
+
+    # ASSUMING A DIAGONAL PRIOR COVARIANCE MATRIX
+    sigma_prior_inv = tf.math.reciprocal_no_nan(sigma_prior)
+    
+    pg_tds = []
+    for ix in range(iterations):
+        LOGGER.debug(f"iter {ix}")
+        # Get a 5 by 1 array of PG(1, 2) variates.
+        xTbeta = tf.reduce_sum(XT * beta, axis=-1)
+        t0 = pc()
+        LOGGER.debug(f"Sample PG")
+        omega_numpy = random_polyagamma(NT, xTbeta.numpy())
+        pg_tds.append(pc() - t0)
+        omega.assign(omega_numpy)
+        #print(omega)
+        LOGGER.debug(f"calculate V_omega_inv")
+        V_omega_inv = get_v_omega_tf(X, omega, sigma_prior_inv, invert=False)
+        LOGGER.debug(f"calculate V_omega by matrix inversion")
+        #V_omega = tf.linalg.inv(V_omega_inv)
+        #LOGGER.debug(f"calculate V_omega by matrix inversion")
+        #mu_omega = tf.reduce_sum(tf.linalg.matmul(V_omega, parenthesis, transpose_a=True), axis=-1)
+
+        # Use Cholesky LL^T to generate multivariate random vectors
+        # x_prime = mu + L x
+        #LOGGER.debug(f"Do Cholesky on V_omega")
+        #L = tf.linalg.cholesky(V_omega)
+
+        LOGGER.debug(f"Do Cholesky on V_omega_inv")
+        L_inv = tf.linalg.cholesky(V_omega_inv)
+
+        
+        #LOGGER.debug(f"Sample multivariate normal")
+        #epsilon = tf.random.normal([CHAINS, K, 1], dtype=dtype)
+        #diff = tf.linalg.matmul(L, epsilon, transpose_a=True)
+
+        LOGGER.debug(f"Obtain diff by Cholesky solve L epsilon = y")
+        # TODO: solve random
+        epsilon_alt = tf.random.normal([CHAINS, K, 1], dtype=dtype)
+        diff_alt = tf.linalg.triangular_solve(L_inv, epsilon_alt)
+
+        LOGGER.debug(f"Obtain mean by dual Cholesky solve")
+        mu_prime = tf.linalg.triangular_solve(L_inv, parenthesis)
+        
+        LOGGER.debug(f"L_inv {L_inv.shape}")
+        mu_alt = tf.linalg.triangular_solve(tf.transpose(L_inv, perm=[0,2,1]), mu_prime, lower=False)
+
+        #epsilon_test = tf.random.normal([CHAINS, K, 100000], dtype=dtype)
+        #diff_test = tf.linalg.triangular_solve(L_inv, epsilon_test)
+        #LOGGER.debug(f"diff_test {diff_test.shape}")
+        #LOGGER.debug(f"diff_test[0] {diff_test[0].shape}")
+        #cov = tfp.stats.covariance(tf.transpose(diff_test[0]))
+        #LOGGER.debug(f"cov \n{tf.round(cov * 1000) / 1000}")
+        #LOGGER.debug(f"V_omega \n{tf.round(V_omega[0] * 1000) / 1000}")
+
+        #exit()
+
+
+        beta = tf.reduce_sum(mu_alt + diff_alt, axis=-1)
+
+        yield beta
+    LOGGER.debug(f"Polya-Gamma sampling total: {np.sum(pg_tds)} (s)")
+
+def embedding_gibbs_tf_fast(e, data, rounds=10, yield_every=1, lambda0=None, plot=True, ll_every=1):
+    turns = ["word", "context"]
+    words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
+    if lambda0 is not None:
+        LOGGER.info(f"Use provided lambda0: {lambda0}")
+    else:
+        lambda0 = e.lambda0
+        LOGGER.info(f"Use lambda0 from the embedding object: {lambda0}")
+
+    logprobs = []
+    LOGGER.info(f"Aggregate data...")
+    X_cache, N_wd_cache, kappa_cache = aggregate_data(data, words, e)
+
+    LOGGER.info(f"Split into independent sets...")
+    blocks = split_into_independent_sets(e=e, wordcounts=N_wd_cache)
+
+    edges, edgecounts = None, None
+
+    # Pre-calculate full data for log ll calculations
+    data_i = tf.constant([elem[0] for elem in data])
+    data_j = tf.constant([elem[1] for elem in data])
+    data_x = tf.constant([elem[2] for elem in data], dtype=tf.float64)
+    
+    for ix, turn in enumerate(turns * rounds):
+        LOGGER.train(f"Flip turn: {turn}, {ix}")
+        prior_count = 0
+
+        # Calculate log_posterior and yield sample
+        if ix % (yield_every * ll_every * 2) == 0:
+            e_sample = copy.deepcopy(e)
+            #data_i = tf.constant([elem[0] for elem in data])
+            #data_j = tf.constant([elem[1] for elem in data])
+            #data_x = tf.constant([elem[2] for elem in data], dtype=tf.float64)
+
+            LOGGER.info(f"Calculate log posterior for the sample...")
+            ll, batch_size = 0.0, 10000
+            if len(data_i) <= batch_size:
+                LOGGER.info(f"Calculate log posterior for the whole data...")
+                ll = tf.reduce_sum(sgns_likelihood(e, data_i, data_j, x=data_x))
+            else:
+                valid_batches = len(data_i) // batch_size
+                LOGGER.info(f"Calculate log posterior for the sample in {valid_batches} batches...")
+                for batch_ix in tqdm.tqdm(list(range(valid_batches))):
+                    s_ix, e_ix = batch_ix * batch_size, (batch_ix +1) * batch_size
+                    ll += tf.reduce_sum(sgns_likelihood(e, data_i[s_ix:e_ix], data_j[s_ix:e_ix], x=data_x[s_ix:e_ix]))
+
+            posterior = ll + e.log_prob(len(data_i), len(data_i))
+            logprobs.append(posterior)
+            LOGGER.train(f"Log posterior for the sample: {posterior}")
+            LOGGER.train(f"Avg log likelihood for the sample: {ll / len(data_x)}")
+            yield e_sample
+
+        # Plot log_posterior graph
+        if ix % (yield_every * 100) == 0 and ix > 0 and plot:
+            from matplotlib import pyplot as plt
+            plot_x_range = np.array(range(len(logprobs)))
+            plot_x_range = plot_x_range * ll_every
+            plt.plot(plot_x_range, logprobs)
+            plt.show()
+
+
+        wd_ns_i_batch_cache = {}
+        wd_batch_cache = {}
+        X_batch_cache, kappa_batch_cache, N_batch_cache = {}, {}, {}
+
+        for block_ix, wd in progressbar.progressbar(enumerate(blocks)):
+            batch_ix = (block_ix, turn)
+
+            e_theta = e.theta.numpy()
+            if batch_ix not in wd_batch_cache:
+                if turn == "context":
+                    wd = [f"{wd_i}_c" for wd_i in wd]
+
+                wd_batch_cache[batch_ix] = tf.constant(wd)
+                wd_nonskipped_indices = tf.squeeze(tf.where([True for wd_i in wd]))
+                if len(wd) == 1:
+                    wd_nonskipped_indices = tf.constant([wd_nonskipped_indices.numpy()])
+
+                wd_ns_i_batch_cache[batch_ix] = wd_nonskipped_indices
+            
+            wd_batch = wd_batch_cache[batch_ix]
+            wd_nonskipped_indices = wd_ns_i_batch_cache[batch_ix]
+
+            # Laplacian prior stuff
+            LOGGER.debug("Prior stuff")
+            mu_prior_wd_all, sigma_prior_wd_all = None, None
+            if edgecounts is not None and turn != "context":
+                sigma_prior_wd_all = get_laplacian_sigma(e, len(wd), tf.float64, edgecounts=edgecounts[block_ix])
+                mu_prior_wd_all = get_laplacian_mu(e, edges=edges[block_ix], edgecounts=edgecounts[block_ix])
+            else:
+                sigma_prior_wd_all = get_laplacian_sigma(e, len(wd), tf.float64)
+
+
+            if batch_ix not in X_batch_cache:
+                X_wd = [X_cache[wd_i] for wd_i in wd]
+                #print(type(X_wd))
+                #print(X_wd)
+                X_batch_cache[batch_ix] = tf.ragged.constant(X_wd)
+                #print(X_wd)
+
+                K = e.dimensionality
+                kappa_wd = tf.ragged.constant([kappa_cache.get(wd_i) for wd_i in wd])
+                kappa_padded = kappa_wd.to_tensor()
+                kappa_batch_cache[batch_ix] = tf.cast(kappa_padded, dtype=tf.float64)
+
+                N_wd_ragged = tf.ragged.constant([N_wd_cache[wd_i] for wd_i in wd])
+                N_wd_padded = N_wd_ragged.to_tensor()
+                N_batch_cache[batch_ix] = tf.math.maximum(N_wd_padded, tf.ones(N_wd_padded.shape, dtype=N_wd_padded.dtype))
+
+            LOGGER.debug("Get suffstats")
+            X_wd = X_batch_cache[batch_ix]
+            N_wd_padded = N_batch_cache[batch_ix]
+            kappa_padded = kappa_batch_cache[batch_ix]
+
+            LOGGER.debug("Get actual vectors")
+            X_padded = e[X_wd].to_tensor()
+            #print(X_padded)
+
+            #exit()
+            
+            LOGGER.debug("Prior stuff")
+            last_sample, mu_prior_wd = None, None
+            sigma_prior_wd = tf.gather(sigma_prior_wd_all, wd_nonskipped_indices)
+            if mu_prior_wd_all is not None:
+                mu_prior_wd = tf.gather(mu_prior_wd_all, wd_nonskipped_indices)
+
+            beta_init = e[wd_batch]
+            LOGGER.debug("PG sampling step")
+            betagen = polyagamma_sampler_tf_fast(beta_init, X_padded,
+                        None, kappa=kappa_padded, sigma_prior=sigma_prior_wd,
+                        mu_prior=mu_prior_wd, N=N_wd_padded, iterations=1)
+            for beta_sample in betagen:
+                last_sample = beta_sample
+            LOGGER.debug("Set vectors")
+
+            #wds_nonfreeze = [wd_i for wd_i in wd if wd_i not in freeze_params]
+            #ids_nonfreeze = [ix for ix, wd_i in enumerate(wd) if wd_i not in freeze_params]
+            #e[wds_nonfreeze] = tf.gather(beta_sample, ids_nonfreeze)
+
 
         if prior_count >= len(words) * 0.2:
             LOGGER.warning(f"sampled from prior: {prior_count} out of {len(words)}")
