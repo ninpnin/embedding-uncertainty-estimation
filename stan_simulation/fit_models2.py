@@ -6,7 +6,9 @@ import sys
 from collections import defaultdict
 from trainerlog import get_logger
 LOGGER = get_logger("stan", splitsec=True)
+import logging
 from pathlib import Path
+import time
 
 import stan
 from cmdstanpy import CmdStanModel
@@ -20,15 +22,15 @@ NOTE: MAP estimate is only supported by CmdStanPy.
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", type=str, default='../../us-congress/congress-stemmed-ws-2-ns-1-vocab-2000-0.json') #'100k_v10_d2_.json' ten_2d_datasets/1.json
+parser.add_argument("--data_path", type=str, default='100k_v100_d10_.json') #'100k_v10_d2_.json' ten_2d_datasets/1.json
 parser.add_argument("--output_dir", type=str, default='test') #stan_fits_dxd_mapjacobian
 parser.add_argument("--stan_model_path", type=str, default='models/sgns_normalpriors_aggregated.stan')
-parser.add_argument("--dim", type=int, default=100)
+parser.add_argument("--dim", type=int, default=20)
 parser.add_argument("--lambda0", type=float) # default=1.0
 parser.add_argument("--estimator", type=str, default='hmc')
-parser.add_argument("--num_chains", type=int, default=2)
-parser.add_argument("--num_samples", type=int, default=2000)
-parser.add_argument("--data_lengths", type=int, nargs="+", default=[100, 200])
+parser.add_argument("--num_chains", type=int, default=1)
+parser.add_argument("--num_samples", type=int, default=1000)
+parser.add_argument("--data_lengths", type=int, nargs="+", default=[1000, 2000, 5000, 10_000, 20_000]) #[50_000, 100_000, 200_000, 500_000]
 args = parser.parse_args()
 
 LOGGER.train(f"Run on args: {args}")
@@ -77,7 +79,7 @@ if sizes is None:
 
 LOGGER.info(f"Total length of data {len(data_entries)}")
 
-data = None # remove from memory
+#data = None # remove from memory
 
 with open(stan_model_path, 'r') as file:
     stan_code = file.read()
@@ -186,7 +188,17 @@ for size in sizes:
     #D = map_context_vectors.shape[1]
     #fixed_context_matrix = map_context_vectors[:D,:] #:D
 
-    
+
+    log_filename = f"stan_fit_{inference_type}_K{D}_{dataset_filename}_{size}.log"
+    log_path = os.path.join(output_dir, log_filename)
+
+    fh = logging.FileHandler(log_path)
+    fh.setLevel(logging.DEBUG)
+    LOGGER.addHandler(fh)
+
+    LOGGER.info(f"Logging this run to {log_path}")
+    LOGGER.info(f"Run on args: {args}")
+
     # -- Fit stan model --
 
 
@@ -198,8 +210,8 @@ for size in sizes:
         stan_data = create_stan_data(data_entries, size, vocabulary, D=D, lambda0=lambda0)
     LOGGER.info('Data preparation complete.')
 
-    data_entries = None #remove from memory
-
+    #data_entries = None #remove from memory
+    t0 = time.time()
     if inference_type=='hmc':
         LOGGER.train(f"Run HMC for {num_samples} samples and {num_chains} chains")
         model = stan.build(stan_code, data=stan_data)
@@ -232,8 +244,10 @@ for size in sizes:
         #save_fit(map, f'map_{size}')
 
         fit = model.laplace_sample(data=stan_data, mode=map, draws=num_samples, jacobian=True)
-    
+    t1 = time.time()
+
     LOGGER.train("finished fit.")
+    LOGGER.train("fit took %.3f seconds"%(t1-t0))
     save_fit(fit, size, D, dataset_filename, inference_type)
     LOGGER.train(f"Saved fit for size {size} in {output_dir}")
     
