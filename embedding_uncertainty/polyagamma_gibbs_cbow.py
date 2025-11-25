@@ -324,8 +324,14 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                     V_Omega += tf.experimental.numpy.kron(E_diag, R_T_Omega_R[j])
 
                 # off-diagonal
+                LOGGER.debug(f"Calculate the off-diagonal")
+                time_off_diag_ROR = 0.0
+                time_off_diag_kronecker = 0.0
                 for ix, wds in enumerate(co_occurences_U.edges):
                     j, k = wds
+                    
+                    t0 = pc()
+
                     indices_j = e.tf_vocabulary[tf.constant([j])]
                     indices_k = e.tf_vocabulary[tf.constant([k])]
 
@@ -346,14 +352,23 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                     R_jk_omega_jk_R_jk = tf.reduce_sum(R_jk_omega_jk_R_jk, axis=0)
 
                     # Create tensor with two nonzero elements at [j,k] and [k, j]
+                    t1 = pc()
+                    #LOGGER.debug(f"Add result to V_omega via the Kronecker product")
                     j = words_with_data.index(j)
                     k = words_with_data.index(k)
                     E_sparsetensor = tf.sparse.SparseTensor([[j,k], [k,j]], [1.0, 1.0], [wwd_len, wwd_len])
                     E_diag = tf.sparse.to_dense(tf.sparse.reorder(E_sparsetensor))
                     V_Omega += tf.experimental.numpy.kron(E_diag, R_jk_omega_jk_R_jk)
 
-                #L_Omega = tf.linalg.cholesky(V_Omega)
+                    t2 = pc()
+                    time_off_diag_ROR += t1 - t0
+                    time_off_diag_kronecker += t2 - t1
 
+                LOGGER.debug(f"Time spent calculating ROR: {time_off_diag_ROR}")
+                LOGGER.debug(f"Time spent in the Kronecker product: {time_off_diag_kronecker}")
+
+                #L_Omega = tf.linalg.cholesky(V_Omega)
+                #exit()
                 # TODO: properly calculate inverse
                 LOGGER.debug(f"Invert V_Omega_inv")
                 V_Omega_inv = tf.linalg.inv(V_Omega)
