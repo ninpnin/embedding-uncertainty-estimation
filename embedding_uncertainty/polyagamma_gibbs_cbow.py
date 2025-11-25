@@ -91,6 +91,14 @@ def sample_cbow_omegas(e, w, C):
     omega = tf.constant(random_polyagamma(1, np.array(etas)))
     return omega
 
+@tf.function
+def update_kron(A, B, j, k):
+    K = B.shape[0]
+    wwd_len = tf.shape(A)[0] / K
+    E_sparsetensor = tf.sparse.SparseTensor([[j,k], [k,j]], [1.0, 1.0], [wwd_len, wwd_len])
+    E_diag = tf.sparse.to_dense(tf.sparse.reorder(E_sparsetensor))
+    return A + tf.experimental.numpy.kron(E_diag, B)
+
 def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[], plot=True, ll_every=1, batch_size=10):
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
 
@@ -324,6 +332,11 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                     V_Omega += tf.experimental.numpy.kron(E_diag, R_T_Omega_R[j])
 
                 # off-diagonal
+
+                # TODO: replace with a (K * |U|) x |E_U| sized dense matrix
+                # with a lot of zeros. It will probably be faster due to the
+                # lack of looping
+
                 LOGGER.debug(f"Calculate the off-diagonal")
                 time_off_diag_ROR = 0.0
                 time_off_diag_kronecker = 0.0
@@ -356,10 +369,8 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                     #LOGGER.debug(f"Add result to V_omega via the Kronecker product")
                     j = words_with_data.index(j)
                     k = words_with_data.index(k)
-                    E_sparsetensor = tf.sparse.SparseTensor([[j,k], [k,j]], [1.0, 1.0], [wwd_len, wwd_len])
-                    E_diag = tf.sparse.to_dense(tf.sparse.reorder(E_sparsetensor))
-                    V_Omega += tf.experimental.numpy.kron(E_diag, R_jk_omega_jk_R_jk)
 
+                    V_Omega = update_kron(V_Omega, R_jk_omega_jk_R_jk, j, k)
                     t2 = pc()
                     time_off_diag_ROR += t1 - t0
                     time_off_diag_kronecker += t2 - t1
