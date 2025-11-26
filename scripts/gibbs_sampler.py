@@ -24,13 +24,16 @@ if __name__ == '__main__':
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--map_estimate", type=str, default=None)
+    parser.add_argument("--freeze_params", type=str, nargs="+", default=None)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
     parser.add_argument("--example_word", type=str, default="word0")
     parser.add_argument("--use_tf", type=bool, default=False)
+    parser.add_argument("--ll_every", type=int, default=1)
     parser.add_argument("--prefix", type=str, default="")
     parser.add_argument("--pg_iter", type=int, default=50)
-    parser.add_argument("--mvn_method", type=str, default="svd")
+    parser.add_argument("--mvn_method", type=str, default="cholesky", choices=["cholesky", "svd"])
     parser.add_argument("--calculate_p", type=bool, default=False)
+    parser.add_argument("--plot", type=bool, default=False)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -68,7 +71,22 @@ if __name__ == '__main__':
         #freeze_params = [f"word{i}_c" for i in range(e.dimensionality)]
         freeze_params = [wd for wd in sorted(list(e.vocabulary)) if "_c" in wd]
         freeze_params = freeze_params[:e.dimensionality]
-        LOGGER.train(f"Copy from MAP and freeze following params {freeze_params}")
+
+        if args.freeze_params is not None:
+            if len(args.freeze_params) != e.dimensionality:
+                LOGGER.error(f"Number of parameters to be frozen {len(args.freeze_params)} does not match dimensionality {e.dimensionality}")
+
+            freeze_params = args.freeze_params
+            if freeze_params[0][-3:] != "_c":
+                LOGGER.warning(f"Parameters to be frozen provided as words without _c; adding it...")
+                freeze_params = [wd.split("_")[0] + "_c" for wd in freeze_params]
+
+                for wd in freeze_params:
+                    if wd not in e:
+                        LOGGER.critical(f"Frozen parameter '{wd}' not in vocabulary!")
+                        exit()
+
+        LOGGER.train(f"Copy from MAP and freeze following params: {freeze_params}")
         e_map = Embedding(saved_model_path=args.map_estimate)
         LOGGER.train(f"e {e[freeze_params].shape} emap { e_map[freeze_params].shape}")
         LOGGER.train(f"e {e[freeze_params].dtype} emap { e_map[freeze_params].dtype}")
@@ -77,17 +95,21 @@ if __name__ == '__main__':
     WARMUP = args.samples // 2
     p_avg = None
     pathstem = Path(args.datapath).stem.replace("_", "-")
-
+    V = len(vocab)
     # Generate a random string to make runs pseudo unique
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
-    samples_folder = f"{pathstem}-gibbs-N-{args.data_len}-D-{args.dim}-{args.prefix}-{randomchars}"
+    samples_folder = f"{pathstem}-gibbs-N-{args.data_len}-K-{args.dim}-V-{V}-PG-{args.pg_iter}-{args.prefix}-{randomchars}"
 
     LOGGER.info(f"Make folder {samples_folder} ...")
     Path(samples_folder).mkdir(exist_ok=True)
 
-    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params)
+    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, plot=args.plot)
     if args.use_tf:
-        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, multivariate_method=args.mvn_method)
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
+                                             polyagamma_iter=args.pg_iter, freeze_params=freeze_params,
+                                             multivariate_method=args.mvn_method, plot=args.plot,
+                                             ll_every=args.ll_every
+                                         )
     for sample_ix, e_sample in enumerate(gibbs_generator):
         word0sample = e_sample[args.example_word].numpy()
         LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")

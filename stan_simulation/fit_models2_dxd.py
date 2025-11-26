@@ -30,6 +30,8 @@ parser.add_argument("--data_lengths", type=int, nargs="+", default=[100])
 
 args = parser.parse_args()
 
+SAVE_FULL_HMC = False
+
 LOGGER.train(f"Run on args: {args}")
 data_path = args.data_path
 stan_model_path = args.stan_model_path
@@ -83,6 +85,7 @@ def load_fit_by_size(size, save_dir):
             parts = f.split('.')[-2].split('_')
             if parts[-1] == str(size):
                 file_path = os.path.join(save_dir, f)
+                LOGGER.info(f"Load MAP from '{f}'")
                 with open(file_path, 'rb') as fn:
                     fit = pickle.load(fn)
                 return fit
@@ -209,11 +212,25 @@ for size in sizes:
         #   transformed parameters { context_vectors ... }
         # If you want 'context_vectors' directly, do fit['context_vectors'] (if it’s declared).
         # Or store the entire `fit` object for now:
-        fit = {
-            'word_vectors': fit['word_vectors'],
-            'context_vectors': fit['context_vectors']
-        }
+        if not SAVE_FULL_HMC:
+            fit = {
+                'word_vectors': fit['word_vectors'],
+                'context_vectors': fit['context_vectors']
+            }
         LOGGER.train('Time elapse hmc: %.3f'%(time.time()-t1))
+
+    elif inference_type == 'cmd_hmc':
+        model = CmdStanModel(stan_file=stan_model_path)
+        
+        fit = model.sample(
+            data=stan_data,
+            chains=num_chains,
+            parallel_chains=num_chains,
+            iter_sampling=num_samples,
+            iter_warmup=1000,
+            save_warmup=False,
+            output_dir=output_dir
+        )
 
     elif inference_type == 'vi':
         vi_iter = 5000

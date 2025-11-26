@@ -43,10 +43,11 @@ if __name__ == '__main__':
     print(theta_true.shape)
     K_truth, V_truth = theta_true.shape[1], theta_true.shape[0] // 2
     if K_truth == K_sample and V_truth == V_sample:
-        LOGGER.train(f"Truth K: {ref_emb.dimensionality}, V: { len(ref_emb.vocabulary) // 2}")
+        LOGGER.train(f"Truth K: {K_truth}, V: { V_truth}")
     else:
-        LOGGER.error(f"Truth K: {ref_emb.dimensionality}, V: { len(ref_emb.vocabulary) // 2}, does not match samples")
-    
+        LOGGER.error(f"Truth K: {K_truth}, V: { V_truth}, does not match samples")
+        exit()
+        
     e_truth = Embedding(saved_model_path=str(list(sample_folder.glob("*.pkl"))[-1].absolute()))
     for wd, ix in tqdm.tqdm(list(d["vocabulary"].items())):
         #print(wd, ix)
@@ -93,7 +94,7 @@ if __name__ == '__main__':
     LOGGER.train(f"RMSE: {RMSE}")
     
     # results/5-gibbs-N-10000-D-5-simulation-zwcb/
-    folder = Path(args.sample_folder).stem
+    folder = Path(args.sample_folder).stem.replace("-K-", "-D-")
     dataset_ix = int(folder.split("-")[0])
     N = int(folder.split("-N-")[-1].split("-D-")[0])
     resultdict = {"dataset_ix": dataset_ix, "N": N, "K": K_truth, "V": V_truth, "ci-90-coverage": ci_coverage, "RMSE": RMSE, "RMSE_normalized": RMSE / RMSE_base}
@@ -102,13 +103,13 @@ if __name__ == '__main__':
     coverage_path = Path("logs/coverage.csv")
     if coverage_path.exists():
         old_df = pl.read_csv(coverage_path)
-        united_df = pl.concat([old_df, df])
-        united_df = united_df.sort("dataset_ix", "N", "K", "V")
+        united_df = pl.concat([df, old_df])
+        #united_df = united_df.sort("dataset_ix", "N", "K", "V")
         #print(united_df)
-        united_df = united_df.unique(["dataset_ix", "N", "K", "V"])
+        united_df = united_df.unique(["dataset_ix", "N", "K", "V"], maintain_order=True)
+        united_df = united_df.sort("K", "V", "N", "dataset_ix")
         print(united_df)
         united_df.write_csv(coverage_path)
-        pass
     else:
         print(df)
         df.write_csv(coverage_path)
