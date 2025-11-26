@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 import re
 
-COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c', "Laplace": "#df647a"}
+COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c', "Laplace": "#df647a", "GibbsNumpy": "#fcb491"}
 for method in list(COLORS):
     for ix in range(10):
         COLORS[f"{method}-{ix}"] = COLORS[method]
@@ -80,7 +80,12 @@ def r_hat(df, reference="HMC"):
         R = az.rhat(X)
         print("Within chain R hat:", R)
         
-    
+def modeltype(s):
+    if "cbow" in s.lower():
+        return "cbow"
+    else:
+        return "sgns"
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
@@ -90,14 +95,25 @@ if __name__ == '__main__':
     parser.add_argument("--do_wordsim", type=bool, default=False)
     parser.add_argument("--full_xaxis", type=bool, default=False, help="Force the x axis to range from -1 to 1")
     parser.add_argument("--enumerate_chains", type=bool, default=False, help="Plot different chains separately even if they use same method")
+    parser.add_argument("--format", type=str, default="pkl")
+    parser.add_argument("--ref_emb", type=str, default=None)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     
+    model = None
+    sample_folder_models = [modeltype(name) for name in args.sample_folder]
+    if len(set(sample_folder_models)) >= 2:
+        LOGGER.error(f"Multiple different models in the same plot: {sample_folder_models}")    
+        assert len(set(sample_folder_models)) <= 1
+    else:
+        model = sample_folder_models[0]
+        LOGGER.train(f"Model: {model}")
+
     # Discard warmup samples
     if args.warmup is None:
         args.warmup = [None] * len(args.sample_folder)
     elif len(args.warmup) == 1:
-        args.warmup = [args.warmup] * len(args.sample_folder)
+        args.warmup = args.warmup * len(args.sample_folder)
     else:
         assert len(args.warmup) == len(args.sample_folder)
         
@@ -105,7 +121,7 @@ if __name__ == '__main__':
     chains = []
     for sample_folder, warmup in zip(args.sample_folder, args.warmup):
         sample_folder = Path(sample_folder)
-        samples = sorted(sample_folder.glob("*.pkl"), key=lambda p: int(p.stem.split("-")[-1]))
+        samples = sorted(sample_folder.glob(f"*.{args.format}"), key=lambda p: int(p.stem.split("-")[-1]))
         # By default the first half
         if warmup is None:
             samples = samples[len(samples) // 2:]
@@ -136,13 +152,23 @@ if __name__ == '__main__':
             rows.append(results)
 
     if len(args.cossim_words) == 2:
+        e_ref, ref_val = None, None
+        if args.ref_emb is not None:
+            e_ref = Embedding(saved_model_path=args.ref_emb)
+            w1, w2 = args.cossim_words
+            rho_1, rho_2 = e_ref[w1], e_ref[w2]
+            ref_val = cossim(rho_1, rho_2)
+            print("Ref val", ref_val, f"({w1}, {w2})")
+
         def estimator_name(foldername):
             if "vi" in foldername.lower():
                 return "MFVI"
             elif "laplace" in foldername.lower():
                 return "Laplace"
-            elif "hmc" in foldername.lower():
+            elif "hmc" in foldername.lower() or "stan" in foldername.lower():
                 return "HMC"
+            elif "numpy" in foldername.lower():
+                return "GibbsNumpy"
             else:
                 return "Gibbs"
         cossim_results = pd.DataFrame(cossim_rows, columns=["chain", "ix", "similarity"])
@@ -164,6 +190,9 @@ if __name__ == '__main__':
         plt.ylabel(None, fontsize=24)
         w1, w2 = [increment_number_in_string(s) for s in args.cossim_words]
 
+        if ref_val is not None:
+            plt.axvline(x = ref_val, color = 'r', label = 'True cossim')
+
         plt.xlabel(f"cossim(ρ_{w1}, ρ_{w2})", fontsize=13)
         #plt.yticks(fontsize=0)
         #plt.yticks([], [])
@@ -179,7 +208,7 @@ if __name__ == '__main__':
             plt.xlim(-1.2, 1.2)
             plt.xticks([-1.0, -0.5, 0.0, 0.5, 1.0])
 
-        plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity.pdf")
+        plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf")
         plt.show()
         
         r_hat(cossim_results, reference="Gibbs")
@@ -188,6 +217,7 @@ if __name__ == '__main__':
         #print(cossim_results[cossim_results["Method"] == "Gibbs"], )
         sns.lineplot(cossim_results[cossim_results["Method"] == "Gibbs"], x="ix", y="similarity")
         plt.savefig("img/cossim-evolution.pdf")
+        plt.show()
 
     results = pd.concat(rows)
     print(results)
