@@ -28,6 +28,7 @@ if __name__ == '__main__':
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
     parser.add_argument("--example_word", type=str, default="word0")
     parser.add_argument("--use_tf", type=bool, default=False)
+    parser.add_argument("--ll_every", type=int, default=1)
     parser.add_argument("--prefix", type=str, default="")
     parser.add_argument("--pg_iter", type=int, default=50)
     parser.add_argument("--mvn_method", type=str, default="cholesky", choices=["cholesky", "svd"])
@@ -104,7 +105,11 @@ if __name__ == '__main__':
 
     gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, plot=args.plot)
     if args.use_tf:
-        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, multivariate_method=args.mvn_method, plot=args.plot)
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
+                                             polyagamma_iter=args.pg_iter, freeze_params=freeze_params,
+                                             multivariate_method=args.mvn_method, plot=args.plot,
+                                             ll_every=args.ll_every
+                                         )
     for sample_ix, e_sample in enumerate(gibbs_generator):
         word0sample = e_sample[args.example_word].numpy()
         LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
