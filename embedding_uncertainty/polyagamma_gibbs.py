@@ -260,7 +260,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
 
     # Preprocess data
     if not aggregate:
-        for wd in progressbar.progressbar(words):
+        for wd in tqdm.tqdm(words):
             for turn in turns:
                 if turn == "context":
                     wd = wd + "_c"
@@ -439,7 +439,7 @@ def get_laplacian_sigma(e, M, dtype, edgecounts=None):
 
 def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambda0=None,
                         freeze_params=[], aggregate=True, multivariate_method="cholesky", plot=True,
-                        ll_every=1):
+                        ll_every=1, pb_level="upper"):
     if multivariate_method not in ["svd", "cholesky", "eigh"]:
         raise ValueError("'multivariate_method' should be either 'svd', 'cholesky' or 'eigh'")
     else:
@@ -448,17 +448,18 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
     turns = ["word", "context"]
     words = [wd for wd in list(e.vocabulary) if "_c" not in wd]
     if lambda0 is not None:
-        LOGGER.info(f"Use provided lambda0: {lambda0}")
+        LOGGER.train(f"Use provided lambda0: {lambda0}")
     else:
         lambda0 = e.lambda0
-        LOGGER.info(f"Use lambda0 from the embedding object: {lambda0}")
+        LOGGER.train(f"Use lambda0 from the embedding object: {lambda0}")
 
     logprobs = []
-    LOGGER.info(f"Aggregate data...")
+    LOGGER.train(f"Aggregate data.")
     X_cache, N_wd_cache, kappa_cache = aggregate_data(data, words, e)
 
     LOGGER.info(f"Split into independent sets...")
     blocks = split_into_independent_sets(e=e, wordcounts=N_wd_cache)
+    blocks_len = len(blocks)
 
     # Pre-calculate quantities for the Laplacian prior
     edges, edgecounts = None, None
@@ -477,9 +478,14 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
     data_i = tf.constant([elem[0] for elem in data])
     data_j = tf.constant([elem[1] for elem in data])
     data_x = tf.constant([elem[2] for elem in data], dtype=tf.float64)
-    
-    for ix, turn in enumerate(turns * rounds):
-        LOGGER.train(f"Flip turn: {turn}, {ix}")
+
+    turn_iterator = list(enumerate(turns * rounds))
+    if pb_level == "upper":
+        turn_iterator = tqdm.tqdm(turn_iterator)
+
+    LOGGER.train(f"Generate a chain of {len(turn_iterator)} samples")
+    for ix, turn in turn_iterator:
+        LOGGER.info(f"Flip turn: {turn}, {ix}")
         prior_count = 0
 
         # Calculate log_posterior and yield sample
@@ -503,8 +509,10 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
 
             posterior = ll + e.log_prob(len(data_i), len(data_i))
             logprobs.append(posterior)
-            LOGGER.train(f"Log posterior for the sample: {posterior}")
-            LOGGER.train(f"Avg log likelihood for the sample: {ll / len(data_x)}")
+            avg_log_ll = ll / len(data_x)
+            LOGGER.info(f"Sample {ix // 2}; log posterior for the sample: {posterior}")
+            LOGGER.info(f"Avg. log likelihood for the sample: {avg_log_ll}")
+            turn_iterator.set_description(f"Avg log ll: {avg_log_ll:.4f}")
             yield e_sample
 
         # Plot log_posterior graph
@@ -515,7 +523,10 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             plt.plot(plot_x_range, logprobs)
             plt.show()
 
-        for block_ix, wd in progressbar.progressbar(enumerate(blocks)):
+        block_iterator = enumerate(blocks)
+        if pb_level != "upper":
+            block_iterator = tqdm.tqdm(block_iterator, total=blocks_len)
+        for block_ix, wd in block_iterator:
             e_theta = e.theta.numpy()
             if turn == "context":
                 wd = [f"{wd_i}_c" for wd_i in wd]
@@ -595,4 +606,3 @@ def embedding_gibbs_tf(e, data, rounds=10, polyagamma_iter=50, yield_every=1, la
             LOGGER.warning(f"sampled from prior: {prior_count} out of {len(words)}")
         else:
             LOGGER.info(f"sampled from prior: {prior_count} out of {len(words)}")
-
