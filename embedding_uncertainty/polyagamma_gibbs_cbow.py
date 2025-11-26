@@ -260,7 +260,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 V_inv = tf.linalg.inv(B_inv_rho)
                 L_inv = tf.linalg.cholesky(V_inv)
                 x_noise = tf.random.normal((K, wwo_len), dtype=tf.float64)
-                e[words_without_data] = tf.matvec(L_inv, x_noise)
+                e[words_without_data] = tf.linalg.matvec(L_inv, x_noise)
 
         omega = sample_cbow_omegas(e, w, C)
 
@@ -407,7 +407,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 L_inv = tf.linalg.cholesky(V_inv)
                 
                 x_noise = tf.random.normal((K, wwo_len), dtype=tf.float64)
-                e[words_without_data_c] = tf.matvec(L_inv, x_noise)
+                e[words_without_data_c] = tf.linalg.matvec(L_inv, x_noise)
         
         # Calculate likelihood
         rhos = e[w]
