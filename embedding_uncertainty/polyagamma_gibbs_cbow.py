@@ -124,7 +124,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
     rho_data_indices = [[] for _ in range(V)]
     alpha_data_indices = [[] for _ in range(V)]
 
-    for i, elem in tqdm.tqdm(enumerate(data)):
+    for i, elem in tqdm.tqdm(enumerate(data), desc="Preprocess data", total=len(data)):
         w_i, C_i, x_i = elem["w"], elem["C"], elem["x"]
         w.append(w_i)
 
@@ -164,8 +164,8 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
     B_inv_rho = tf.eye(K, dtype=tf.float64) * e.lambda0
     B_inv_alpha = tf.eye(K, dtype=tf.float64) * e.lambda0
 
-    for ix in range(rounds):
-        LOGGER.train(f"Flip turn {ix}")
+    for ix in (pb := tqdm.tqdm(range(rounds))):
+        LOGGER.info(f"Flip turn {ix}")
         prior_count = 0
 
         # Sample omega from the Polya-Gamma distribution
@@ -277,7 +277,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 LOGGER.debug(f"Cholesky decompose prior")
                 L_inv = tf.linalg.cholesky(V_inv)
                 x_noise = tf.random.normal((K, wwo_len), dtype=tf.float64)
-                e[words_without_data] = tf.matvec(L_inv, x_noise)
+                e[words_without_data] = tf.linalg.matvec(L_inv, x_noise)
 
         LOGGER.debug(f"Sample omegas")
         omega = sample_cbow_omegas(e, w, C)
@@ -450,7 +450,7 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
                 L_inv = tf.linalg.cholesky(V_inv)
                 
                 x_noise = tf.random.normal((K, wwo_len), dtype=tf.float64)
-                e[words_without_data_c] = tf.matvec(L_inv, x_noise)
+                e[words_without_data_c] = tf.linalg.matvec(L_inv, x_noise)
         
         # Calculate likelihood
         LOGGER.debug(f"Calculate likelihood")
@@ -461,17 +461,11 @@ def cbow_gibbs_parallellized(e, data, rounds=10, yield_every=1, freeze_params=[]
         x64 = tf.cast(x, dtype=tf.float64)
         sigm = tf.math.sigmoid(etas * (2.0 * x64 - 1.0))
         log_p = tf.math.log(sigm)
-        log_ll = tf.reduce_mean(log_p)
-        log_posterior = log_ll + e.log_prob(batch_size=1, data_size=len(x))
+        log_ll = tf.reduce_mean(log_p).numpy()
+        log_posterior = log_ll + e.log_prob(batch_size=1, data_size=len(x)).numpy()
 
-        LOGGER.train(f"log_ll {log_ll.numpy()}, log_posterior {log_posterior.numpy()}")
-        LOGGER.train(f"eta {etas.numpy()[:3]}")
+        LOGGER.info(f"log_ll {log_ll}, log_posterior {log_posterior}")
+        pb.set_description(f"Avg log ll: {log_ll:.4f}")
+        LOGGER.debug(f"eta {etas.numpy()[:3]}")
 
         yield copy.deepcopy(e)
-
-
-
-
-
-
-

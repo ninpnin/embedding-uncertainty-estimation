@@ -35,6 +35,9 @@ if __name__ == '__main__':
     if args.datapath is not None:
         with open(args.datapath) as f:
             data = json.load(f)
+            if "data" in data.keys():
+                LOGGER.warn("JSON is nested; load contents of 'data' variable")
+                data = data["data"]
 
     for elem in data:
         w_i, C_i = elem["w"], elem["C"]

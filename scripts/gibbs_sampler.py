@@ -28,10 +28,12 @@ if __name__ == '__main__':
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
     parser.add_argument("--example_word", type=str, default="word0")
     parser.add_argument("--use_tf", type=bool, default=False)
+    parser.add_argument("--ll_every", type=int, default=1)
     parser.add_argument("--prefix", type=str, default="")
     parser.add_argument("--pg_iter", type=int, default=50)
     parser.add_argument("--mvn_method", type=str, default="cholesky", choices=["cholesky", "svd"])
     parser.add_argument("--calculate_p", type=bool, default=False)
+    parser.add_argument("--results_folder", type=str, default="results", help="Where the samples folder should be placed")
     parser.add_argument("--plot", type=bool, default=False)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
@@ -98,13 +100,19 @@ if __name__ == '__main__':
     # Generate a random string to make runs pseudo unique
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
     samples_folder = f"{pathstem}-gibbs-N-{args.data_len}-K-{args.dim}-V-{V}-PG-{args.pg_iter}-{args.prefix}-{randomchars}"
-
+    results_folder = Path(args.results_folder)
+    results_folder.mkdir(exist_ok=True)
     LOGGER.info(f"Make folder {samples_folder} ...")
-    Path(samples_folder).mkdir(exist_ok=True)
+    samples_folder = (results_folder / samples_folder)
+    samples_folder.mkdir(exist_ok=True)
 
     gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, plot=args.plot)
     if args.use_tf:
-        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, multivariate_method=args.mvn_method, plot=args.plot)
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
+                                             polyagamma_iter=args.pg_iter, freeze_params=freeze_params,
+                                             multivariate_method=args.mvn_method, plot=args.plot,
+                                             ll_every=args.ll_every
+                                         )
     for sample_ix, e_sample in enumerate(gibbs_generator):
         word0sample = e_sample[args.example_word].numpy()
         LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
@@ -123,9 +131,10 @@ if __name__ == '__main__':
                 else:
                     p_avg += p
 
-        sample_path = f"{samples_folder}/sample-{sample_ix}.pkl"
+        sample_path = samples_folder / f"sample-{sample_ix}.pkl"
+        sample_path_str = str(sample_path.resolve())
         LOGGER.info(f"Save sample to {sample_path} ...")
-        e_sample.save(sample_path)
+        e_sample.save(sample_path_str)
 
     theta_true = np.array(d["theta"])
     rho_true = theta_true[:theta_true.shape[0] // 2]

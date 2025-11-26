@@ -99,7 +99,7 @@ class Test(unittest.TestCase):
             beta0 = tf.cast(beta0, dtype=tf.float64)
             
             samples_gpu = []
-            for ix, sample in progressbar.progressbar(enumerate(polyagamma_sampler_tf(beta0, X, y, iterations=ITERATIONS, N=N))):
+            for ix, sample in progressbar.progressbar(enumerate(polyagamma_sampler_tf(beta0, X, y, iterations=ITERATIONS, N=N, multivariate_method="svd"))):
                 if ix >= WARMUP:
                     samples_gpu.append(sample)
             
@@ -125,7 +125,7 @@ class Test(unittest.TestCase):
                 print("Samples_k shape", samples_k.shape)
                 rhat_k = az.rhat(samples_k)
                 print("Rhat between short and long chains", rhat_k)
-                self.assertLessEqual(rhat_k, 1.05, f"Rhat between short and long chains too high {rhat_k} for dim {k} of K={K} and N={M} and {ITERATIONS} samples")
+                self.assertLessEqual(rhat_k, 1.05, f"Rhat between GPU and CPU chains too high {rhat_k} for dim {k} of K={K} and N={M} and {ITERATIONS} samples")
 
     def test_pg_gpu_priorinit_accuracy(self):
         """
@@ -161,7 +161,7 @@ class Test(unittest.TestCase):
             beta0 = tf.cast(beta0, dtype=tf.float64)
             
             samples_gpu = []
-            for ix, sample in progressbar.progressbar(enumerate(polyagamma_sampler_tf(beta0, X, y, iterations=ITERATIONS, N=N))):
+            for ix, sample in progressbar.progressbar(enumerate(polyagamma_sampler_tf(beta0, X, y, iterations=ITERATIONS, N=N, multivariate_method="svd"))):
                 if ix >= WARMUP:
                     samples_gpu.append(sample)
             
@@ -188,7 +188,7 @@ class Test(unittest.TestCase):
                 print("Samples_k shape", samples_k.shape)
                 rhat_k = az.rhat(samples_k)
                 print("Rhat between short and long chains", rhat_k)
-                self.assertLessEqual(rhat_k, 1.05, f"Rhat between short and long chains too high {rhat_k} for dim {k} of K={K} and N={M} and {ITERATIONS} samples")
+                self.assertLessEqual(rhat_k, 1.05, f"Rhat between CPU and GPU chains too high {rhat_k} for dim {k} of K={K} and N={M} and {ITERATIONS} samples")
 
 if __name__ == '__main__':
     # begin the unittest.main()
