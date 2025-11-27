@@ -31,7 +31,7 @@ if __name__ == '__main__':
     parser.add_argument("--prefix", type=str, default="")
     parser.add_argument("--pg_iter", type=int, default=5)
     parser.add_argument("--mvn_method", type=str, default="cholesky", choices=["cholesky", "svd"])
-    parser.add_argument("--calculate_p", type=bool, default=False)
+    parser.add_argument("--ll_every", type=int, default=1)
     parser.add_argument("--plot", type=bool, default=False)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
@@ -99,12 +99,14 @@ if __name__ == '__main__':
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
     samples_folder = f"{pathstem}-gibbs-N-{args.data_len}-K-{args.dim}-V-{V}-PG-{args.pg_iter}-{args.prefix}-{randomchars}"
 
-    gibbs_generator = embedding_gibbs_tf_fast(e, data, rounds=args.samples, plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=100)
+    gibbs_generator = embedding_gibbs_tf_fast(e, data, rounds=args.samples,
+        plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
     for sample_ix, e_sample in enumerate(gibbs_generator):
         word0sample = e_sample[args.example_word].numpy()
         LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
 
-    gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples, plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=100)
+    gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
+        plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
     for sample_ix, e_sample in enumerate(gibbs_generator):
         word0sample = e_sample[args.example_word].numpy()
         LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
