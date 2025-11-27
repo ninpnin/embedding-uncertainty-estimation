@@ -12,6 +12,7 @@ from probabilistic_word_embeddings.models import sgns_likelihood
 import networkx as nx
 import tqdm
 
+
 LOGGER.info("Done!")
 from time import perf_counter as pc
 
@@ -668,11 +669,6 @@ def polyagamma_sampler_tf_fast(beta_init, X, y, iterations=2, kappa=None, N=None
         LOGGER.debug(f"Do Cholesky on V_omega_inv")
         L_inv = tf.linalg.cholesky(V_omega_inv)
 
-        
-        #LOGGER.debug(f"Sample multivariate normal")
-        #epsilon = tf.random.normal([CHAINS, K, 1], dtype=dtype)
-        #diff = tf.linalg.matmul(L, epsilon, transpose_a=True)
-
         LOGGER.debug(f"Obtain diff by Cholesky solve L epsilon = y")
         # TODO: solve random
         epsilon_alt = tf.random.normal([CHAINS, K, 1], dtype=dtype)
@@ -684,20 +680,10 @@ def polyagamma_sampler_tf_fast(beta_init, X, y, iterations=2, kappa=None, N=None
         LOGGER.debug(f"L_inv {L_inv.shape}")
         mu_alt = tf.linalg.triangular_solve(tf.transpose(L_inv, perm=[0,2,1]), mu_prime, lower=False)
 
-        #epsilon_test = tf.random.normal([CHAINS, K, 100000], dtype=dtype)
-        #diff_test = tf.linalg.triangular_solve(L_inv, epsilon_test)
-        #LOGGER.debug(f"diff_test {diff_test.shape}")
-        #LOGGER.debug(f"diff_test[0] {diff_test[0].shape}")
-        #cov = tfp.stats.covariance(tf.transpose(diff_test[0]))
-        #LOGGER.debug(f"cov \n{tf.round(cov * 1000) / 1000}")
-        #LOGGER.debug(f"V_omega \n{tf.round(V_omega[0] * 1000) / 1000}")
-
-        #exit()
-
-
         beta = tf.reduce_sum(mu_alt + diff_alt, axis=-1)
 
         yield beta
+
     LOGGER.debug(f"Polya-Gamma sampling total: {np.sum(pg_tds)} (s)")
 
 def embedding_gibbs_tf_fast(e, data, rounds=10, polyagamma_iter=1, yield_every=1, lambda0=None, plot=True, ll_every=1):
@@ -728,8 +714,13 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, polyagamma_iter=1, yield_every=1
     X_batch_cache, kappa_batch_cache, N_batch_cache = {}, {}, {}
     sigma_prior_batch_cache = {}
 
-    for ix, turn in enumerate(turns * rounds):
-        LOGGER.train(f"Flip turn: {turn}, {ix}")
+    turn_iterator = list(enumerate(turns * rounds))
+    if True:
+        turn_iterator = tqdm.tqdm(turn_iterator)
+
+    LOGGER.train(f"Generate a chain of {len(turn_iterator)} samples")
+    for ix, turn in turn_iterator:
+        LOGGER.info(f"Flip turn: {turn}, {ix}")
         prior_count = 0
 
         # Calculate log_posterior and yield sample
@@ -753,8 +744,9 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, polyagamma_iter=1, yield_every=1
 
             posterior = ll + e.log_prob(len(data_i), len(data_i))
             logprobs.append(posterior)
-            LOGGER.train(f"Log posterior for the sample: {posterior}")
-            LOGGER.train(f"Avg log likelihood for the sample: {ll / len(data_x)}")
+            LOGGER.info(f"Log posterior for the sample: {posterior}")
+            LOGGER.info(f"Avg log likelihood for the sample: {ll / len(data_x)}")
+            turn_iterator.set_description(f"Avg log ll: {ll / len(data_x):.4f}")
             yield e_sample
 
         # Plot log_posterior graph
@@ -766,7 +758,7 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, polyagamma_iter=1, yield_every=1
             plt.show()
 
 
-        for block_ix, wd in progressbar.progressbar(enumerate(blocks)):
+        for block_ix, wd in enumerate(blocks):
             batch_ix = (block_ix, turn)
 
             e_theta = e.theta.numpy()
@@ -820,9 +812,6 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, polyagamma_iter=1, yield_every=1
 
             LOGGER.debug("Get actual vectors")
             X_padded = e[X_wd].to_tensor()
-            #print(X_padded)
-
-            #exit()
             
             LOGGER.debug("Prior stuff")
             last_sample, mu_prior_wd = None, None
@@ -841,7 +830,7 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, polyagamma_iter=1, yield_every=1
 
             #wds_nonfreeze = [wd_i for wd_i in wd if wd_i not in freeze_params]
             #ids_nonfreeze = [ix for ix, wd_i in enumerate(wd) if wd_i not in freeze_params]
-            #e[wds_nonfreeze] = tf.gather(beta_sample, ids_nonfreeze)
+            e[wd_batch] = beta_sample
 
 
         if prior_count >= len(words) * 0.2:
