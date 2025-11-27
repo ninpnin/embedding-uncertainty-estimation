@@ -277,8 +277,13 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
     else:
         X_cache, N_wd_cache, kappa_cache = aggregate_data(data, words, e)
 
-    for ix, turn in enumerate(turns * rounds):
-        LOGGER.train(f"Flip turn: {turn}, {ix}")
+    turn_iterator = list(enumerate(turns * rounds))
+    turn_iterator = tqdm.tqdm(turn_iterator)
+
+    LOGGER.train(f"Generate a chain of {len(turn_iterator)} samples")
+
+    for ix, turn in turn_iterator:
+        LOGGER.info(f"Flip turn: {turn}, {ix}")
         prior_count = 0
 
         # Calculate log_posterior and yield sample
@@ -292,8 +297,9 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
             ll = tf.reduce_sum(sgns_likelihood(e, data_i, data_j, x=data_x))
             posterior = ll + e.log_prob(len(data_i), len(data_i))
             logprobs.append(posterior)
-            LOGGER.train(f"Log posterior for the sample: {posterior}")
-            LOGGER.train(f"Avg log likelihood for the sample: {ll / len(data_x)}")
+            LOGGER.info(f"Log posterior for the sample: {posterior}")
+            LOGGER.info(f"Avg log likelihood for the sample: {ll / len(data_x)}")
+            turn_iterator.set_description(f"Avg log ll: {ll / len(data_x):.4f}")
             yield e_sample
 
         # Plot log_posterior graph
@@ -303,7 +309,7 @@ def embedding_gibbs(e, data, rounds=10, polyagamma_iter=50, yield_every=1, lambd
             plt.show()
 
         # Do sampling
-        for wd in progressbar.progressbar(words):
+        for wd in words:
             e_theta = e.theta.numpy()
             if turn == "context":
                 wd = wd + "_c"
