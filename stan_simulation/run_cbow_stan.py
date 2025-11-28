@@ -28,6 +28,9 @@ if __name__ == '__main__':
     #TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), datafile)
     with open(datafile) as f:
         docs = json.load(f)
+        if "data" in docs.keys():
+            LOGGER.warn("JSON is nested; load contents of 'data' variable")
+            docs = docs["data"]
 
     # --- Data setup ---  NOTE! indexing starts on 1 with stan, so the vocab will be different from numpy Gibbs sampler.
     N = args.data_len
