@@ -744,7 +744,10 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, polyagamma_iter=1, yield_every=1
             else:
                 valid_batches = len(data_i) // batch_size
                 LOGGER.info(f"Calculate log posterior for the sample in {valid_batches} batches...")
-                for batch_ix in tqdm.tqdm(list(range(valid_batches))):
+                valbatch_iter = list(range(valid_batches))
+                if False:
+                    valbatch_iter = tqdm.tqdm(valbatch_iter)
+                for batch_ix in valbatch_iter:
                     s_ix, e_ix = batch_ix * batch_size, (batch_ix +1) * batch_size
                     ll += tf.reduce_sum(sgns_likelihood(e, data_i[s_ix:e_ix], data_j[s_ix:e_ix], x=data_x[s_ix:e_ix]))
 
