@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parser.add_argument("--map_estimate", type=str, default=None)
     parser.add_argument("--freeze_params", type=str, nargs="+", default=None)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
-    parser.add_argument("--example_word", type=str, default="word0")
+    parser.add_argument("--example_word", type=str, default=None)
     parser.add_argument("--use_tf", type=bool, default=False)
     parser.add_argument("--prefix", type=str, default="")
     parser.add_argument("--pg_iter", type=int, default=5)
@@ -102,11 +102,13 @@ if __name__ == '__main__':
     gibbs_generator = embedding_gibbs_tf_fast(e, data, rounds=args.samples,
         plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
     for sample_ix, e_sample in enumerate(gibbs_generator):
-        word0sample = e_sample[args.example_word].numpy()
-        LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
+        if args.example_word is not None:
+            word0sample = e_sample[args.example_word].numpy()
+            LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
 
     gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
         plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
     for sample_ix, e_sample in enumerate(gibbs_generator):
-        word0sample = e_sample[args.example_word].numpy()
-        LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
+        if args.example_word is not None:
+            word0sample = e_sample[args.example_word].numpy()
+            LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
