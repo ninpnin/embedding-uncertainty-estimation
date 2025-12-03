@@ -8,7 +8,7 @@ import json
 import progressbar
 import pandas as pd
 from trainerlog import get_logger
-LOGGER = get_logger("gibbs")
+LOGGER = get_logger("gibbs-benchmark", splitsec=True)
 LOGGER.info("Load modules..")
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -105,6 +105,7 @@ if __name__ == '__main__':
         if args.example_word is not None:
             word0sample = e_sample[args.example_word].numpy()
             LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
+    LOGGER.train("Fast sampling done")
 
     gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
         plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
@@ -112,3 +113,5 @@ if __name__ == '__main__':
         if args.example_word is not None:
             word0sample = e_sample[args.example_word].numpy()
             LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
+    LOGGER.train("Baseline sampling done")
+    
