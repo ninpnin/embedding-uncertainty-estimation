@@ -819,9 +819,16 @@ def embedding_gibbs_tf_fast(e, data, rounds=10, polyagamma_iter=1, yield_every=1
             N_wd_padded = N_batch_cache[batch_ix]
             kappa_padded = kappa_batch_cache[batch_ix]
 
-            LOGGER.debug("Get actual vectors")
-            X_padded = e[X_wd].to_tensor()
-            
+            LOGGER.debug(f"Get actual vectors for X_wd of shape {X_wd.shape} ({X_wd.row_lengths()})")
+            max_N = tf.reduce_max(X_wd.row_lengths())
+            X_padded = None
+
+            # Empty batches must be created manually
+            if max_N >= 1:
+                X_padded = e[X_wd].to_tensor()
+            else:
+                X_padded = tf.zeros([len(wd_batch), 0, K], dtype=tf.float64)
+
             LOGGER.debug("Prior stuff")
             last_sample, mu_prior_wd = None, None
             sigma_prior_wd = tf.gather(sigma_prior_wd_all, wd_nonskipped_indices)
