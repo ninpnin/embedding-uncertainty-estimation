@@ -24,11 +24,11 @@ if __name__ == '__main__':
 
     #plt.figure(figsize=(10, 6))
     try:
-        g = sns.lineplot(df, x="N", y="runtime (minutes)", hue="method", linewidth=2.5)
+        g = sns.lineplot(df, x="N", y="runtime (minutes)", hue="method",linewidth=2.5,  palette=["tab:blue", "tab:green"])
     except:
         import pandas as pd
         df = df.to_pandas()
-        g = sns.lineplot(df, x="N", y="runtime (minutes)", hue="method", linewidth=2.5)
+        g = sns.lineplot(df, x="N", y="runtime (minutes)", hue="method", linewidth=2.5, palette=["tab:blue", "tab:green"])
 
     
     if args.logplot:
