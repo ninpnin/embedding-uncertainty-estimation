@@ -35,6 +35,7 @@ if __name__ == '__main__':
     parser.add_argument("--ll_every", type=int, default=1)
     parser.add_argument("--plot", type=bool, default=False)
     parser.add_argument("--calculate_p", type=bool, default=False)
+    parser.add_argument("--algos", type=str, nargs="+", default=["normal", "fast"])
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -142,11 +143,12 @@ if __name__ == '__main__':
         LOGGER.train(f"ESS (cossim): {np.mean(ess_arr_cos)} (+- {np.std(ess_arr_cos)})")
 
 
-    gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
-        plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
-    for sample_ix, e_sample in enumerate(gibbs_generator):
-        if args.example_word is not None:
-            word0sample = e_sample[args.example_word].numpy()
-            LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
-    LOGGER.train("Baseline sampling done")
+    if "normal" in args.algos:
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
+            plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
+        for sample_ix, e_sample in enumerate(gibbs_generator):
+            if args.example_word is not None:
+                word0sample = e_sample[args.example_word].numpy()
+                LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
+        LOGGER.train("Baseline sampling done")
 
