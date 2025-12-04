@@ -14,6 +14,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from pathlib import Path
 import random, string
+import tqdm
 
 if __name__ == '__main__':
     import argparse
@@ -33,6 +34,7 @@ if __name__ == '__main__':
     parser.add_argument("--mvn_method", type=str, default="cholesky", choices=["cholesky", "svd"])
     parser.add_argument("--ll_every", type=int, default=1)
     parser.add_argument("--plot", type=bool, default=False)
+    parser.add_argument("--calculate_p", type=bool, default=False)
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -99,13 +101,46 @@ if __name__ == '__main__':
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
     samples_folder = f"{pathstem}-gibbs-N-{args.data_len}-K-{args.dim}-V-{V}-PG-{args.pg_iter}-{args.prefix}-{randomchars}"
 
+    p, cossim = None, None
+    words = list(vocab)
+    contexts = [f"{wd}_c" for wd in words]
+    if args.calculate_p:
+        p = np.zeros((args.samples // 2, V,V))
+        cossim = np.zeros((args.samples // 2, V,V))
+
     gibbs_generator = embedding_gibbs_tf_fast(e, data, rounds=args.samples,
         plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
     for sample_ix, e_sample in enumerate(gibbs_generator):
         if args.example_word is not None:
             word0sample = e_sample[args.example_word].numpy()
             LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
+        if args.calculate_p and sample_ix >= args.samples // 2:
+            p_ix = e[words].numpy() @ e[words].numpy().T
+            p[sample_ix - args.samples // 2] = p_ix
+            cossim_ix = e[words].numpy()
+            rho_norm = np.linalg.norm(cossim_ix, axis=1)
+            cossim_ix = ((cossim_ix.T) / rho_norm).T
+            cossim_ix = cossim_ix @ cossim_ix.T
+            cossim[sample_ix - args.samples // 2] = cossim_ix
+
     LOGGER.train("Fast sampling done")
+    if args.calculate_p:
+        import arviz as az
+        ess_arr = []
+        ess_arr_cos = []
+        for w in tqdm.tqdm(range(V)):
+            for v in range(V):
+                samples = p[:, w, v]
+                cossim_samples = cossim[:, w, v]
+                ESS = az.ess(samples)
+                ESS_cos = az.ess(cossim_samples)
+                ess_arr.append(ESS)
+                ess_arr_cos.append(ESS_cos)
+        
+        ess_arr = np.array(ess_arr)
+        LOGGER.train(f"ESS (alpha rho.T): {np.mean(ess_arr)} (+- {np.std(ess_arr)})")
+        LOGGER.train(f"ESS (cossim): {np.mean(ess_arr_cos)} (+- {np.std(ess_arr_cos)})")
+
 
     gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
         plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
@@ -114,4 +149,4 @@ if __name__ == '__main__':
             word0sample = e_sample[args.example_word].numpy()
             LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
     LOGGER.train("Baseline sampling done")
-    
+
