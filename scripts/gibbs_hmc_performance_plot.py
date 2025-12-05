@@ -3,7 +3,7 @@ LOGGER = get_logger("perf-plot")
 import polars as pl
 import seaborn as sns
 from matplotlib import pyplot as plt
-plt.rc('font', family='serif', size=14)
+plt.rc('font',  size=14) #family='serif',
 
 if __name__ == '__main__':
     import argparse
@@ -22,7 +22,15 @@ if __name__ == '__main__':
     df = df.with_columns(pl.col("N") * 1000)
     df = df.with_columns((pl.col("runtime") / 60).alias("runtime (minutes)"))
 
-    g = sns.lineplot(df, x="N", y="runtime (minutes)", hue="method")
+    #plt.figure(figsize=(10, 6))
+    try:
+        g = sns.lineplot(df, x="N", y="runtime (minutes)", hue="method",linewidth=2.5,  palette=["tab:blue", "tab:green"])
+    except:
+        import pandas as pd
+        df = df.to_pandas()
+        g = sns.lineplot(df, x="N", y="runtime (minutes)", hue="method", linewidth=2.5, palette=["tab:blue", "tab:green"])
+
+    
     if args.logplot:
         plt.xscale('log')
         plt.yscale('log')
@@ -39,7 +47,7 @@ if __name__ == '__main__':
     
     g.set_ylabel('runtime (minutes)', labelpad=15, fontsize=15)
     plt.tight_layout()
-
+    plt.grid()
     image_filepath = f"img/speed-benchmark-gibbs-hmc-{model}.pdf"
     if args.logplot:
         image_filepath = image_filepath.replace(".pdf", "-log.pdf")
