@@ -6,11 +6,11 @@ The required packages are included in ```pyproject.toml```. The most straightfor
 
 All algorithms use the same preprocessed data format. An example is provided in ```data/sim-format.json```.
 
-## Gibbs sampler
+## SGNS Gibbs sampler
 
-The Gibbs sampler is implemented in ```embedding_uncertainty/polyagamma_gibbs.py```. This includes a logistic regression posterior sampler and a full Gibbs sampler for SGNS embeddings.
+The SGNS Gibbs sampler is implemented in ```embedding_uncertainty/polyagamma_gibbs.py```. This includes a logistic regression posterior sampler and a full Gibbs sampler for SGNS embeddings.
 
-The Gibbs sampler can be run with ```scripts/gibbs_sampler.py``` :
+The SGNS Gibbs sampler can be run with ```scripts/gibbs_sampler.py``` :
 
 ```
 usage: gibbs_sampler.py [-h] [--datapath DATAPATH] [--shuffle_data SHUFFLE_DATA] [--dim DIM] [--data_len DATA_LEN] [--samples SAMPLES]
@@ -33,6 +33,34 @@ optional arguments:
   --mvn_method {cholesky,svd}
   --calculate_p CALCULATE_P
   --plot PLOT
+```
+
+## CBOW Gibbs sampler
+
+The CBOW Gibbs sampler is implemented in ```embedding_uncertainty/polyagamma_gibbs_cbow.py```. This includes a simplistic numpy sampler as well as an optimized TensorFlow sampler.
+
+The CBOW Gibbs sampler can be run with ```scripts/cbow_gibbs_sampler.py``` :
+
+```
+usage: cbow_gibbs_sampler.py [-h] [--datapath DATAPATH] [--dim DIM] [--data_len DATA_LEN] [--samples SAMPLES] [--lambda0 LAMBDA0]
+                             [--example_word EXAMPLE_WORD] [--prefix PREFIX] [--results_folder RESULTS_FOLDER] [--calculate_p CALCULATE_P]
+                             [--benchmark BENCHMARK]
+
+options:
+  -h, --help            show this help message and exit
+  --datapath DATAPATH
+  --dim DIM
+  --data_len DATA_LEN
+  --samples SAMPLES
+  --lambda0 LAMBDA0     Prior strength (variance). If not specified, set to K
+  --example_word EXAMPLE_WORD
+  --prefix PREFIX
+  --results_folder RESULTS_FOLDER
+                        Where the samples folder should be placed
+  --calculate_p CALCULATE_P
+                        Calculate alpha rho.T for ESS etc.
+  --benchmark BENCHMARK
+                        Only run the script; don't save embeddings
 ```
 
 ## Hamiltonian Monte Carlo and MFVI
