@@ -35,29 +35,6 @@ optional arguments:
   --plot PLOT
 ```
 
-## Laplace approximation
-
-The Gibbs sampler is implemented in ```embedding_uncertainty/laplace_approx.py```.
-
-The Laplace approximation can be run on the simulated data with ```scripts/laplace_approximation.py``` :
-
-```
-usage: laplace_approximation.py [-h] [--embedding EMBEDDING] [--datapath DATAPATH] [--data_len DATA_LEN] [--word WORD] [--context CONTEXT] [--samples SAMPLES]
-                                [--ci_alpha CI_ALPHA] [--elementwise ELEMENTWISE] [--save_folder SAVE_FOLDER]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --embedding EMBEDDING
-  --datapath DATAPATH
-  --data_len DATA_LEN
-  --word WORD
-  --context CONTEXT
-  --samples SAMPLES
-  --ci_alpha CI_ALPHA
-  --elementwise ELEMENTWISE
-  --save_folder SAVE_FOLDER
-```
-
 ## Hamiltonian Monte Carlo and MFVI
 
 Hamiltonian Monte Carlo is implemented in Stan. The unconstrained embedding model is implemented in ```stan_simulation/models/sgns_normalpriors_aggregated.stan```, and the constrained model is implemented in ```stan_simulation/models/sgns_normalpriors_fix_last_aggregated.stan```.
@@ -120,4 +97,4 @@ Logs and aggregated results of the experiments are saved in the ```logs/``` fold
 
 ## Tests
 
-The Polya-Gamma sampler and Laplace approximation are tested via the ```unittest``` Python module in the ```tests``` folder.
+The Polya-Gamma sampler and related functions are tested via the ```unittest``` Python module in the ```tests``` folder.
