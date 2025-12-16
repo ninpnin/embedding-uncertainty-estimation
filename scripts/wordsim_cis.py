@@ -17,6 +17,17 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import seaborn as sns
 import re
+import pickle
+
+def save_with_state(path, show=False):
+    plt.savefig(path)
+    mpl_path = path.replace(".pdf", ".matplotlib")
+    assert mpl_path != path
+
+    fig = plt.gcf()
+    with open(mpl_path, "wb") as f:
+        pickle.dump(fig, f)
+
 
 COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c', "Laplace": "#df647a", "GibbsNumpy": "#fcb491"}
 for method in list(COLORS):
@@ -235,8 +246,10 @@ if __name__ == '__main__':
             plt.xlim(-1.2, 1.2)
             plt.xticks([-1.0, -0.5, 0.0, 0.5, 1.0])
 
-        plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf")
-        plt.show()
+        savepath = f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf"
+        #plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf")
+        #plt.show()
+        save_with_state(savepath)
         
         r_hat(cossim_results, reference="Gibbs")
 
