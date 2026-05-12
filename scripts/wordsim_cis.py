@@ -18,13 +18,21 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 import re
 import pickle
+import sys, platform
+import datetime
 
-def save_with_state(path, show=False):
+def save_with_state(path, show=False, metadata_dict=None):
     plt.savefig(path)
-    mpl_path = path.replace(".pdf", ".matplotlib")
+    mpl_path = path.replace(".pdf", ".matplotlib.pkl")
     assert mpl_path != path
 
     fig = plt.gcf()
+    metadata_dict["pythoninfo"] = str(sys.version)
+    metadata_dict["operating-system"] = str(sys.platform)
+    metadata_dict["hostname"] = str(platform.node())
+    metadata_dict["timestamp"] = str(datetime.datetime.now().isoformat())
+    if metadata_dict is not None:
+        fig.metadata = metadata_dict
     with open(mpl_path, "wb") as f:
         pickle.dump(fig, f)
 
@@ -249,7 +257,7 @@ if __name__ == '__main__':
         savepath = f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf"
         #plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf")
         #plt.show()
-        save_with_state(savepath)
+        save_with_state(savepath, metadata_dict=vars(args))
         
         r_hat(cossim_results, reference="Gibbs")
 
