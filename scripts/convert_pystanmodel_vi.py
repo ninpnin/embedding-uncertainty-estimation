@@ -11,7 +11,9 @@ from pathlib import Path
 def load_pickle_emb(path):
     with open(path, "rb") as f:
         d = pickle.load(f)
-
+    is_cmdstan = "cmdstan" in str(d).lower()
+    if is_cmdstan:
+        LOGGER.error(f"Loaded pickled object: {d}")
     LOGGER.debug(f"{d.__dir__()}")
     return d
 
