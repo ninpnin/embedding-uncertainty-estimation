@@ -172,11 +172,13 @@ if __name__ == '__main__':
     
     rows = []
     cossim_rows = []
+    dimensionality = None
     for chain_ix, samples in enumerate(chains):
         for ix, sample in tqdm.tqdm(list(enumerate(samples))):
             LOGGER.debug(f"Load data from {str(sample.absolute())}...")
             try:
                 e_sample = Embedding(saved_model_path=str(sample.absolute()))
+                dimensionality = e_sample.dimensionality
             except Exception as e:
                 LOGGER.error(f"Error loading from {str(sample.absolute())}: {e}")
                 exit()
@@ -254,10 +256,12 @@ if __name__ == '__main__':
             plt.xlim(-1.2, 1.2)
             plt.xticks([-1.0, -0.5, 0.0, 0.5, 1.0])
 
-        savepath = f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf"
+        savepath = f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}-K-{dimensionality}.pdf"
         #plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf")
         #plt.show()
-        save_with_state(savepath, metadata_dict=vars(args))
+        metadata_dict = vars(args)
+        metadata_dict["K"] = dimensionality
+        save_with_state(savepath, metadata_dict=metadata_dict)
         
         r_hat(cossim_results, reference="Gibbs")
 
