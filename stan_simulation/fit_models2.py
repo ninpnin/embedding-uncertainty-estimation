@@ -235,6 +235,23 @@ for size in sizes:
         
         LOGGER.info("Fit ok.")
         
+    elif inference_type=='mala':
+        LOGGER.train(f"Run MALA (CMD HMC with treedepth=1) for {num_samples} samples and {num_chains} chains")
+        model = CmdStanModel(stan_file=stan_model_path)
+        
+        fit = model.sample(
+            data=stan_data,
+            chains=num_chains,
+            parallel_chains=num_chains,
+            iter_sampling=num_samples,
+            iter_warmup=1000,
+            max_treedepth=1,
+            #save_warmup=False,
+            output_dir=output_dir
+        )
+        
+        LOGGER.info("Fit ok.")
+        
 
     elif inference_type=='vi':
         vi_iter = 5000 #?
