@@ -20,7 +20,7 @@ def get_p_matrix(e):
     alpha = e[contexts].numpy()
     rho = e[contexts].numpy()
 
-    return sigmoid(alpha.T @ rho)
+    return sigmoid(alpha @ rho.T)
 
 class Test(unittest.TestCase):
 

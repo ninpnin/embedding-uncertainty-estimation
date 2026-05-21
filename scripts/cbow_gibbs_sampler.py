@@ -23,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
+    parser.add_argument("--batch_size", type=int, default=10)
     parser.add_argument("--example_word", type=str, default="word0")
     parser.add_argument("--prefix", type=str, default="")
     parser.add_argument("--results_folder", type=str, default="results", help="Where the samples folder should be placed")
@@ -75,7 +76,7 @@ if __name__ == '__main__':
     LOGGER.info(f"Mkdir {samples_folder} ...")
     samples_folder.mkdir(exist_ok=True)
 
-    gibbs_generator = cbow_gibbs_parallellized(e, data, rounds=args.samples)
+    gibbs_generator = cbow_gibbs_parallellized(e, data, rounds=args.samples, batch_size=args.batch_size)
     local = None
 
     cossim, words = None, list(vocab)
