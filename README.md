@@ -123,6 +123,21 @@ The ```jobs/``` folder contains scripts and slurm job files that run the experim
 
 Logs and aggregated results of the experiments are saved in the ```logs/``` folder.
 
+## Plots
+
+Different plots in the article are generated with the following scripts
+
+```
+plots/alternative_plots/applied_plots.ipynb
+plots/convergence.ipynb
+plots/donut_plots.ipynb
+plots/rmse_convergence.ipynb
+scripts/gibbs_hmc_performance_plot.py
+scripts/map_pm_posterior_plot.py
+scripts/rmse_plot.py
+scripts/wordsim_cis.py
+```
+
 ## Tests
 
 The Polya-Gamma sampler and related functions are tested via the ```unittest``` Python module in the ```tests``` folder.
