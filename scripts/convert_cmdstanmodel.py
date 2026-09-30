@@ -1,3 +1,6 @@
+"""
+Convert CmdStan MAP estimate to a pwe.Embedding
+"""
 import numpy as np
 import cmdstanpy
 import pickle, json
