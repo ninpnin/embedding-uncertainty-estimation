@@ -6,11 +6,11 @@ The required packages are included in ```pyproject.toml```. The most straightfor
 
 All algorithms use the same preprocessed data format. An example is provided in ```data/sim-format.json```.
 
-## Gibbs sampler
+## SGNS Gibbs sampler
 
-The Gibbs sampler is implemented in ```embedding_uncertainty/polyagamma_gibbs.py```. This includes a logistic regression posterior sampler and a full Gibbs sampler for SGNS embeddings.
+The SGNS Gibbs sampler is implemented in ```embedding_uncertainty/polyagamma_gibbs.py```. This includes a logistic regression posterior sampler and a full Gibbs sampler for SGNS embeddings.
 
-The Gibbs sampler can be run with ```scripts/gibbs_sampler.py``` :
+The SGNS Gibbs sampler can be run with ```scripts/gibbs_sampler.py``` :
 
 ```
 usage: gibbs_sampler.py [-h] [--datapath DATAPATH] [--shuffle_data SHUFFLE_DATA] [--dim DIM] [--data_len DATA_LEN] [--samples SAMPLES]
@@ -35,27 +35,32 @@ optional arguments:
   --plot PLOT
 ```
 
-## Laplace approximation
+## CBOW Gibbs sampler
 
-The Gibbs sampler is implemented in ```embedding_uncertainty/laplace_approx.py```.
+The CBOW Gibbs sampler is implemented in ```embedding_uncertainty/polyagamma_gibbs_cbow.py```. This includes a simplistic numpy sampler as well as an optimized TensorFlow sampler.
 
-The Laplace approximation can be run on the simulated data with ```scripts/laplace_approximation.py``` :
+The CBOW Gibbs sampler can be run with ```scripts/cbow_gibbs_sampler.py``` :
 
 ```
-usage: laplace_approximation.py [-h] [--embedding EMBEDDING] [--datapath DATAPATH] [--data_len DATA_LEN] [--word WORD] [--context CONTEXT] [--samples SAMPLES]
-                                [--ci_alpha CI_ALPHA] [--elementwise ELEMENTWISE] [--save_folder SAVE_FOLDER]
+usage: cbow_gibbs_sampler.py [-h] [--datapath DATAPATH] [--dim DIM] [--data_len DATA_LEN] [--samples SAMPLES] [--lambda0 LAMBDA0]
+                             [--example_word EXAMPLE_WORD] [--prefix PREFIX] [--results_folder RESULTS_FOLDER] [--calculate_p CALCULATE_P]
+                             [--benchmark BENCHMARK]
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --embedding EMBEDDING
   --datapath DATAPATH
+  --dim DIM
   --data_len DATA_LEN
-  --word WORD
-  --context CONTEXT
   --samples SAMPLES
-  --ci_alpha CI_ALPHA
-  --elementwise ELEMENTWISE
-  --save_folder SAVE_FOLDER
+  --lambda0 LAMBDA0     Prior strength (variance). If not specified, set to K
+  --example_word EXAMPLE_WORD
+  --prefix PREFIX
+  --results_folder RESULTS_FOLDER
+                        Where the samples folder should be placed
+  --calculate_p CALCULATE_P
+                        Calculate alpha rho.T for ESS etc.
+  --benchmark BENCHMARK
+                        Only run the script; don't save embeddings
 ```
 
 ## Hamiltonian Monte Carlo and MFVI
@@ -118,6 +123,21 @@ The ```jobs/``` folder contains scripts and slurm job files that run the experim
 
 Logs and aggregated results of the experiments are saved in the ```logs/``` folder.
 
+## Plots
+
+Different plots in the article are generated with the following scripts
+
+```
+plots/alternative_plots/applied_plots.ipynb
+plots/convergence.ipynb
+plots/donut_plots.ipynb
+plots/rmse_convergence.ipynb
+scripts/gibbs_hmc_performance_plot.py
+scripts/map_pm_posterior_plot.py
+scripts/rmse_plot.py
+scripts/wordsim_cis.py
+```
+
 ## Tests
 
-The Polya-Gamma sampler and Laplace approximation are tested via the ```unittest``` Python module in the ```tests``` folder.
+The Polya-Gamma sampler and related functions are tested via the ```unittest``` Python module in the ```tests``` folder.

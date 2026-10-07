@@ -17,6 +17,25 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import seaborn as sns
 import re
+import pickle
+import sys, platform
+import datetime
+
+def save_with_state(path, show=False, metadata_dict=None):
+    plt.savefig(path)
+    mpl_path = path.replace(".pdf", ".matplotlib.pkl")
+    assert mpl_path != path
+
+    fig = plt.gcf()
+    metadata_dict["pythoninfo"] = str(sys.version)
+    metadata_dict["operating-system"] = str(sys.platform)
+    metadata_dict["hostname"] = str(platform.node())
+    metadata_dict["timestamp"] = str(datetime.datetime.now().isoformat())
+    if metadata_dict is not None:
+        fig.metadata = metadata_dict
+    with open(mpl_path, "wb") as f:
+        pickle.dump(fig, f)
+
 
 COLORS = {"HMC": '#1f77b4', "MFVI": '#ff7f0e', "Gibbs": '#2ca02c', "Laplace": "#df647a", "GibbsNumpy": "#fcb491"}
 for method in list(COLORS):
@@ -91,6 +110,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--sample_folder", type=str, default=None, nargs="+")
     parser.add_argument("--warmup", type=int, default=None, nargs="+")
+    parser.add_argument("--thinning", type=int, default=None, nargs="+")
     parser.add_argument("--cossim_words", type=str, default=[], nargs="+")
     parser.add_argument("--do_wordsim", type=bool, default=False)
     parser.add_argument("--full_xaxis", type=bool, default=False, help="Force the x axis to range from -1 to 1")
@@ -116,27 +136,53 @@ if __name__ == '__main__':
         args.warmup = args.warmup * len(args.sample_folder)
     else:
         assert len(args.warmup) == len(args.sample_folder)
+
+    if args.thinning is None:
+        args.thinning = [None] * len(args.sample_folder)
+    elif len(args.thinning) == 1:
+        args.thinning = args.thinning * len(args.sample_folder)
+    else:
+        assert len(args.thinning) == len(args.sample_folder)
         
     print("warmup", args.warmup)
     chains = []
-    for sample_folder, warmup in zip(args.sample_folder, args.warmup):
+    for sample_folder, warmup, thinning in zip(args.sample_folder, args.warmup, args.thinning):
         sample_folder = Path(sample_folder)
         samples = sorted(sample_folder.glob(f"*.{args.format}"), key=lambda p: int(p.stem.split("-")[-1]))
         # By default the first half
         if warmup is None:
+            wu_examples = [p.stem for p in samples[len(samples) // 2 - 3:len(samples) // 2]]
+            LOGGER.info(f"Remove up until {wu_examples} for warmup")
             samples = samples[len(samples) // 2:]
         else:
+            if warmup >= 1:
+                wu_examples = [p.stem for p in samples[warmup-3:warmup]]
+                LOGGER.info(f"Remove up until {wu_examples} for warmup")
+            else:
+                LOGGER.warning(f"Do not remove samples for warmup")
             samples = samples[warmup:]
+        
+        if thinning is not None:
+            LOGGER.info(f"Use thinning: {thinning}")
+            samples = samples[::thinning]
+
         chains.append(samples)
         
     #e_post_mean = posterior_mean([str(s.absolute()) for s in samples])
     
     rows = []
     cossim_rows = []
+    dimensionality = None
     for chain_ix, samples in enumerate(chains):
         for ix, sample in tqdm.tqdm(list(enumerate(samples))):
             LOGGER.debug(f"Load data from {str(sample.absolute())}...")
-            e_sample = Embedding(saved_model_path=str(sample.absolute()))
+            try:
+                e_sample = Embedding(saved_model_path=str(sample.absolute()))
+                dimensionality = e_sample.dimensionality
+            except Exception as e:
+                LOGGER.error(f"Error loading from {str(sample.absolute())}: {e}")
+                exit()
+
             results = None
             if args.do_wordsim:
                 results = evaluate_word_similarity(e_sample)
@@ -161,14 +207,16 @@ if __name__ == '__main__':
             print("Ref val", ref_val, f"({w1}, {w2})")
 
         def estimator_name(foldername):
-            if "vi" in foldername.lower():
-                return "MFVI"
-            elif "laplace" in foldername.lower():
-                return "Laplace"
+            if "gibbs" in foldername.lower():
+                return "Gibbs"
             elif "hmc" in foldername.lower() or "stan" in foldername.lower():
                 return "HMC"
+            elif "laplace" in foldername.lower():
+                return "Laplace"
             elif "numpy" in foldername.lower():
                 return "GibbsNumpy"
+            if "vi" in foldername.lower():
+                return "MFVI"
             else:
                 return "Gibbs"
         cossim_results = pd.DataFrame(cossim_rows, columns=["chain", "ix", "similarity"])
@@ -208,8 +256,12 @@ if __name__ == '__main__':
             plt.xlim(-1.2, 1.2)
             plt.xticks([-1.0, -0.5, 0.0, 0.5, 1.0])
 
-        plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf")
-        plt.show()
+        savepath = f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}-K-{dimensionality}.pdf"
+        #plt.savefig(f"img/{args.cossim_words[0]}-{args.cossim_words[1]}-similarity-{model}.pdf")
+        #plt.show()
+        metadata_dict = vars(args)
+        metadata_dict["K"] = dimensionality
+        save_with_state(savepath, metadata_dict=metadata_dict)
         
         r_hat(cossim_results, reference="Gibbs")
 

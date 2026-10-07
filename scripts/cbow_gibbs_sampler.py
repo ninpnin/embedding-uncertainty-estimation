@@ -13,6 +13,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from pathlib import Path
 import random, string
+import tqdm
 
 if __name__ == '__main__':
     import argparse
@@ -22,9 +23,12 @@ if __name__ == '__main__':
     parser.add_argument("--data_len", type=int, default=None)
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
+    parser.add_argument("--batch_size", type=int, default=10)
     parser.add_argument("--example_word", type=str, default="word0")
     parser.add_argument("--prefix", type=str, default="")
     parser.add_argument("--results_folder", type=str, default="results", help="Where the samples folder should be placed")
+    parser.add_argument("--calculate_p", type=bool, default=False, help="Calculate alpha rho.T for ESS etc.")
+    parser.add_argument("--benchmark", type=bool, default=False, help="Only run the script; don't save embeddings")
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -35,6 +39,9 @@ if __name__ == '__main__':
     if args.datapath is not None:
         with open(args.datapath) as f:
             data = json.load(f)
+            if not isinstance(data, list) and "data" in data.keys():
+                LOGGER.warn("JSON is nested; load contents of 'data' variable")
+                data = data["data"]
 
     for elem in data:
         w_i, C_i = elem["w"], elem["C"]
@@ -69,8 +76,13 @@ if __name__ == '__main__':
     LOGGER.info(f"Mkdir {samples_folder} ...")
     samples_folder.mkdir(exist_ok=True)
 
-    gibbs_generator = cbow_gibbs_parallellized(e, data, rounds=args.samples)
+    gibbs_generator = cbow_gibbs_parallellized(e, data, rounds=args.samples, batch_size=args.batch_size)
     local = None
+
+    cossim, words = None, list(vocab)
+    if args.calculate_p:
+        cossim = np.zeros((args.samples // 2, V,V))
+
     for sample_ix, e_sample in enumerate(gibbs_generator):
         Path(samples_folder).mkdir(exist_ok=True)
         word0sample = e_sample[args.example_word].numpy()
@@ -78,4 +90,25 @@ if __name__ == '__main__':
 
         sample_path = samples_folder / f"sample-{sample_ix}.json"
         sample_path_str = str(sample_path.resolve())
-        e_sample.save(sample_path_str)
+        if not args.benchmark:
+            e_sample.save(sample_path_str)
+
+        if args.calculate_p and sample_ix >= args.samples // 2:
+            cossim_ix = e[words].numpy()
+            rho_norm = np.linalg.norm(cossim_ix, axis=1)
+            cossim_ix = ((cossim_ix.T) / rho_norm).T
+            cossim_ix = cossim_ix @ cossim_ix.T
+            cossim[sample_ix - args.samples // 2] = cossim_ix
+
+    LOGGER.info("Calculate ESS based on cossim")
+    if args.calculate_p:
+        import arviz as az
+        ess_arr_cos = []
+        for w in tqdm.tqdm(range(V)):
+            for v in range(V):
+                cossim_samples = cossim[:, w, v]
+                ESS_cos = az.ess(cossim_samples)
+                ess_arr_cos.append(ESS_cos)
+        
+        ess_arr_cos = np.array(ess_arr_cos)
+        LOGGER.train(f"ESS (cossim): {np.mean(ess_arr_cos)} (+- {np.std(ess_arr_cos)})")

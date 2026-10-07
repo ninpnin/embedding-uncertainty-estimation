@@ -1,5 +1,5 @@
 from embedding_uncertainty import embedding_gibbs
-from embedding_uncertainty import embedding_gibbs_tf
+from embedding_uncertainty import embedding_gibbs_tf, embedding_gibbs_tf_fast
 from probabilistic_word_embeddings.embeddings import Embedding
 import numpy as np
 import tensorflow as tf
@@ -8,12 +8,13 @@ import json
 import progressbar
 import pandas as pd
 from trainerlog import get_logger
-LOGGER = get_logger("gibbs")
+LOGGER = get_logger("gibbs-benchmark", splitsec=True)
 LOGGER.info("Load modules..")
 import seaborn as sns
 from matplotlib import pyplot as plt
 from pathlib import Path
 import random, string
+import tqdm
 
 if __name__ == '__main__':
     import argparse
@@ -26,15 +27,15 @@ if __name__ == '__main__':
     parser.add_argument("--map_estimate", type=str, default=None)
     parser.add_argument("--freeze_params", type=str, nargs="+", default=None)
     parser.add_argument("--lambda0", type=float, default=None, help="Prior strength (variance). If not specified, set to K")
-    parser.add_argument("--example_word", type=str, default="word0")
+    parser.add_argument("--example_word", type=str, default=None)
     parser.add_argument("--use_tf", type=bool, default=False)
-    parser.add_argument("--ll_every", type=int, default=1)
     parser.add_argument("--prefix", type=str, default="")
-    parser.add_argument("--pg_iter", type=int, default=50)
+    parser.add_argument("--pg_iter", type=int, default=5)
     parser.add_argument("--mvn_method", type=str, default="cholesky", choices=["cholesky", "svd"])
-    parser.add_argument("--calculate_p", type=bool, default=False)
-    parser.add_argument("--results_folder", type=str, default="results", help="Where the samples folder should be placed")
+    parser.add_argument("--ll_every", type=int, default=1)
     parser.add_argument("--plot", type=bool, default=False)
+    parser.add_argument("--calculate_p", type=bool, default=False)
+    parser.add_argument("--algos", type=str, nargs="+", default=["normal", "fast"])
     args = parser.parse_args()
     LOGGER.train(f"Args: {args}")
     # {'joo': 0, 'moi': 1, 'jee': 2, 'joo_c': 3, 'moi_c': 5, 'jee_c': 4}
@@ -100,55 +101,54 @@ if __name__ == '__main__':
     # Generate a random string to make runs pseudo unique
     randomchars = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(4))
     samples_folder = f"{pathstem}-gibbs-N-{args.data_len}-K-{args.dim}-V-{V}-PG-{args.pg_iter}-{args.prefix}-{randomchars}"
-    results_folder = Path(args.results_folder)
-    results_folder.mkdir(exist_ok=True)
-    LOGGER.info(f"Make folder {samples_folder} ...")
-    samples_folder = (results_folder / samples_folder)
-    samples_folder.mkdir(exist_ok=True)
 
-    gibbs_generator = embedding_gibbs(e, data, rounds=args.samples, polyagamma_iter=args.pg_iter, freeze_params=freeze_params, plot=args.plot)
-    if args.use_tf:
-        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
-                                             polyagamma_iter=args.pg_iter, freeze_params=freeze_params,
-                                             multivariate_method=args.mvn_method, plot=args.plot,
-                                             ll_every=args.ll_every
-                                         )
-    for sample_ix, e_sample in enumerate(gibbs_generator):
-        word0sample = e_sample[args.example_word].numpy()
-        LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
-        x.append(word0sample[0])
-        y.append(word0sample[1])
-
-        if args.calculate_p:
-            rho = e_sample[[wd for wd in e.vocabulary if "_c" not in wd]].numpy()
-            alpha = e_sample[[wd for wd in e.vocabulary if "_c" in wd]].numpy()
-            eta = rho @ alpha.T
-            p = tf.math.sigmoid(eta)
-
-            if sample_ix >= WARMUP:
-                if p_avg is None:
-                    p_avg = p
-                else:
-                    p_avg += p
-
-        sample_path = samples_folder / f"sample-{sample_ix}.pkl"
-        sample_path_str = str(sample_path.resolve())
-        LOGGER.info(f"Save sample to {sample_path} ...")
-        e_sample.save(sample_path_str)
-
-    theta_true = np.array(d["theta"])
-    rho_true = theta_true[:theta_true.shape[0] // 2]
-    alpha_true = theta_true[theta_true.shape[0] // 2:]
-
+    p, cossim = None, None
+    words = list(vocab)
+    contexts = [f"{wd}_c" for wd in words]
     if args.calculate_p:
-        p_true = tf.math.sigmoid(rho_true @ alpha_true.T).numpy()
-        p_avg = p_avg / (args.samples - WARMUP)
-        
-        LOGGER.train(f"RMSE baseline {np.sqrt(np.mean((p_true - np.mean(p_true)) ** 2))}")
-        RMSE = np.sqrt(np.mean((p_true - p_avg) ** 2))
-        LOGGER.train(f"RMSE: {RMSE}")
+        p = np.zeros((args.samples // 2, V,V))
+        cossim = np.zeros((args.samples // 2, V,V))
 
-    sns.set_theme()
-    sns.lineplot(x=x, y=y, sort=False)
-    plt.savefig(f"gibbsample-{args.example_word}-{args.samples}.png")
-    plt.show()
+    gibbs_generator = embedding_gibbs_tf_fast(e, data, rounds=args.samples,
+        plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
+    for sample_ix, e_sample in enumerate(gibbs_generator):
+        if args.example_word is not None:
+            word0sample = e_sample[args.example_word].numpy()
+            LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
+        if args.calculate_p and sample_ix >= args.samples // 2:
+            p_ix = e[words].numpy() @ e[words].numpy().T
+            p[sample_ix - args.samples // 2] = p_ix
+            cossim_ix = e[words].numpy()
+            rho_norm = np.linalg.norm(cossim_ix, axis=1)
+            cossim_ix = ((cossim_ix.T) / rho_norm).T
+            cossim_ix = cossim_ix @ cossim_ix.T
+            cossim[sample_ix - args.samples // 2] = cossim_ix
+
+    LOGGER.train("Fast sampling done")
+    if args.calculate_p:
+        import arviz as az
+        ess_arr = []
+        ess_arr_cos = []
+        for w in tqdm.tqdm(range(V)):
+            for v in range(V):
+                samples = p[:, w, v]
+                cossim_samples = cossim[:, w, v]
+                ESS = az.ess(samples)
+                ESS_cos = az.ess(cossim_samples)
+                ess_arr.append(ESS)
+                ess_arr_cos.append(ESS_cos)
+        
+        ess_arr = np.array(ess_arr)
+        LOGGER.train(f"ESS (alpha rho.T): {np.mean(ess_arr)} (+- {np.std(ess_arr)})")
+        LOGGER.train(f"ESS (cossim): {np.mean(ess_arr_cos)} (+- {np.std(ess_arr_cos)})")
+
+
+    if "normal" in args.algos:
+        gibbs_generator = embedding_gibbs_tf(e, data, rounds=args.samples,
+            plot=args.plot, polyagamma_iter=args.pg_iter, ll_every=args.ll_every)
+        for sample_ix, e_sample in enumerate(gibbs_generator):
+            if args.example_word is not None:
+                word0sample = e_sample[args.example_word].numpy()
+                LOGGER.info(f"Example word {args.example_word}: {e_sample[args.example_word]}")
+        LOGGER.train("Baseline sampling done")
+
